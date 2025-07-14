@@ -5,7 +5,7 @@ werkzeug==3.0.1
 
 # Audio Processing
 pydub==0.25.1
-numpy==1.26.0
+numpy==1.26.4
 
 # File Processing
 python-magic==0.4.27

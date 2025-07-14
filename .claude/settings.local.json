@@ -16,7 +16,13 @@
       "Bash(git init:*)",
       "Bash(gh repo create:*)",
       "Bash(git remote add:*)",
-      "Bash(git add:*)"
+      "Bash(git add:*)",
+      "Bash(winget install:*)",
+      "Bash(\"C:\\Users\\Ryan.김준형\\AppData\\Local\\Programs\\Python\\Python313\\python.exe\" -m venv venv_win)",
+      "Bash(venv_winScriptsactivate.bat)",
+      "Bash(venv_win\\Scripts\\python.exe -m pip install:*)",
+      "Bash(.venv_winScriptspython.exe -m pip install --upgrade pip)",
+      "Bash(\"./venv_win/Scripts/python.exe\":*)"
     ],
     "deny": []
   }

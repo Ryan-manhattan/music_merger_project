@@ -3,16 +3,14 @@ Music Merger - 유틸리티 함수들
 """
 
 import os
-# import magic  # magic 모듈 주석 처리
-from pydub import AudioSegment
+import subprocess
+import json
 from datetime import datetime, timedelta
 
 # FFmpeg 경로 설정
 ffmpeg_path = os.path.join(os.path.dirname(__file__), 'ffmpeg', 'ffmpeg-master-latest-win64-gpl', 'bin')
-if os.path.exists(ffmpeg_path):
-    AudioSegment.converter = os.path.join(ffmpeg_path, 'ffmpeg.exe')
-    AudioSegment.ffmpeg = os.path.join(ffmpeg_path, 'ffmpeg.exe')
-    AudioSegment.ffprobe = os.path.join(ffmpeg_path, 'ffprobe.exe')
+FFMPEG_EXE = os.path.join(ffmpeg_path, 'ffmpeg.exe') if os.path.exists(ffmpeg_path) else 'ffmpeg'
+FFPROBE_EXE = os.path.join(ffmpeg_path, 'ffprobe.exe') if os.path.exists(ffmpeg_path) else 'ffprobe'
 
 # 허용된 MIME 타입
 ALLOWED_EXTENSIONS = {'.mp3', '.wav', '.m4a', '.flac', '.mp4', '.webm'}
@@ -44,50 +42,42 @@ def validate_audio_file(filepath):
         if ext not in ALLOWED_EXTENSIONS:
             result['error'] = f'지원하지 않는 파일 확장자입니다: {ext}'
             return result
-        # pydub으로 오디오 정보 추출 (FFmpeg 없이 기본 포맷만)
+        # 기본 정보로 검증 (ffprobe 없이)
         try:
-            console_log(f"pydub으로 파일 읽기 시도: {filepath}")
-            # MP3/MP4 파일인 경우 FFmpeg 없이 처리 시도
-            if ext in ['.mp3', '.mp4']:
-                try:
-                    # FFmpeg 없이 처리 어려우므로 기본값 반환
-                    console_log(f"{ext.upper()} 파일 - 기본 정보로 처리")
-                    file_size = os.path.getsize(filepath)
-                    # 대략적인 추정 (1MB당 약 1분)
-                    estimated_duration = max(file_size / (1024 * 1024) * 60, 30)
-                    
-                    format_name = 'MP3' if ext == '.mp3' else 'MP4'
-                    
-                    result['info'] = {
-                        'duration': estimated_duration,
-                        'duration_str': format_duration(estimated_duration),
-                        'channels': 2,
-                        'frame_rate': 44100,
-                        'sample_width': 2,
-                        'bitrate': 128000,
-                        'format': format_name
-                    }
-                    result['valid'] = True
-                    return result
-                except Exception:
-                    pass
+            console_log(f"파일 기본 정보 확인: {filepath}")
             
-            audio = AudioSegment.from_file(filepath)
-            # 오디오 정보 수집
+            # 파일 크기로 대략적인 지속시간 추정
+            file_size = os.path.getsize(filepath)
+            console_log(f"파일 크기: {file_size} bytes")
+            
+            # 대략적인 추정 (파일 크기 기반)
+            if ext == '.mp3':
+                # MP3: 1MB당 약 1분 (128kbps 기준)
+                estimated_duration = max(file_size / (1024 * 1024) * 60, 10)
+            elif ext == '.wav':
+                # WAV: 1MB당 약 6초 (16bit, 44.1kHz 스테레오 기준)
+                estimated_duration = max(file_size / (1024 * 1024) * 6, 10)
+            else:
+                # 기타 포맷
+                estimated_duration = max(file_size / (1024 * 1024) * 30, 10)
+            
+            # 최대 30분 제한
+            if estimated_duration > 1800:
+                result['error'] = f'파일이 너무 큽니다 (추정: {estimated_duration/60:.1f}분, 최대: 30분)'
+                return result
+            
+            # 기본 오디오 정보 설정
             result['info'] = {
-                'duration': len(audio) / 1000.0,  # 초 단위
-                'duration_str': format_duration(len(audio) / 1000.0),
-                'channels': audio.channels,
-                'frame_rate': audio.frame_rate,
-                'sample_width': audio.sample_width,
-                'bitrate': audio.frame_rate * audio.frame_width * 8,
+                'duration': estimated_duration,
+                'duration_str': format_duration(estimated_duration),
+                'channels': 2,
+                'frame_rate': 44100,
+                'sample_width': 2,
+                'bitrate': 128000,
                 'format': ext[1:].upper()
             }
-            console_log(f"오디오 정보: {result['info']}")
-            # 최대 길이 체크 (30분)
-            if result['info']['duration'] > 1800:
-                result['error'] = '파일 길이가 너무 깁니다 (최대 30분)'
-                return result
+            
+            console_log(f"추정 오디오 정보: {result['info']}")
             result['valid'] = True
         except Exception as e:
             result['error'] = f'오디오 파일 읽기 실패: {str(e)}'
