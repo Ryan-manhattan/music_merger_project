@@ -1,0 +1,23 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(python:*)",
+      "Bash(pip install:*)",
+      "Bash(choco install:*)",
+      "Bash(powershell:*)",
+      "Bash(dir)",
+      "Bash(playwright install:*)",
+      "Bash(curl:*)",
+      "Bash(findstr:*)",
+      "Bash(ls:*)",
+      "Bash(choco:*)",
+      "Bash(unzip:*)",
+      "Bash(rm:*)",
+      "Bash(git init:*)",
+      "Bash(gh repo create:*)",
+      "Bash(git remote add:*)",
+      "Bash(git add:*)"
+    ],
+    "deny": []
+  }
+}

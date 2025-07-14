@@ -1,0 +1,23 @@
+# Music Merger Requirements
+# Web Framework
+Flask==3.0.0
+werkzeug==3.0.1
+
+# Audio Processing
+pydub==0.25.1
+numpy==1.26.0
+
+# File Processing
+python-magic==0.4.27
+
+# Production Server
+gunicorn==21.2.0
+
+# Environment Variables
+python-dotenv==1.0.0
+
+# CORS support
+flask-cors==4.0.0
+
+# YouTube/Music Link Extraction
+yt-dlp==2023.12.30

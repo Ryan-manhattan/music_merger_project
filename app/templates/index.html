@@ -1,0 +1,118 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="app-wrapper">
+    <!-- 파일 업로드 영역 -->
+    <section class="upload-section">
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <h2>파일 선택 또는 드래그 앤 드롭</h2>
+            <p>MP3, WAV, M4A, FLAC 파일을 업로드하세요</p>
+            <input type="file" id="fileInput" multiple accept=".mp3,.wav,.m4a,.flac" hidden>
+            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                파일 선택
+            </button>
+        </div>
+        
+        <!-- 링크 입력 영역 -->
+        <div class="link-section">
+            <div class="section-divider">
+                <span>또는</span>
+            </div>
+            <div class="link-input-area">
+                <div class="upload-icon">🔗</div>
+                <h3>YouTube/음악 링크에서 추출</h3>
+                <p>YouTube, SoundCloud 등의 링크를 입력하세요</p>
+                <div class="link-input-group">
+                    <input type="url" id="linkInput" placeholder="https://youtube.com/watch?v=..." class="link-input">
+                    <button class="btn btn-secondary" id="extractBtn" onclick="extractFromLink()">
+                        🎵 추출
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 업로드된 파일 목록 -->
+    <section class="files-section" id="filesSection" style="display: none;">
+        <h3>업로드된 파일 목록</h3>
+        <div class="files-list" id="filesList"></div>
+    </section>
+
+    <!-- 전체 설정 -->
+    <section class="global-settings" id="globalSettings" style="display: none;">
+        <h3>전체 설정</h3>
+        <div class="settings-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="normalizeVolume" checked>
+                <span>볼륨 정규화</span>
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="crossfade">
+                <span>크로스페이드</span>
+            </label>
+        </div>
+    </section>
+
+    <!-- 처리 버튼 -->
+    <section class="action-section" id="actionSection" style="display: none;">
+        <button class="btn btn-success btn-large" id="processBtn" onclick="processAudio()">
+            🎵 합치기 시작
+        </button>
+    </section>
+
+    <!-- 진행 상황 -->
+    <section class="progress-section" id="progressSection" style="display: none;">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p class="progress-text" id="progressText">처리 중...</p>
+    </section>
+
+    <!-- 결과 -->
+    <section class="result-section" id="resultSection" style="display: none;">
+        <h3>✅ 처리 완료!</h3>
+        <p class="result-info" id="resultInfo"></p>
+        <button class="btn btn-primary" id="downloadBtn">
+            📥 다운로드
+        </button>
+        <button class="btn btn-secondary" onclick="resetApp()">
+            새로 시작
+        </button>
+    </section>
+</div>
+
+<!-- 파일 아이템 템플릿 -->
+<template id="fileItemTemplate">
+    <div class="file-item" data-filename="">
+        <div class="file-header">
+            <span class="file-icon">🎵</span>
+            <span class="file-name"></span>
+            <div class="file-actions">
+                <button class="btn-icon" onclick="toggleFileSettings(this)">⚙️</button>
+                <button class="btn-icon" onclick="moveFileUp(this)">⬆️</button>
+                <button class="btn-icon" onclick="moveFileDown(this)">⬇️</button>
+                <button class="btn-icon btn-danger" onclick="removeFile(this)">❌</button>
+            </div>
+        </div>
+        <div class="file-settings" style="display: none;">
+            <div class="setting-group">
+                <label>페이드인 (초): <span class="value-display">2</span></label>
+                <input type="range" class="slider" name="fadeIn" min="0" max="10" value="2" step="0.5">
+            </div>
+            <div class="setting-group">
+                <label>페이드아웃 (초): <span class="value-display">3</span></label>
+                <input type="range" class="slider" name="fadeOut" min="0" max="10" value="3" step="0.5">
+            </div>
+            <div class="setting-group">
+                <label>볼륨 (dB): <span class="value-display">0</span></label>
+                <input type="range" class="slider" name="volume" min="-20" max="20" value="0" step="1">
+            </div>
+            <div class="setting-group">
+                <label>간격 (초): <span class="value-display">1</span></label>
+                <input type="range" class="slider" name="gap" min="0" max="5" value="1" step="0.5">
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}
