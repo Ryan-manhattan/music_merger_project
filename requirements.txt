@@ -20,7 +20,7 @@ python-dotenv==1.0.0
 flask-cors==4.0.0
 
 # YouTube/Music Link Extraction
-yt-dlp==2023.12.30
+yt-dlp==2025.6.30
 
 # Video Processing
 moviepy==2.2.1

@@ -1,3 +1,9 @@
 @echo off
-cd "C:\Users\Ryan.김준형\Documents\Projects\music_merger_project"
+echo Starting Music Merger Server...
+echo Server URL: http://localhost:5000
+echo.
+
+call venv_win\Scripts\activate.bat
 python app.py
+
+pause
