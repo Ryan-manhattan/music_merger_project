@@ -110,7 +110,7 @@ class AudioProcessor:
                 '-i', filelist_path,
                 '-vn',  # 비디오 스트림 제거
                 '-acodec', 'libmp3lame',  # MP3 인코딩
-                '-ab', '192k',  # 비트레이트 설정
+                '-ab', '320k',  # 비트레이트 설정
                 '-ar', '44100',  # 샘플레이트 설정
                 '-y',  # 덮어쓰기
                 output_path
@@ -180,7 +180,7 @@ class AudioProcessor:
             FFMPEG_EXE,
             '-i', input_path,
             '-codec:a', 'mp3',
-            '-b:a', '192k',
+            '-b:a', '320k',
             '-ar', '44100',
             '-y',
             output_path

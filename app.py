@@ -6,12 +6,13 @@ Music Merger - 음악 파일 이어붙이기 웹 서비스
 
 import os
 
-# FFmpeg 경로를 환경 변수에 추가
-ffmpeg_path = os.path.join(os.path.dirname(__file__), 'ffmpeg', 'ffmpeg-master-latest-win64-gpl', 'bin')
-if os.path.exists(ffmpeg_path):
-    current_path = os.environ.get('PATH', '')
-    if ffmpeg_path not in current_path:
-        os.environ['PATH'] = ffmpeg_path + os.pathsep + current_path
+# FFmpeg 경로를 환경 변수에 추가 (로컬 개발용)
+if os.name == 'nt':  # Windows에서만 실행
+    ffmpeg_path = os.path.join(os.path.dirname(__file__), 'ffmpeg', 'ffmpeg-master-latest-win64-gpl', 'bin')
+    if os.path.exists(ffmpeg_path):
+        current_path = os.environ.get('PATH', '')
+        if ffmpeg_path not in current_path:
+            os.environ['PATH'] = ffmpeg_path + os.pathsep + current_path
 
 from flask import Flask, render_template, request, jsonify, send_file
 from flask_cors import CORS
@@ -531,4 +532,6 @@ class console:
 
 if __name__ == '__main__':
     console.log("=== Music Merger 서버 시작 ===")
-    app.run(debug=True, host='0.0.0.0', port=5000)
+    port = int(os.environ.get('PORT', 5000))
+    debug = os.environ.get('FLASK_ENV') != 'production'
+    app.run(debug=debug, host='0.0.0.0', port=port)
