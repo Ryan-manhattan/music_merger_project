@@ -23,6 +23,7 @@ import uuid
 from utils import validate_audio_file, generate_safe_filename, get_file_size_mb
 from audio_processor import AudioProcessor
 from link_extractor import LinkExtractor
+from video_processor import VideoProcessor
 
 # Flask 앱 초기화 (Windows 경로 대응)
 app = Flask(__name__, 
@@ -35,6 +36,7 @@ app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB 제한
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'app', 'uploads')
 app.config['PROCESSED_FOLDER'] = os.path.join(os.path.dirname(__file__), 'app', 'processed')
 app.config['ALLOWED_EXTENSIONS'] = {'mp3', 'wav', 'm4a', 'flac', 'mp4', 'webm'}
+app.config['ALLOWED_IMAGE_EXTENSIONS'] = {'jpg', 'jpeg', 'png', 'bmp', 'gif'}
 
 # 폴더 생성 확인
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -45,6 +47,11 @@ def allowed_file(filename):
     """파일 확장자 검증"""
     return '.' in filename and \
            filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_EXTENSIONS']
+
+def allowed_image_file(filename):
+    """이미지 파일 확장자 검증"""
+    return '.' in filename and \
+           filename.rsplit('.', 1)[1].lower() in app.config['ALLOWED_IMAGE_EXTENSIONS']
 
 
 # cleanup 함수 제거 - 파일 자동 삭제 방지
@@ -325,6 +332,163 @@ def extract_link_job(job_id, url):
         console.log(f"[Extract Job] {job_id} - 오류 발생: {str(e)}")
         processing_jobs[job_id]['status'] = 'error'
         processing_jobs[job_id]['message'] = f'오류: {str(e)}'
+
+
+@app.route('/upload_image', methods=['POST'])
+def upload_image():
+    """이미지 파일 업로드 처리"""
+    console.log("[Route] /upload_image - 이미지 업로드 요청")
+    
+    if 'image' not in request.files:
+        console.log("[Upload Image] 이미지 파일이 없음")
+        return jsonify({'error': '이미지 파일이 없습니다'}), 400
+    
+    file = request.files['image']
+    
+    if file and allowed_image_file(file.filename):
+        # 안전한 파일명 생성
+        filename = generate_safe_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        console.log(f"[Upload Image] 이미지 저장 경로: {filepath}")
+        
+        # 파일 저장
+        file.save(filepath)
+        console.log(f"[Upload Image] 이미지 저장 완료: {filename}")
+        
+        # 파일 정보 반환
+        file_info = {
+            'filename': filename,
+            'original_name': file.filename,
+            'size': os.path.getsize(filepath),
+            'size_mb': get_file_size_mb(filepath),
+            'path': filepath
+        }
+        
+        return jsonify({
+            'success': True,
+            'image': file_info
+        })
+    else:
+        console.log(f"[Upload Image] 허용되지 않은 이미지 파일: {file.filename}")
+        return jsonify({
+            'success': False,
+            'error': f"{file.filename}: 지원하지 않는 이미지 형식입니다"
+        }), 400
+
+
+@app.route('/create_video', methods=['POST'])
+def create_video():
+    """동영상 생성 요청"""
+    console.log("[Route] /create_video - 동영상 생성 요청")
+    
+    data = request.get_json()
+    console.log(f"[Create Video] 받은 데이터: {json.dumps(data, indent=2)}")
+    
+    # 작업 ID 생성
+    job_id = str(uuid.uuid4())
+    
+    # 동영상 생성 작업 시작
+    thread = threading.Thread(
+        target=create_video_job,
+        args=(job_id, data)
+    )
+    thread.start()
+    
+    return jsonify({
+        'success': True,
+        'job_id': job_id,
+        'message': '동영상 생성을 시작했습니다'
+    })
+
+
+def create_video_job(job_id, data):
+    """백그라운드 동영상 생성 작업"""
+    console.log(f"[Video Job] {job_id} - 동영상 생성 시작")
+    
+    # 처리 상태 초기화
+    processing_jobs[job_id] = {
+        'status': 'processing',
+        'progress': 0,
+        'message': '동영상 생성 준비 중...',
+        'result': None
+    }
+    
+    try:
+        # 동영상 프로세서 생성
+        video_processor = VideoProcessor(console_log=console.log)
+        
+        # 파일 경로 설정
+        audio_filename = data['audio_filename']
+        image_filename = data['image_filename']
+        
+        audio_path = os.path.join(app.config['PROCESSED_FOLDER'], audio_filename)
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+        
+        console.log(f"[Video Job] 오디오 파일: {audio_path}")
+        console.log(f"[Video Job] 이미지 파일: {image_path}")
+        console.log(f"[Video Job] 오디오 파일 존재: {os.path.exists(audio_path)}")
+        console.log(f"[Video Job] 이미지 파일 존재: {os.path.exists(image_path)}")
+        
+        # 출력 파일명 생성
+        output_filename = f"video_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+        output_path = os.path.join(app.config['PROCESSED_FOLDER'], output_filename)
+        
+        # 동영상 설정
+        video_preset = data.get('preset', 'youtube_hd')
+        presets = video_processor.get_video_presets()
+        
+        if video_preset in presets:
+            video_size = presets[video_preset]['size']
+            fps = presets[video_preset]['fps']
+        else:
+            video_size = (1920, 1080)
+            fps = 30
+        
+        # 진행률 콜백 함수
+        def progress_callback(progress, message):
+            processing_jobs[job_id]['progress'] = progress
+            processing_jobs[job_id]['message'] = message
+            console.log(f"[Video Job] {job_id} - {progress}% - {message}")
+        
+        # 동영상 생성 실행
+        result = video_processor.create_video_from_audio_image(
+            audio_path=audio_path,
+            image_path=image_path,
+            output_path=output_path,
+            video_size=video_size,
+            fps=fps,
+            progress_callback=progress_callback
+        )
+        
+        # 처리 완료
+        processing_jobs[job_id]['status'] = 'completed'
+        processing_jobs[job_id]['progress'] = 100
+        processing_jobs[job_id]['message'] = '동영상 생성 완료!'
+        processing_jobs[job_id]['result'] = {
+            'type': 'video',
+            'video_info': result
+        }
+        
+        console.log(f"[Video Job] {job_id} - 동영상 생성 완료: {result}")
+        
+    except Exception as e:
+        # 오류 처리
+        console.log(f"[Video Job] {job_id} - 오류 발생: {str(e)}")
+        processing_jobs[job_id]['status'] = 'error'
+        processing_jobs[job_id]['message'] = f'오류: {str(e)}'
+
+
+@app.route('/video_presets')
+def get_video_presets():
+    """동영상 프리셋 목록 반환"""
+    video_processor = VideoProcessor()
+    presets = video_processor.get_video_presets()
+    
+    return jsonify({
+        'success': True,
+        'presets': presets
+    })
 
 
 @app.route('/download/<filename>')

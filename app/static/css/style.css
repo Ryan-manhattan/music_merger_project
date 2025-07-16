@@ -1,5 +1,149 @@
 /* Music Merger - 메인 스타일시트 */
 
+/* 동영상 생성 섹션 스타일 */
+.video-section {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: var(--spacing-xl);
+    margin-top: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--border);
+}
+
+.video-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.form-group label {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.image-upload-area {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: var(--spacing-xl);
+    text-align: center;
+    transition: border-color 0.3s ease;
+    cursor: pointer;
+}
+
+.image-upload-area:hover {
+    border-color: var(--primary-color);
+}
+
+.upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--spacing-sm);
+}
+
+.upload-placeholder .upload-icon {
+    font-size: 3rem;
+    color: var(--text-secondary);
+}
+
+.upload-placeholder p {
+    color: var(--text-secondary);
+    margin: 0;
+}
+
+.file-info {
+    font-size: 0.875rem;
+    color: var(--text-secondary);
+}
+
+.image-preview {
+    text-align: center;
+    padding: var(--spacing-md);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    background: var(--background);
+}
+
+.image-preview img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: 8px;
+    object-fit: contain;
+}
+
+.image-preview p {
+    margin-top: var(--spacing-sm);
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+}
+
+.form-select {
+    padding: var(--spacing-sm) var(--spacing-md);
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 1rem;
+    cursor: pointer;
+    transition: border-color 0.3s ease;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(107, 70, 193, 0.1);
+}
+
+.btn-outline {
+    background: transparent;
+    color: var(--primary-color);
+    border: 1px solid var(--primary-color);
+}
+
+.btn-outline:hover {
+    background: var(--primary-color);
+    color: white;
+}
+
+/* 동영상 진행 상황 및 결과 섹션 */
+.video-progress-section,
+.video-result-section {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: var(--spacing-xl);
+    margin-top: var(--spacing-lg);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--border);
+    text-align: center;
+}
+
+.result-actions {
+    display: flex;
+    gap: var(--spacing-md);
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: var(--spacing-lg);
+}
+
+/* 반응형 디자인 */
+@media (max-width: 768px) {
+    .result-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .result-actions .btn {
+        width: 100%;
+        max-width: 300px;
+    }
+}
+
 /* 전역 스타일 */
 * {
     margin: 0;

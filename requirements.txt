@@ -21,3 +21,7 @@ flask-cors==4.0.0
 
 # YouTube/Music Link Extraction
 yt-dlp==2023.12.30
+
+# Video Processing
+moviepy==2.2.1
+Pillow==11.3.0

@@ -5,6 +5,8 @@ console.log("[Music Merger] JavaScript 로드 완료");
 let uploadedFiles = [];
 let fileSettings = {};
 let currentExtractJob = null;
+let uploadedImage = null;
+let currentAudioResult = null;
 
 // DOM 로드 완료 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
@@ -24,6 +26,12 @@ function setupEventListeners() {
     uploadArea.addEventListener('dragover', handleDragOver);
     uploadArea.addEventListener('dragleave', handleDragLeave);
     uploadArea.addEventListener('drop', handleDrop);
+    
+    // 이미지 업로드 이벤트
+    const imageUpload = document.getElementById('imageUpload');
+    if (imageUpload) {
+        imageUpload.addEventListener('change', handleImageSelect);
+    }
     
     // 슬라이더 값 변경 이벤트 (이벤트 위임)
     document.addEventListener('input', (e) => {
@@ -327,6 +335,9 @@ async function monitorProgress(jobId) {
 function showResult(result) {
     console.log("[Result] 결과 표시");
     
+    // 현재 오디오 결과 저장
+    currentAudioResult = result;
+    
     document.getElementById('progressSection').style.display = 'none';
     document.getElementById('resultSection').style.display = 'block';
     
@@ -349,6 +360,8 @@ function resetApp() {
     // 변수 초기화
     uploadedFiles = [];
     fileSettings = {};
+    uploadedImage = null;
+    currentAudioResult = null;
     
     // UI 초기화
     document.getElementById('filesList').innerHTML = '';
@@ -357,10 +370,25 @@ function resetApp() {
     document.getElementById('actionSection').style.display = 'none';
     document.getElementById('progressSection').style.display = 'none';
     document.getElementById('resultSection').style.display = 'none';
+    document.getElementById('videoSection').style.display = 'none';
+    document.getElementById('videoProgressSection').style.display = 'none';
+    document.getElementById('videoResultSection').style.display = 'none';
     document.getElementById('fileInput').value = '';
+    
+    // 이미지 업로드 초기화
+    const imageUpload = document.getElementById('imageUpload');
+    const imageUploadArea = document.getElementById('imageUploadArea');
+    const imagePreview = document.getElementById('imagePreview');
+    const generateVideoBtn = document.getElementById('generateVideoBtn');
+    
+    if (imageUpload) imageUpload.value = '';
+    if (imageUploadArea) imageUploadArea.style.display = 'block';
+    if (imagePreview) imagePreview.style.display = 'none';
+    if (generateVideoBtn) generateVideoBtn.disabled = true;
     
     // 진행률 초기화
     resetProgress();
+    resetVideoProgress();
 }
 
 // 진행률 초기화
@@ -567,11 +595,213 @@ function formatDuration(seconds) {
 }
 
 // 전역 함수로 노출 (인라인 onclick용)
+// 이미지 선택 처리
+function handleImageSelect(e) {
+    console.log("[ImageSelect] 이미지 선택됨");
+    const file = e.target.files[0];
+    if (file) {
+        uploadImage(file);
+    }
+}
+
+// 이미지 업로드
+async function uploadImage(file) {
+    console.log("[ImageUpload] 이미지 업로드 시작:", file.name);
+    
+    const formData = new FormData();
+    formData.append('image', file);
+    
+    try {
+        const response = await fetch('/upload_image', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const data = await response.json();
+        console.log("[ImageUpload] 서버 응답:", data);
+        
+        if (data.success) {
+            uploadedImage = data.image;
+            showImagePreview(file, data.image);
+            
+            // 동영상 생성 버튼 활성화
+            document.getElementById('generateVideoBtn').disabled = false;
+        } else {
+            alert('이미지 업로드 오류: ' + data.error);
+        }
+    } catch (error) {
+        console.error("[ImageUpload] 오류:", error);
+        alert('이미지 업로드 중 오류가 발생했습니다.');
+    }
+}
+
+// 이미지 미리보기 표시
+function showImagePreview(file, imageInfo) {
+    console.log("[ImagePreview] 이미지 미리보기 표시");
+    
+    const uploadArea = document.getElementById('imageUploadArea');
+    const preview = document.getElementById('imagePreview');
+    const previewImg = document.getElementById('previewImg');
+    const imageInfoEl = document.getElementById('imageInfo');
+    
+    // 미리보기 이미지 설정
+    const reader = new FileReader();
+    reader.onload = (e) => {
+        previewImg.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+    
+    // 이미지 정보 표시
+    imageInfoEl.textContent = `${imageInfo.original_name} (${imageInfo.size_mb.toFixed(1)} MB)`;
+    
+    // UI 업데이트
+    uploadArea.style.display = 'none';
+    preview.style.display = 'block';
+}
+
+// 동영상 섹션 표시
+function showVideoSection() {
+    console.log("[VideoSection] 동영상 섹션 표시");
+    
+    if (!currentAudioResult) {
+        alert('먼저 오디오 파일을 처리해주세요.');
+        return;
+    }
+    
+    document.getElementById('videoSection').style.display = 'block';
+    
+    // 스크롤 이동
+    document.getElementById('videoSection').scrollIntoView({ 
+        behavior: 'smooth' 
+    });
+}
+
+// 동영상 생성
+async function generateVideo() {
+    console.log("[Video] 동영상 생성 시작");
+    
+    if (!currentAudioResult || !uploadedImage) {
+        alert('오디오 파일과 이미지가 모두 필요합니다.');
+        return;
+    }
+    
+    // UI 상태 변경
+    document.getElementById('videoSection').style.display = 'none';
+    document.getElementById('videoProgressSection').style.display = 'block';
+    
+    const videoData = {
+        audio_filename: currentAudioResult.filename,
+        image_filename: uploadedImage.filename,
+        preset: document.getElementById('videoPreset').value
+    };
+    
+    console.log("[Video] 동영상 생성 데이터:", videoData);
+    
+    try {
+        // 동영상 생성 요청
+        const response = await fetch('/create_video', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify(videoData)
+        });
+        
+        const result = await response.json();
+        console.log("[Video] 동영상 생성 시작 응답:", result);
+        
+        if (result.success && result.job_id) {
+            // 진행 상황 모니터링 시작
+            monitorVideoProgress(result.job_id);
+        } else {
+            throw new Error(result.message || '동영상 생성 시작 실패');
+        }
+    } catch (error) {
+        console.error("[Video] 오류:", error);
+        alert('동영상 생성 중 오류가 발생했습니다: ' + error.message);
+        resetVideoProgress();
+    }
+}
+
+// 동영상 진행 상황 모니터링
+async function monitorVideoProgress(jobId) {
+    console.log("[VideoMonitor] 동영상 진행 상황 모니터링 시작:", jobId);
+    
+    const progressFill = document.getElementById('videoProgressFill');
+    const progressText = document.getElementById('videoProgressText');
+    
+    const checkStatus = async () => {
+        try {
+            const response = await fetch(`/process/status/${jobId}`);
+            const status = await response.json();
+            
+            console.log("[VideoMonitor] 상태:", status);
+            
+            // 진행률 업데이트
+            progressFill.style.width = status.progress + '%';
+            progressText.textContent = status.message || `동영상 생성 중... ${status.progress}%`;
+            
+            if (status.status === 'completed') {
+                // 동영상 생성 완료
+                console.log("[VideoMonitor] 동영상 생성 완료:", status.result);
+                showVideoResult(status.result.video_info);
+            } else if (status.status === 'error') {
+                // 오류 발생
+                throw new Error(status.message || '동영상 생성 중 오류 발생');
+            } else {
+                // 계속 모니터링
+                setTimeout(checkStatus, 1000); // 1초마다 확인
+            }
+        } catch (error) {
+            console.error("[VideoMonitor] 오류:", error);
+            alert('동영상 생성 중 오류가 발생했습니다: ' + error.message);
+            resetVideoProgress();
+        }
+    };
+    
+    // 첫 확인
+    checkStatus();
+}
+
+// 동영상 결과 표시
+function showVideoResult(videoInfo) {
+    console.log("[VideoResult] 동영상 결과 표시");
+    
+    document.getElementById('videoProgressSection').style.display = 'none';
+    document.getElementById('videoResultSection').style.display = 'block';
+    
+    // 결과 정보 표시
+    document.getElementById('videoResultInfo').textContent = 
+        `동영상이 성공적으로 생성되었습니다! (${videoInfo.resolution}, ${(videoInfo.size / (1024*1024)).toFixed(1)} MB)`;
+    
+    // 다운로드 버튼 설정
+    document.getElementById('downloadVideoBtn').onclick = () => {
+        console.log("[VideoDownload] 동영상 다운로드 시작:", videoInfo.filename);
+        window.location.href = `/download/${videoInfo.filename}`;
+    };
+    
+    // 스크롤 이동
+    document.getElementById('videoResultSection').scrollIntoView({ 
+        behavior: 'smooth' 
+    });
+}
+
+// 동영상 진행률 초기화
+function resetVideoProgress() {
+    document.getElementById('videoProgressFill').style.width = '0%';
+    document.getElementById('videoProgressText').textContent = '동영상 생성 준비 중...';
+    document.getElementById('videoSection').style.display = 'block';
+    document.getElementById('videoProgressSection').style.display = 'none';
+}
+
+// 전역 함수로 노출 (인라인 onclick용)
 window.toggleFileSettings = toggleFileSettings;
 window.moveFileUp = moveFileUp;
 window.moveFileDown = moveFileDown;
 window.removeFile = removeFile;
 window.processAudio = processAudio;
 window.resetApp = resetApp;
+window.showVideoSection = showVideoSection;
+window.generateVideo = generateVideo;
 
 console.log("[Music Merger] 모든 함수 정의 완료");

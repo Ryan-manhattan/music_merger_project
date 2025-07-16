@@ -22,7 +22,11 @@
       "Bash(venv_winScriptsactivate.bat)",
       "Bash(venv_win\\Scripts\\python.exe -m pip install:*)",
       "Bash(.venv_winScriptspython.exe -m pip install --upgrade pip)",
-      "Bash(\"./venv_win/Scripts/python.exe\":*)"
+      "Bash(\"./venv_win/Scripts/python.exe\":*)",
+      "Bash(where python)",
+      "Bash(venv_win/Scripts/pip.exe uninstall:*)",
+      "Bash(venv_win/Scripts/pip.exe install moviepy)",
+      "Bash(venv_win/Scripts/python.exe -c \"import moviepy; print(''MoviePy 버전:'', moviepy.__version__)\")"
     ],
     "deny": []
   }

@@ -73,12 +73,81 @@
     <section class="result-section" id="resultSection" style="display: none;">
         <h3>✅ 처리 완료!</h3>
         <p class="result-info" id="resultInfo"></p>
-        <button class="btn btn-primary" id="downloadBtn">
-            📥 다운로드
-        </button>
-        <button class="btn btn-secondary" onclick="resetApp()">
-            새로 시작
-        </button>
+        <div class="result-actions">
+            <button class="btn btn-primary" id="downloadBtn">
+                📥 오디오 다운로드
+            </button>
+            <button class="btn btn-success" id="createVideoBtn" onclick="showVideoSection()">
+                🎬 동영상 만들기
+            </button>
+            <button class="btn btn-secondary" onclick="resetApp()">
+                새로 시작
+            </button>
+        </div>
+    </section>
+
+    <!-- 동영상 생성 -->
+    <section class="video-section" id="videoSection" style="display: none;">
+        <h3>🎬 동영상 생성</h3>
+        <div class="video-form">
+            <div class="form-group">
+                <label for="imageUpload">배경 이미지 업로드:</label>
+                <div class="image-upload-area" id="imageUploadArea">
+                    <div class="upload-placeholder">
+                        <span class="upload-icon">🖼️</span>
+                        <p>이미지를 드래그하거나 클릭하여 선택하세요</p>
+                        <p class="file-info">JPG, PNG, BMP 파일 지원</p>
+                    </div>
+                    <input type="file" id="imageUpload" accept=".jpg,.jpeg,.png,.bmp,.gif" hidden>
+                    <button class="btn btn-outline" onclick="document.getElementById('imageUpload').click()">
+                        이미지 선택
+                    </button>
+                </div>
+                <div class="image-preview" id="imagePreview" style="display: none;">
+                    <img id="previewImg" src="" alt="미리보기">
+                    <p id="imageInfo"></p>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="videoPreset">동영상 품질:</label>
+                <select id="videoPreset" class="form-select">
+                    <option value="youtube_hd">유튜브 HD (1080p, 30fps)</option>
+                    <option value="youtube_hd_60">유튜브 HD (1080p, 60fps)</option>
+                    <option value="youtube_standard">유튜브 표준 (720p)</option>
+                    <option value="youtube_mobile">모바일 최적화 (720p)</option>
+                </select>
+            </div>
+            
+            <div class="form-group">
+                <button class="btn btn-success btn-large" id="generateVideoBtn" onclick="generateVideo()" disabled>
+                    🎬 동영상 생성
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 동영상 진행 상황 -->
+    <section class="video-progress-section" id="videoProgressSection" style="display: none;">
+        <h3>🎬 동영상 생성 중...</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" id="videoProgressFill"></div>
+        </div>
+        <p class="progress-text" id="videoProgressText">동영상 생성 준비 중...</p>
+    </section>
+
+    <!-- 동영상 결과 -->
+    <section class="video-result-section" id="videoResultSection" style="display: none;">
+        <h3>✅ 동영상 생성 완료!</h3>
+        <p class="result-info" id="videoResultInfo"></p>
+        <div class="result-actions">
+            <button class="btn btn-primary" id="downloadVideoBtn">
+                📥 동영상 다운로드
+            </button>
+            <button class="btn btn-secondary" onclick="resetApp()">
+                새로 시작
+            </button>
+        </div>
     </section>
 </div>
 
