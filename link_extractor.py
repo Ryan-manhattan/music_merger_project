@@ -42,6 +42,9 @@ class LinkExtractor:
                 'writeinfojson': False,  # JSON 정보 파일 생성 안함
                 'no_post_overwrites': True,  # 파일 덮어쓰기 방지
                 'cookiefile': None,  # 쿠키 파일 사용 안함
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
             }
             
             self.console_log(f"[Extract] 임시 다운로드 폴더: {temp_download_folder}")
@@ -215,7 +218,13 @@ class LinkExtractor:
     def get_video_info(self, url):
         """링크에서 비디오 정보만 가져오기"""
         try:
-            with yt_dlp.YoutubeDL({'quiet': True}) as ydl:
+            ydl_opts = {
+                'quiet': True,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                }
+            }
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
                 info = ydl.extract_info(url, download=False)
                 return {
                     'success': True,
