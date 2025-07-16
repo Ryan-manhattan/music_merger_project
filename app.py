@@ -61,7 +61,7 @@ def allowed_image_file(filename):
 @app.route('/')
 def index():
     """메인 페이지"""
-    console.log("[Route] / - 메인 페이지 요청")
+    print("[Route] / - 메인 페이지 요청")
     return render_template('index.html')
 
 
