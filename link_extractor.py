@@ -49,11 +49,11 @@ class LinkExtractor:
             self.console_log(f"[Extract] 파일명 패턴: {safe_filename}_%(title)s.%(ext)s")
             
             
-            # 간단한 기본 정보 설정 (빠른 처리를 위해 추출 건너뛰기)
+            # 임시 제목 설정 (나중에 파일명에서 추출)
             title = f"YouTube_Video_{datetime.now().strftime('%H%M%S')}"
             duration = 0
             
-            self.console_log(f"[Extract] 정보 추출 건너뛰고 바로 다운로드 진행")
+            self.console_log(f"[Extract] 바로 다운로드 진행 (제목은 파일명에서 추출 예정)")
             
             # 진행률 업데이트
             if progress_callback:
@@ -157,11 +157,35 @@ class LinkExtractor:
             
             # 다운로드된 파일명에서 제목 추출 시도
             original_filename = os.path.basename(latest_file)
-            if original_filename != safe_filename:
-                # 다운로드된 원본 파일명에서 제목 추출
-                name_without_ext = os.path.splitext(original_filename)[0]
-                title = name_without_ext.replace('_', ' ')[:50]  # 50자 제한
-                self.console_log(f"[Extract] 파일명에서 추출한 제목: {title}")
+            name_without_ext = os.path.splitext(original_filename)[0]
+            
+            self.console_log(f"[Extract] 원본 파일명: {original_filename}")
+            self.console_log(f"[Extract] 확장자 제거: {name_without_ext}")
+            
+            # youtube_날짜시간_ 패턴 제거하여 실제 제목 추출
+            if name_without_ext.startswith('youtube_') and '_' in name_without_ext:
+                # youtube_20241216_095923_Something in the Way 형태에서 제목 부분만 추출
+                parts = name_without_ext.split('_', 3)  # 최대 3번 분할
+                if len(parts) >= 4:
+                    # 4번째 부분이 실제 제목
+                    title = parts[3].replace('_', ' ').strip()
+                    self.console_log(f"[Extract] 패턴 매칭으로 추출한 제목: {title}")
+                else:
+                    # 패턴이 맞지 않으면 전체를 제목으로 사용
+                    title = name_without_ext.replace('_', ' ').strip()
+                    self.console_log(f"[Extract] 전체 파일명을 제목으로 사용: {title}")
+            else:
+                # youtube_ 패턴이 아니면 전체를 제목으로 사용
+                title = name_without_ext.replace('_', ' ').strip()
+                self.console_log(f"[Extract] 일반 파일명에서 제목 추출: {title}")
+            
+            # 제목 길이 제한 및 정리
+            if len(title) > 60:
+                title = title[:60] + '...'
+            elif len(title) < 3:
+                title = f"음악_{datetime.now().strftime('%H%M%S')}"
+                
+            self.console_log(f"[Extract] 최종 제목: {title}")
             
             # 파일 정보 반환
             file_info = {
