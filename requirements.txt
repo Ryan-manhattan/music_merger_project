@@ -28,3 +28,16 @@ Pillow==11.3.0
 
 # FFmpeg Python wrapper
 ffmpeg-python==0.2.0
+
+# Google API Client Libraries
+google-api-python-client==2.144.0
+google-auth-httplib2==0.2.0
+google-auth-oauthlib==1.2.0
+
+# Text Processing for Music Analysis
+textblob==0.17.1
+nltk==3.8.1
+
+# Google Cloud Vertex AI for Lyria
+google-cloud-aiplatform==1.58.0
+google-cloud-storage==2.10.0

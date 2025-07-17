@@ -12,6 +12,7 @@ let currentAudioResult = null;
 document.addEventListener('DOMContentLoaded', () => {
     console.log("[Init] DOM 로드 완료, 이벤트 리스너 설정");
     setupEventListeners();
+    updateNavigation();
 });
 
 // 이벤트 리스너 설정
@@ -803,5 +804,22 @@ window.processAudio = processAudio;
 window.resetApp = resetApp;
 window.showVideoSection = showVideoSection;
 window.generateVideo = generateVideo;
+
+// 네비게이션 업데이트 함수
+function updateNavigation() {
+    const currentPath = window.location.pathname;
+    const navLinks = document.querySelectorAll('.nav-link');
+    
+    navLinks.forEach(link => {
+        // 현재 페이지와 링크 경로 비교
+        const linkPath = new URL(link.href).pathname;
+        
+        if (currentPath === linkPath) {
+            link.classList.add('active');
+        } else {
+            link.classList.remove('active');
+        }
+    });
+}
 
 console.log("[Music Merger] 모든 함수 정의 완료");

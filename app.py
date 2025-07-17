@@ -25,6 +25,7 @@ from utils import validate_audio_file, generate_safe_filename, get_file_size_mb
 from audio_processor import AudioProcessor
 from link_extractor import LinkExtractor
 from video_processor import VideoProcessor
+from music_service import MusicService
 
 # Flask 앱 초기화 (Windows 경로 대응)
 app = Flask(__name__, 
@@ -42,6 +43,35 @@ app.config['ALLOWED_IMAGE_EXTENSIONS'] = {'jpg', 'jpeg', 'png', 'bmp', 'gif'}
 # 폴더 생성 확인
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
+
+# 콘솔 로그 함수 (디버깅용)
+class console:
+    @staticmethod
+    def log(message):
+        """콘솔 로그 출력"""
+        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+        # UTF-8 문자를 안전하게 처리
+        try:
+            safe_message = str(message).encode('cp949', 'ignore').decode('cp949')
+        except:
+            safe_message = str(message).encode('ascii', 'ignore').decode('ascii')
+        
+        log_msg = f"[{timestamp}] {safe_message}"
+        print(log_msg)
+        # 즉시 플러시하여 버퍼링 방지
+        import sys
+        sys.stdout.flush()
+
+# 음악 서비스 초기화 (환경 변수 설정 후)
+music_service = None
+try:
+    music_service = MusicService(console_log=lambda msg: console.log(msg))
+    console.log("음악 서비스 초기화 완료")
+except Exception as e:
+    console.log(f"음악 서비스 초기화 실패: {str(e)}")
+
+# 음악 분석 작업 저장소
+music_analysis_jobs = {}
 
 
 def allowed_file(filename):
@@ -63,6 +93,13 @@ def index():
     """메인 페이지"""
     print("[Route] / - 메인 페이지 요청")
     return render_template('index.html')
+
+
+@app.route('/music-analysis')
+def music_analysis():
+    """음악 분석 페이지"""
+    console.log("[Route] /music-analysis - 음악 분석 페이지 요청")
+    return render_template('music_analysis.html')
 
 
 @app.route('/upload', methods=['POST'])
@@ -504,30 +541,296 @@ def download_file(filename):
         return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
 
 
+# ===========================================
+# 음악 분석 및 AI 생성 API 라우팅
+# ===========================================
+
+@app.route('/api/music-analysis/status')
+def music_analysis_status():
+    """음악 분석 서비스 상태 확인"""
+    console.log("[Route] /api/music-analysis/status - 서비스 상태 확인")
+    
+    try:
+        if music_service:
+            status = music_service.check_service_status()
+            return jsonify(status)
+        else:
+            return jsonify({
+                'overall_status': 'error',
+                'error': '음악 서비스가 초기화되지 않았습니다'
+            })
+    except Exception as e:
+        console.log(f"[Music Analysis] 상태 확인 오류: {str(e)}")
+        return jsonify({
+            'overall_status': 'error',
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/music-analysis/analyze', methods=['POST'])
+def analyze_music():
+    """YouTube 음악 분석 (분석만)"""
+    console.log("[Route] /api/music-analysis/analyze - 음악 분석 요청")
+    
+    try:
+        if not music_service:
+            return jsonify({
+                'success': False,
+                'error': '음악 서비스가 초기화되지 않았습니다'
+            }), 500
+        
+        data = request.get_json()
+        url = data.get('url', '').strip()
+        
+        if not url:
+            return jsonify({
+                'success': False,
+                'error': 'YouTube URL이 필요합니다'
+            }), 400
+        
+        # 작업 ID 생성
+        job_id = str(uuid.uuid4())
+        
+        # 분석 작업 시작
+        thread = threading.Thread(
+            target=analyze_music_job,
+            args=(job_id, url)
+        )
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': '음악 분석을 시작했습니다'
+        })
+        
+    except Exception as e:
+        console.log(f"[Music Analysis] 분석 요청 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/music-analysis/generate', methods=['POST'])
+def generate_music():
+    """YouTube 음악 분석 후 AI 생성"""
+    console.log("[Route] /api/music-analysis/generate - 음악 생성 요청")
+    
+    try:
+        if not music_service:
+            return jsonify({
+                'success': False,
+                'error': '음악 서비스가 초기화되지 않았습니다'
+            }), 500
+        
+        data = request.get_json()
+        url = data.get('url', '').strip()
+        options = data.get('options', {})
+        
+        if not url:
+            return jsonify({
+                'success': False,
+                'error': 'YouTube URL이 필요합니다'
+            }), 400
+        
+        # 작업 ID 생성
+        job_id = str(uuid.uuid4())
+        
+        # 생성 작업 시작
+        thread = threading.Thread(
+            target=generate_music_job,
+            args=(job_id, url, options)
+        )
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': '음악 분석 및 생성을 시작했습니다'
+        })
+        
+    except Exception as e:
+        console.log(f"[Music Analysis] 생성 요청 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/music-analysis/status/<job_id>')
+def music_analysis_job_status(job_id):
+    """음악 분석 작업 상태 확인"""
+    console.log(f"[Route] /api/music-analysis/status/{job_id} - 작업 상태 확인")
+    
+    if job_id not in music_analysis_jobs:
+        return jsonify({'error': '작업을 찾을 수 없습니다'}), 404
+    
+    job_info = music_analysis_jobs[job_id]
+    
+    # 완료된 작업은 정보 제거 (메모리 정리)
+    if job_info['status'] == 'completed' and job_info.get('result'):
+        result = job_info['result']
+        del music_analysis_jobs[job_id]
+        return jsonify({
+            'status': 'completed',
+            'progress': 100,
+            'message': '처리 완료!',
+            'result': result
+        })
+    
+    return jsonify(job_info)
+
+
+@app.route('/api/music-analysis/styles')
+def get_music_styles():
+    """지원하는 음악 스타일 목록"""
+    console.log("[Route] /api/music-analysis/styles - 스타일 목록 요청")
+    
+    try:
+        if music_service:
+            styles = music_service.get_music_styles()
+            return jsonify({
+                'success': True,
+                'styles': styles
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': '음악 서비스가 초기화되지 않았습니다'
+            }), 500
+    except Exception as e:
+        console.log(f"[Music Analysis] 스타일 목록 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/music-analysis/history')
+def get_music_history():
+    """음악 생성 이력 조회"""
+    console.log("[Route] /api/music-analysis/history - 이력 조회 요청")
+    
+    try:
+        if music_service:
+            history = music_service.get_generation_history()
+            return jsonify({
+                'success': True,
+                'history': history
+            })
+        else:
+            return jsonify({
+                'success': False,
+                'error': '음악 서비스가 초기화되지 않았습니다'
+            }), 500
+    except Exception as e:
+        console.log(f"[Music Analysis] 이력 조회 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+def analyze_music_job(job_id, url):
+    """백그라운드 음악 분석 작업"""
+    console.log(f"[Analyze Job] {job_id} - 분석 시작: {url}")
+    
+    # 처리 상태 초기화
+    music_analysis_jobs[job_id] = {
+        'status': 'processing',
+        'progress': 0,
+        'message': '분석 준비 중...',
+        'result': None
+    }
+    
+    try:
+        # 진행률 콜백 함수
+        def progress_callback(progress, message):
+            music_analysis_jobs[job_id]['progress'] = progress
+            music_analysis_jobs[job_id]['message'] = message
+            console.log(f"[Analyze Job] {job_id} - {progress}% - {message}")
+        
+        # 음악 분석 실행
+        result = music_service.analyze_only(url, progress_callback)
+        
+        if result['success']:
+            # 분석 완료
+            music_analysis_jobs[job_id]['status'] = 'completed'
+            music_analysis_jobs[job_id]['progress'] = 100
+            music_analysis_jobs[job_id]['message'] = '분석 완료!'
+            music_analysis_jobs[job_id]['result'] = result
+            
+            console.log(f"[Analyze Job] {job_id} - 분석 완료")
+        else:
+            # 분석 실패
+            music_analysis_jobs[job_id]['status'] = 'error'
+            music_analysis_jobs[job_id]['message'] = result['error']
+            console.log(f"[Analyze Job] {job_id} - 분석 실패: {result['error']}")
+        
+    except Exception as e:
+        # 오류 처리
+        console.log(f"[Analyze Job] {job_id} - 오류 발생: {str(e)}")
+        music_analysis_jobs[job_id]['status'] = 'error'
+        music_analysis_jobs[job_id]['message'] = f'오류: {str(e)}'
+
+
+def generate_music_job(job_id, url, options):
+    """백그라운드 음악 생성 작업"""
+    console.log(f"[Generate Job] {job_id} - 생성 시작: {url}")
+    
+    # 처리 상태 초기화
+    music_analysis_jobs[job_id] = {
+        'status': 'processing',
+        'progress': 0,
+        'message': '생성 준비 중...',
+        'result': None
+    }
+    
+    try:
+        # 진행률 콜백 함수
+        def progress_callback(progress, message):
+            music_analysis_jobs[job_id]['progress'] = progress
+            music_analysis_jobs[job_id]['message'] = message
+            console.log(f"[Generate Job] {job_id} - {progress}% - {message}")
+        
+        # 출력 폴더 설정
+        generation_options = options.copy()
+        generation_options['output_folder'] = app.config['PROCESSED_FOLDER']
+        
+        # 음악 분석 및 생성 실행
+        result = music_service.analyze_and_generate(
+            url, 
+            generation_options, 
+            progress_callback
+        )
+        
+        if result['success']:
+            # 생성 완료
+            music_analysis_jobs[job_id]['status'] = 'completed'
+            music_analysis_jobs[job_id]['progress'] = 100
+            music_analysis_jobs[job_id]['message'] = '생성 완료!'
+            music_analysis_jobs[job_id]['result'] = result
+            
+            console.log(f"[Generate Job] {job_id} - 생성 완료")
+        else:
+            # 생성 실패
+            music_analysis_jobs[job_id]['status'] = 'error'
+            music_analysis_jobs[job_id]['message'] = result['error']
+            console.log(f"[Generate Job] {job_id} - 생성 실패: {result['error']}")
+        
+    except Exception as e:
+        # 오류 처리
+        console.log(f"[Generate Job] {job_id} - 오류 발생: {str(e)}")
+        music_analysis_jobs[job_id]['status'] = 'error'
+        music_analysis_jobs[job_id]['message'] = f'오류: {str(e)}'
+
+
 @app.errorhandler(413)
 def too_large(e):
     """파일 크기 초과 에러 처리"""
     console.log("[Error] 파일 크기 초과")
     return jsonify({'error': '파일 크기가 너무 큽니다 (최대 500MB)'}), 413
-
-
-# 콘솔 로그 함수 (디버깅용)
-class console:
-    @staticmethod
-    def log(message):
-        """콘솔 로그 출력"""
-        timestamp = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
-        # UTF-8 문자를 안전하게 처리
-        try:
-            safe_message = str(message).encode('cp949', 'ignore').decode('cp949')
-        except:
-            safe_message = str(message).encode('ascii', 'ignore').decode('ascii')
-        
-        log_msg = f"[{timestamp}] {safe_message}"
-        print(log_msg)
-        # 즉시 플러시하여 버퍼링 방지
-        import sys
-        sys.stdout.flush()
 
 
 if __name__ == '__main__':
