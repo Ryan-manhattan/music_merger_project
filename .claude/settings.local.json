@@ -29,7 +29,13 @@
       "Bash(venv_win/Scripts/python.exe -c \"import moviepy; print(''MoviePy 버전:'', moviepy.__version__)\")",
       "Bash(taskkill:*)",
       "Bash(git commit:*)",
-      "Bash(touch:*)"
+      "Bash(touch:*)",
+      "Bash(git push:*)",
+      "Bash(claude mcp)",
+      "Bash(claude mcp:*)",
+      "Bash(render services list)",
+      "Bash(brew install:*)",
+      "Bash(render auth login)"
     ],
     "deny": []
   }

@@ -27,6 +27,8 @@ from link_extractor import LinkExtractor
 from video_processor import VideoProcessor
 from music_service import MusicService
 from database import DatabaseManager
+from trends_analyzer import TrendsAnalyzer
+from market_analyzer import MusicMarketAnalyzer
 
 # Flask 앱 초기화 (Windows 경로 대응)
 app = Flask(__name__, 
@@ -86,6 +88,20 @@ try:
     console.log("데이터베이스 매니저 초기화 완료")
 except Exception as e:
     console.log(f"데이터베이스 매니저 초기화 실패: {str(e)}")
+
+try:
+    trends_analyzer = TrendsAnalyzer(console_log=lambda msg: console.log(msg))
+    console.log("트렌드 분석기 초기화 완료")
+except Exception as e:
+    trends_analyzer = None
+    console.log(f"트렌드 분석기 초기화 실패: {str(e)}")
+
+try:
+    market_analyzer = MusicMarketAnalyzer(console_log=lambda msg: console.log(msg))
+    console.log("시장 분석기 초기화 완료")
+except Exception as e:
+    market_analyzer = None
+    console.log(f"시장 분석기 초기화 실패: {str(e)}")
 
 # 음악 분석 작업 저장소
 music_analysis_jobs = {}
@@ -877,6 +893,264 @@ def delete_session(session_id):
             })
     except Exception as e:
         console.log(f"[Route] 세션 삭제 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@app.route('/api/trends/artist', methods=['POST'])
+def get_artist_trends():
+    """아티스트 트렌드 분석"""
+    console.log("[Route] /api/trends/artist - 아티스트 트렌드 분석")
+    
+    try:
+        if not trends_analyzer:
+            return jsonify({
+                'success': False,
+                'error': '트렌드 분석기가 초기화되지 않았습니다'
+            }), 500
+        
+        data = request.get_json()
+        artist = data.get('artist', '').strip()
+        timeframe = data.get('timeframe', 'today 3-m')
+        geo = data.get('geo', 'KR')
+        
+        if not artist:
+            return jsonify({
+                'success': False,
+                'error': '아티스트명을 입력해주세요'
+            }), 400
+        
+        result = trends_analyzer.get_artist_trends(artist, timeframe, geo)
+        return jsonify(result)
+        
+    except Exception as e:
+        console.log(f"[Route] 아티스트 트렌드 분석 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@app.route('/api/trends/compare', methods=['POST'])
+def compare_artists_trends():
+    """아티스트 비교 트렌드 분석"""
+    console.log("[Route] /api/trends/compare - 아티스트 비교 분석")
+    
+    try:
+        if not trends_analyzer:
+            return jsonify({
+                'success': False,
+                'error': '트렌드 분석기가 초기화되지 않았습니다'
+            }), 500
+        
+        data = request.get_json()
+        artists = data.get('artists', [])
+        timeframe = data.get('timeframe', 'today 3-m')
+        geo = data.get('geo', 'KR')
+        
+        if not artists or len(artists) < 2:
+            return jsonify({
+                'success': False,
+                'error': '비교할 아티스트를 2명 이상 입력해주세요'
+            }), 400
+        
+        result = trends_analyzer.compare_artists(artists, timeframe, geo)
+        return jsonify(result)
+        
+    except Exception as e:
+        console.log(f"[Route] 아티스트 비교 분석 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@app.route('/api/trends/genres')
+def get_genre_trends():
+    """음악 장르 트렌드 분석"""
+    console.log("[Route] /api/trends/genres - 장르 트렌드 분석")
+    
+    try:
+        if not trends_analyzer:
+            return jsonify({
+                'success': False,
+                'error': '트렌드 분석기가 초기화되지 않았습니다'
+            }), 500
+        
+        timeframe = request.args.get('timeframe', 'today 3-m')
+        geo = request.args.get('geo', 'KR')
+        genres = request.args.getlist('genres')  # ?genres=케이팝&genres=힙합
+        
+        if not genres:
+            genres = None  # 기본 장르 사용
+        
+        result = trends_analyzer.get_music_genre_trends(genres, timeframe, geo)
+        return jsonify(result)
+        
+    except Exception as e:
+        console.log(f"[Route] 장르 트렌드 분석 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@app.route('/api/trends/keywords', methods=['POST'])
+def get_keyword_suggestions():
+    """키워드 제안 및 관련 검색어"""
+    console.log("[Route] /api/trends/keywords - 키워드 제안")
+    
+    try:
+        if not trends_analyzer:
+            return jsonify({
+                'success': False,
+                'error': '트렌드 분석기가 초기화되지 않았습니다'
+            }), 500
+        
+        data = request.get_json()
+        keyword = data.get('keyword', '').strip()
+        geo = data.get('geo', 'KR')
+        
+        if not keyword:
+            return jsonify({
+                'success': False,
+                'error': '키워드를 입력해주세요'
+            }), 400
+        
+        result = trends_analyzer.get_keyword_suggestions(keyword, geo)
+        return jsonify(result)
+        
+    except Exception as e:
+        console.log(f"[Route] 키워드 제안 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+# ===========================================
+# 시장 분석 API 라우팅
+# ===========================================
+
+@app.route('/api/market/analyze/<genre>')
+def analyze_genre_market(genre):
+    """특정 장르의 시장 분석"""
+    console.log(f"[Route] /api/market/analyze/{genre} - 장르 시장 분석")
+    
+    try:
+        if not market_analyzer:
+            return jsonify({
+                'success': False,
+                'error': '시장 분석기가 초기화되지 않았습니다'
+            }), 500
+        
+        timeframe = request.args.get('timeframe', 'today 12-m')
+        geo = request.args.get('geo', 'KR')
+        
+        result = market_analyzer.analyze_genre_market(genre, timeframe, geo)
+        return jsonify(result)
+        
+    except Exception as e:
+        console.log(f"[Route] 장르 시장 분석 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@app.route('/api/market/compare', methods=['POST'])
+def compare_genre_markets():
+    """여러 장르의 시장 비교 분석"""
+    console.log("[Route] /api/market/compare - 장르 시장 비교")
+    
+    try:
+        if not market_analyzer:
+            return jsonify({
+                'success': False,
+                'error': '시장 분석기가 초기화되지 않았습니다'
+            }), 500
+        
+        data = request.get_json()
+        genres = data.get('genres', [])
+        timeframe = data.get('timeframe', 'today 12-m')
+        geo = data.get('geo', 'KR')
+        
+        if not genres or len(genres) < 2:
+            return jsonify({
+                'success': False,
+                'error': '비교할 장르를 2개 이상 입력해주세요'
+            }), 400
+        
+        result = market_analyzer.compare_genre_markets(genres, timeframe, geo)
+        return jsonify(result)
+        
+    except Exception as e:
+        console.log(f"[Route] 장르 시장 비교 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@app.route('/api/market/overview')
+def get_market_overview():
+    """전체 음악 시장 개관"""
+    console.log("[Route] /api/market/overview - 전체 시장 개관")
+    
+    try:
+        if not market_analyzer:
+            return jsonify({
+                'success': False,
+                'error': '시장 분석기가 초기화되지 않았습니다'
+            }), 500
+        
+        timeframe = request.args.get('timeframe', 'today 12-m')
+        geo = request.args.get('geo', 'KR')
+        
+        result = market_analyzer.get_market_overview(timeframe, geo)
+        return jsonify(result)
+        
+    except Exception as e:
+        console.log(f"[Route] 시장 개관 분석 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        })
+
+
+@app.route('/api/market/genres')
+def get_supported_genres():
+    """지원되는 장르 목록"""
+    console.log("[Route] /api/market/genres - 지원 장르 목록")
+    
+    try:
+        if not market_analyzer:
+            return jsonify({
+                'success': False,
+                'error': '시장 분석기가 초기화되지 않았습니다'
+            }), 500
+        
+        genres = market_analyzer.genre_mapping
+        genre_list = []
+        
+        for genre_id, genre_info in genres.items():
+            genre_list.append({
+                'id': genre_id,
+                'korean': genre_info['ko'],
+                'english': genre_info['en'],
+                'category': genre_info['category']
+            })
+        
+        return jsonify({
+            'success': True,
+            'genres': genre_list,
+            'count': len(genre_list)
+        })
+        
+    except Exception as e:
+        console.log(f"[Route] 장르 목록 조회 오류: {str(e)}")
         return jsonify({
             'success': False,
             'error': str(e)
