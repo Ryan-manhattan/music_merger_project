@@ -42,10 +42,20 @@ class LyriaClient:
         if not VERTEX_AI_AVAILABLE:
             raise ImportError("Google Cloud Vertex AI 라이브러리가 설치되지 않았습니다. pip install google-cloud-aiplatform 실행")
         
-        # 서비스 계정 설정
-        if service_account_path and os.path.exists(service_account_path):
+        # 서비스 계정 설정 (Render 환경 변수 우선 처리)
+        credentials_json = os.getenv('GOOGLE_APPLICATION_CREDENTIALS_JSON')
+        if credentials_json:
+            # Render 환경: JSON 문자열을 임시 파일로 저장
+            import tempfile
+            with tempfile.NamedTemporaryFile(mode='w', suffix='.json', delete=False) as f:
+                f.write(credentials_json)
+                temp_credentials_path = f.name
+            os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = temp_credentials_path
+            self.console_log(f"[Lyria Client] 서비스 계정 설정 (환경 변수): {temp_credentials_path}")
+        elif service_account_path and os.path.exists(service_account_path):
+            # 로컬 환경: 파일 경로 사용
             os.environ['GOOGLE_APPLICATION_CREDENTIALS'] = service_account_path
-            self.console_log(f"[Lyria Client] 서비스 계정 설정: {service_account_path}")
+            self.console_log(f"[Lyria Client] 서비스 계정 설정 (파일): {service_account_path}")
         
         try:
             # Vertex AI 초기화
