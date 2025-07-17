@@ -20,17 +20,31 @@ from textblob import TextBlob
 import nltk
 
 class MusicAnalyzer:
-    def __init__(self, api_key: str, console_log=None):
+    def __init__(self, api_key: str, console_log=None, enable_db=True):
         """
         YouTube Music Analyzer 초기화
         
         Args:
             api_key: YouTube Data API v3 키
             console_log: 로그 출력 함수
+            enable_db: 데이터베이스 저장 활성화 여부
         """
         self.api_key = api_key
         self.youtube = build('youtube', 'v3', developerKey=api_key)
         self.console_log = console_log or print
+        
+        # 데이터베이스 초기화
+        self.db_manager = None
+        if enable_db:
+            try:
+                from database import DatabaseManager
+                # 프로젝트 루트의 기본 DB 파일 사용
+                db_path = os.path.join(os.getcwd(), 'music_analysis.db')
+                self.db_manager = DatabaseManager(db_path=db_path, console_log=self.console_log)
+                self.console_log("[Music Analyzer] 데이터베이스 연결 완료")
+            except Exception as e:
+                self.console_log(f"[Music Analyzer] 데이터베이스 연결 실패: {str(e)}")
+                self.db_manager = None
         
         # 음악 관련 키워드 사전
         self.music_genres = {
@@ -140,7 +154,7 @@ class MusicAnalyzer:
             self.console_log(f"[Music Analyzer] 비디오 정보 가져오기 오류: {str(e)}")
             return {'success': False, 'error': f'오류: {str(e)}'}
     
-    def get_video_comments(self, video_id: str, max_results: int = 20) -> List[Dict]:
+    def get_video_comments(self, video_id: str, max_results: int = 100) -> List[Dict]:
         """
         비디오 댓글 가져오기
         
@@ -406,6 +420,16 @@ class MusicAnalyzer:
                     'estimated_key': self._estimate_key(mood_analysis['primary_mood']),
                     'energy_level': self._estimate_energy(mood_analysis['primary_mood'])
                 },
+                'comments_data': {
+                    'comments': comments,
+                    'comment_count': len(comments),
+                    'sentiment_analysis': {
+                        'average_sentiment': mood_analysis.get('sentiment_score', 0),
+                        'positive_comments': len([c for c in comments if self._get_comment_sentiment(c['text']) > 0.1]),
+                        'negative_comments': len([c for c in comments if self._get_comment_sentiment(c['text']) < -0.1]),
+                        'neutral_comments': len([c for c in comments if -0.1 <= self._get_comment_sentiment(c['text']) <= 0.1])
+                    }
+                },
                 'analysis_metadata': {
                     'analyzed_at': datetime.now().isoformat(),
                     'comment_count': len(comments),
@@ -415,6 +439,27 @@ class MusicAnalyzer:
             
             self.console_log(f"[Music Analyzer] 분석 완료: {artist_info['artist']} - {artist_info['song']}")
             self.console_log(f"[Music Analyzer] 장르: {genre_analysis['primary_genre']}, 분위기: {mood_analysis['primary_mood']}")
+            
+            # 데이터베이스에 저장
+            if self.db_manager:
+                try:
+                    session_id = self.db_manager.save_analysis_result(analysis_result)
+                    analysis_result['database'] = {
+                        'saved': True,
+                        'session_id': session_id
+                    }
+                    self.console_log(f"[Music Analyzer] 데이터베이스 저장 완료: session_id={session_id}")
+                except Exception as e:
+                    self.console_log(f"[Music Analyzer] 데이터베이스 저장 실패: {str(e)}")
+                    analysis_result['database'] = {
+                        'saved': False,
+                        'error': str(e)
+                    }
+            else:
+                analysis_result['database'] = {
+                    'saved': False,
+                    'error': 'Database not initialized'
+                }
             
             return analysis_result
             
@@ -476,3 +521,11 @@ class MusicAnalyzer:
             'uplifting': 'High'
         }
         return energy_mapping.get(mood, 'Medium')
+    
+    def _get_comment_sentiment(self, text: str) -> float:
+        """개별 댓글의 감성 점수 계산"""
+        try:
+            blob = TextBlob(text)
+            return blob.sentiment.polarity
+        except:
+            return 0.0

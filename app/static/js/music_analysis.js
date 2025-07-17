@@ -75,6 +75,10 @@ class MusicAnalysis {
             statusText.textContent = '✅ 모든 서비스가 준비되었습니다';
             statusText.className = 'status-text success';
             statusSection.className = 'status-section';
+        } else if (status.overall_status === 'analysis_only') {
+            statusText.textContent = '📊 분석 전용 모드 (AI 생성 기능 비활성화)';
+            statusText.className = 'status-text warning';
+            statusSection.className = 'status-section status-warning';
         } else if (status.overall_status === 'partial') {
             statusText.textContent = '⚠️ 일부 서비스만 사용 가능합니다';
             statusText.className = 'status-text warning';
@@ -248,7 +252,11 @@ class MusicAnalysis {
         this.hideProgress();
         this.setButtonsDisabled(false);
         
-        if (result.analysis) {
+        // 분석 전용 모드에서는 result가 직접 분석 결과를 포함
+        if (result.video_info && result.music_analysis) {
+            this.displayAnalysisResults(result);
+        } else if (result.analysis) {
+            // 기존 구조 지원
             this.displayAnalysisResults(result.analysis);
         }
         
@@ -404,7 +412,7 @@ class MusicAnalysis {
     clearResults() {
         // 입력 필드 초기화
         document.getElementById('youtubeUrl').value = '';
-        document.getElementById('generationMode').value = 'analyze_and_generate';
+        document.getElementById('generationMode').value = 'analyze_only';
         document.getElementById('musicStyle').value = 'auto';
         document.getElementById('duration').value = '30';
         document.getElementById('variations').value = '1';
