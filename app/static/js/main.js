@@ -13,6 +13,8 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("[Init] DOM 로드 완료, 이벤트 리스너 설정");
     setupEventListeners();
     updateNavigation();
+    loadGenres();
+    setupMarketAnalysisListeners();
 });
 
 // 이벤트 리스너 설정
@@ -821,5 +823,503 @@ function updateNavigation() {
         }
     });
 }
+
+// ===========================================
+// 탭 관리 기능
+// ===========================================
+
+function showTab(tabName) {
+    console.log(`[Tab] 탭 전환: ${tabName}`);
+    
+    // 모든 탭 버튼에서 active 클래스 제거
+    document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
+    
+    // 모든 탭 컨텐츠 숨김
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+    
+    // 선택된 탭 버튼에 active 클래스 추가
+    event.target.classList.add('active');
+    
+    // 선택된 탭 컨텐츠 표시
+    const tabContent = document.getElementById(tabName + 'Tab');
+    if (tabContent) {
+        tabContent.classList.add('active');
+    }
+}
+
+// ===========================================
+// 시장 분석 기능
+// ===========================================
+
+let marketGenres = [];
+
+// 장르 목록 로드
+async function loadGenres() {
+    try {
+        const response = await fetch('/api/market/genres');
+        const data = await response.json();
+        
+        if (data.success) {
+            marketGenres = data.genres;
+            populateGenreSelects();
+            console.log("[Market] 장르 목록 로드 완료:", data.count, "개");
+        } else {
+            console.error("[Market] 장르 로드 실패:", data.error);
+        }
+    } catch (error) {
+        console.error("[Market] 장르 로드 오류:", error);
+    }
+}
+
+// 장르 선택 요소들 채우기
+function populateGenreSelects() {
+    const genreSelect = document.getElementById('genreSelect');
+    const genreCheckboxes = document.getElementById('genreCheckboxes');
+    
+    if (genreSelect && marketGenres.length > 0) {
+        genreSelect.innerHTML = '<option value="">장르를 선택하세요...</option>';
+        marketGenres.forEach(genre => {
+            const option = document.createElement('option');
+            option.value = genre.id;
+            option.textContent = `${genre.korean} (${genre.english})`;
+            genreSelect.appendChild(option);
+        });
+    }
+    
+    if (genreCheckboxes && marketGenres.length > 0) {
+        genreCheckboxes.innerHTML = '';
+        marketGenres.forEach(genre => {
+            const label = document.createElement('label');
+            label.className = 'checkbox-label';
+            label.innerHTML = `
+                <input type="checkbox" name="compareGenres" value="${genre.id}">
+                <span>${genre.korean} (${genre.english})</span>
+            `;
+            genreCheckboxes.appendChild(label);
+        });
+    }
+}
+
+// 시장 분석 이벤트 리스너 설정
+function setupMarketAnalysisListeners() {
+    // 분석 유형 변경 시
+    document.querySelectorAll('input[name="analysisType"]').forEach(radio => {
+        radio.addEventListener('change', function() {
+            const singleOption = document.getElementById('singleGenreOption');
+            const compareOption = document.getElementById('compareGenreOption');
+            
+            if (this.value === 'single') {
+                singleOption.style.display = 'block';
+                compareOption.style.display = 'none';
+            } else if (this.value === 'compare') {
+                singleOption.style.display = 'none';
+                compareOption.style.display = 'block';
+            } else {
+                singleOption.style.display = 'none';
+                compareOption.style.display = 'none';
+            }
+        });
+    });
+}
+
+// 시장 분석 시작
+async function startMarketAnalysis() {
+    const analysisType = document.querySelector('input[name="analysisType"]:checked').value;
+    const timeframe = document.getElementById('timeframe').value;
+    const geo = document.getElementById('geoRegion').value;
+    
+    console.log(`[Market] 시장 분석 시작: ${analysisType}`);
+    
+    showMarketProgress();
+    
+    try {
+        let result;
+        
+        if (analysisType === 'single') {
+            const genre = document.getElementById('genreSelect').value;
+            if (!genre) {
+                alert('장르를 선택해주세요.');
+                hideMarketProgress();
+                return;
+            }
+            result = await analyzeSingleGenre(genre, timeframe, geo);
+        } else if (analysisType === 'compare') {
+            const selectedGenres = Array.from(document.querySelectorAll('input[name="compareGenres"]:checked'))
+                .map(cb => cb.value);
+            if (selectedGenres.length < 2) {
+                alert('비교할 장르를 2개 이상 선택해주세요.');
+                hideMarketProgress();
+                return;
+            }
+            result = await compareGenres(selectedGenres, timeframe, geo);
+        } else {
+            result = await getMarketOverview(timeframe, geo);
+        }
+        
+        if (result.success) {
+            displayMarketResult(result, analysisType);
+        } else {
+            alert('분석 실패: ' + result.error);
+        }
+    } catch (error) {
+        console.error("[Market] 분석 오류:", error);
+        alert('분석 중 오류가 발생했습니다: ' + error.message);
+    }
+    
+    hideMarketProgress();
+}
+
+// 개별 장르 분석
+async function analyzeSingleGenre(genre, timeframe, geo) {
+    const url = `/api/market/analyze/${genre}?timeframe=${encodeURIComponent(timeframe)}&geo=${geo}`;
+    const response = await fetch(url);
+    return await response.json();
+}
+
+// 장르 비교 분석
+async function compareGenres(genres, timeframe, geo) {
+    const response = await fetch('/api/market/compare', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ genres, timeframe, geo })
+    });
+    return await response.json();
+}
+
+// 전체 시장 개관
+async function getMarketOverview(timeframe, geo) {
+    const url = `/api/market/overview?timeframe=${encodeURIComponent(timeframe)}&geo=${geo}`;
+    const response = await fetch(url);
+    return await response.json();
+}
+
+// 진행 상황 표시
+function showMarketProgress() {
+    document.getElementById('marketProgressSection').style.display = 'block';
+    document.getElementById('marketResultSection').style.display = 'none';
+    document.getElementById('marketProgressText').textContent = '시장 데이터 수집 중...';
+    
+    // 진행바 애니메이션
+    let progress = 0;
+    const progressBar = document.getElementById('marketProgressFill');
+    const interval = setInterval(() => {
+        progress += 2;
+        progressBar.style.width = progress + '%';
+        if (progress >= 90) {
+            clearInterval(interval);
+        }
+    }, 100);
+}
+
+// 진행 상황 숨김
+function hideMarketProgress() {
+    document.getElementById('marketProgressSection').style.display = 'none';
+    document.getElementById('marketProgressFill').style.width = '100%';
+}
+
+// 결과 표시
+function displayMarketResult(result, analysisType) {
+    const resultSection = document.getElementById('marketResultSection');
+    const resultDiv = document.getElementById('marketResult');
+    
+    let html = '';
+    
+    if (analysisType === 'single') {
+        html = formatSingleGenreResult(result);
+    } else if (analysisType === 'compare') {
+        html = formatCompareResult(result);
+    } else {
+        html = formatOverviewResult(result);
+    }
+    
+    resultDiv.innerHTML = html;
+    resultSection.style.display = 'block';
+}
+
+// 개별 장르 결과 포맷
+function formatSingleGenreResult(result) {
+    const genreInfo = marketGenres.find(g => g.id === result.genre);
+    const genreName = genreInfo ? genreInfo.korean : result.genre;
+    
+    const trends = result.trends_data || {};
+    const metrics = result.market_metrics || {};
+    const forecast = result.market_forecast || {};
+    
+    return `
+        <div class="result-card">
+            <h4>📊 ${genreName} 시장 분석</h4>
+            
+            <div class="metrics-grid">
+                <div class="metric-item">
+                    <span class="metric-label">현재 트렌드 점수</span>
+                    <span class="metric-value">${trends.current_score || 0}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">평균 점수</span>
+                    <span class="metric-value">${(trends.average_score || 0).toFixed(1)}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">시장 등급</span>
+                    <span class="metric-value grade-${(metrics.market_grade || 'C').toLowerCase()}">${metrics.market_grade || 'N/A'}</span>
+                </div>
+                <div class="metric-item">
+                    <span class="metric-label">트렌드 방향</span>
+                    <span class="metric-value direction-${trends.trend_direction || 'stable'}">${getTrendIcon(trends.trend_direction)} ${getTrendText(trends.trend_direction)}</span>
+                </div>
+            </div>
+            
+            ${forecast.short_term ? `
+                <div class="forecast-section">
+                    <h5>📅 단기 예측 (1-3개월)</h5>
+                    <p><strong>방향:</strong> ${forecast.short_term.direction} (${forecast.short_term.predicted_change})</p>
+                    <p><strong>신뢰도:</strong> ${forecast.short_term.confidence}</p>
+                </div>
+            ` : ''}
+            
+            ${forecast.long_term ? `
+                <div class="forecast-section">
+                    <h5>🔮 장기 전망 (6-12개월)</h5>
+                    <p><strong>전망:</strong> ${forecast.long_term.outlook}</p>
+                    <p><strong>투자 추천:</strong> ${forecast.long_term.investment_recommendation}</p>
+                    <p><strong>리스크:</strong> ${forecast.long_term.risk_level}</p>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+// 비교 결과 포맷
+function formatCompareResult(result) {
+    const ranking = result.market_ranking || {};
+    const growth = result.growth_analysis || {};
+    
+    return `
+        <div class="result-card">
+            <h4>📊 장르 비교 분석</h4>
+            
+            ${ranking.trends_ranking ? `
+                <div class="ranking-section">
+                    <h5>📈 트렌드 순위</h5>
+                    <ol class="ranking-list">
+                        ${ranking.trends_ranking.map((genre, index) => {
+                            const genreInfo = marketGenres.find(g => g.id === genre);
+                            const genreName = genreInfo ? genreInfo.korean : genre;
+                            return `<li>${genreName}</li>`;
+                        }).join('')}
+                    </ol>
+                </div>
+            ` : ''}
+            
+            ${growth.rising_genres || growth.stable_genres || growth.declining_genres ? `
+                <div class="growth-section">
+                    <h5>📊 성장 분석</h5>
+                    ${growth.rising_genres?.length ? `<p><strong>📈 상승:</strong> ${growth.rising_genres.map(g => getGenreName(g)).join(', ')}</p>` : ''}
+                    ${growth.stable_genres?.length ? `<p><strong>➡️ 안정:</strong> ${growth.stable_genres.map(g => getGenreName(g)).join(', ')}</p>` : ''}
+                    ${growth.declining_genres?.length ? `<p><strong>📉 하락:</strong> ${growth.declining_genres.map(g => getGenreName(g)).join(', ')}</p>` : ''}
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+// 전체 시장 개관 결과 포맷
+function formatOverviewResult(result) {
+    const summary = result.market_summary || {};
+    const insights = result.market_insights || [];
+    const recommendations = result.recommendations || [];
+    
+    return `
+        <div class="result-card">
+            <h4>🌍 전체 음악 시장 개관</h4>
+            
+            <div class="summary-section">
+                <h5>📊 시장 요약</h5>
+                <div class="summary-grid">
+                    <div class="summary-item">
+                        <span class="summary-label">분석 장르 수</span>
+                        <span class="summary-value">${summary.total_genres_analyzed || 0}개</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">지배적 장르</span>
+                        <span class="summary-value">${getGenreName(summary.dominant_genre) || 'N/A'}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">최고 성장</span>
+                        <span class="summary-value">${getGenreName(summary.fastest_growing) || 'N/A'}</span>
+                    </div>
+                    <div class="summary-item">
+                        <span class="summary-label">최고 참여</span>
+                        <span class="summary-value">${getGenreName(summary.most_engaging) || 'N/A'}</span>
+                    </div>
+                </div>
+            </div>
+            
+            ${insights.length ? `
+                <div class="insights-section">
+                    <h5>💡 시장 인사이트</h5>
+                    <ul class="insights-list">
+                        ${insights.map(insight => `<li>${insight}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+            
+            ${recommendations.length ? `
+                <div class="recommendations-section">
+                    <h5>📋 추천사항</h5>
+                    <ul class="recommendations-list">
+                        ${recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        </div>
+    `;
+}
+
+// 헬퍼 함수들
+function getTrendIcon(direction) {
+    switch(direction) {
+        case 'rising': return '📈';
+        case 'falling': return '📉';
+        default: return '➡️';
+    }
+}
+
+function getTrendText(direction) {
+    switch(direction) {
+        case 'rising': return '상승';
+        case 'falling': return '하락';
+        default: return '안정';
+    }
+}
+
+function getGenreName(genreId) {
+    if (!genreId) return null;
+    const genre = marketGenres.find(g => g.id === genreId);
+    return genre ? genre.korean : genreId;
+}
+
+// 분석 초기화
+function resetMarketAnalysis() {
+    document.getElementById('marketResultSection').style.display = 'none';
+    document.getElementById('marketProgressSection').style.display = 'none';
+    
+    // 폼 초기화
+    document.querySelector('input[name="analysisType"][value="single"]').checked = true;
+    document.getElementById('genreSelect').value = '';
+    document.querySelectorAll('input[name="compareGenres"]').forEach(cb => cb.checked = false);
+    document.getElementById('timeframe').value = 'today 3-m';
+    document.getElementById('geoRegion').value = 'KR';
+    
+    // 옵션 표시 상태 리셋
+    document.getElementById('singleGenreOption').style.display = 'block';
+    document.getElementById('compareGenreOption').style.display = 'none';
+}
+
+// 음악 분석 함수
+async function analyzeMusic() {
+    const url = document.getElementById('analysisLinkInput').value.trim();
+    if (!url) {
+        alert('YouTube URL을 입력해주세요.');
+        return;
+    }
+    
+    console.log("[Analysis] 음악 분석 시작:", url);
+    
+    // 진행 상황 표시
+    document.getElementById('analysisProgressSection').style.display = 'block';
+    document.getElementById('analysisResultSection').style.display = 'none';
+    
+    try {
+        const response = await fetch('/api/music-analysis/analyze', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ url })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // 작업 상태 모니터링
+            monitorAnalysisJob(data.job_id);
+        } else {
+            alert('분석 시작 실패: ' + data.error);
+            document.getElementById('analysisProgressSection').style.display = 'none';
+        }
+    } catch (error) {
+        console.error("[Analysis] 분석 오류:", error);
+        alert('분석 중 오류가 발생했습니다: ' + error.message);
+        document.getElementById('analysisProgressSection').style.display = 'none';
+    }
+}
+
+// 분석 작업 모니터링
+function monitorAnalysisJob(jobId) {
+    const interval = setInterval(async () => {
+        try {
+            const response = await fetch(`/api/music-analysis/status/${jobId}`);
+            const data = await response.json();
+            
+            // 진행률 업데이트
+            document.getElementById('analysisProgressFill').style.width = (data.progress || 0) + '%';
+            document.getElementById('analysisProgressText').textContent = data.message || '분석 중...';
+            
+            if (data.status === 'completed') {
+                clearInterval(interval);
+                displayAnalysisResult(data.result);
+                document.getElementById('analysisProgressSection').style.display = 'none';
+            } else if (data.status === 'error') {
+                clearInterval(interval);
+                alert('분석 실패: ' + data.message);
+                document.getElementById('analysisProgressSection').style.display = 'none';
+            }
+        } catch (error) {
+            console.error("[Analysis] 상태 확인 오류:", error);
+            clearInterval(interval);
+        }
+    }, 2000);
+}
+
+// 분석 결과 표시
+function displayAnalysisResult(result) {
+    const resultDiv = document.getElementById('analysisResult');
+    
+    let html = `
+        <div class="result-card">
+            <h4>🎵 ${result.video_info?.title || '분석 결과'}</h4>
+            
+            <div class="video-info">
+                <p><strong>채널:</strong> ${result.video_info?.channel || 'N/A'}</p>
+                <p><strong>조회수:</strong> ${(result.video_info?.view_count || 0).toLocaleString()}</p>
+                <p><strong>좋아요:</strong> ${(result.video_info?.like_count || 0).toLocaleString()}</p>
+            </div>
+            
+            ${result.music_analysis ? `
+                <div class="music-analysis">
+                    <h5>🎼 음악 분석</h5>
+                    <p><strong>장르:</strong> ${result.music_analysis.primary_genre || 'N/A'}</p>
+                    <p><strong>BPM:</strong> ${result.music_analysis.bpm || 'N/A'}</p>
+                    <p><strong>감정:</strong> ${result.music_analysis.mood || 'N/A'}</p>
+                </div>
+            ` : ''}
+            
+            ${result.comments_analysis ? `
+                <div class="comments-analysis">
+                    <h5>💬 댓글 분석</h5>
+                    <p><strong>댓글 수:</strong> ${result.comments_analysis.total_comments}개</p>
+                    <p><strong>평균 감성:</strong> ${(result.comments_analysis.average_sentiment || 0).toFixed(2)}</p>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    resultDiv.innerHTML = html;
+    document.getElementById('analysisResultSection').style.display = 'block';
+}
+
+// 전역 함수로 노출
+window.showTab = showTab;
+window.startMarketAnalysis = startMarketAnalysis;
+window.resetMarketAnalysis = resetMarketAnalysis;
+window.analyzeMusic = analyzeMusic;
 
 console.log("[Music Merger] 모든 함수 정의 완료");

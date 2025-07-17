@@ -2,6 +2,15 @@
 
 {% block content %}
 <div class="app-wrapper">
+    <!-- 네비게이션 탭 -->
+    <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="showTab('upload')">🎵 음악 합치기</button>
+        <button class="nav-tab" onclick="showTab('analysis')">📊 음악 분석</button>
+        <button class="nav-tab" onclick="showTab('market')">📈 시장 분석</button>
+    </nav>
+
+    <!-- 음악 합치기 탭 -->
+    <div id="uploadTab" class="tab-content active">
     <!-- 파일 업로드 영역 -->
     <section class="upload-section">
         <div class="upload-area" id="uploadArea">
@@ -149,6 +158,134 @@
             </button>
         </div>
     </section>
+    </div>
+
+    <!-- 음악 분석 탭 -->
+    <div id="analysisTab" class="tab-content">
+        <section class="analysis-section">
+            <div class="analysis-area">
+                <div class="upload-icon">🎵</div>
+                <h2>YouTube 음악 분석</h2>
+                <p>YouTube 링크를 입력하여 음악을 분석하세요</p>
+                <div class="link-input-group">
+                    <input type="url" id="analysisLinkInput" placeholder="https://youtube.com/watch?v=..." class="link-input">
+                    <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeMusic()">
+                        🔍 분석하기
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 분석 진행 상황 -->
+        <section class="analysis-progress-section" id="analysisProgressSection" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="analysisProgressFill"></div>
+            </div>
+            <p class="progress-text" id="analysisProgressText">분석 중...</p>
+        </section>
+
+        <!-- 분석 결과 -->
+        <section class="analysis-result-section" id="analysisResultSection" style="display: none;">
+            <h3>✅ 분석 완료!</h3>
+            <div class="analysis-result" id="analysisResult"></div>
+        </section>
+    </div>
+
+    <!-- 시장 분석 탭 -->
+    <div id="marketTab" class="tab-content">
+        <section class="market-section">
+            <div class="market-header">
+                <div class="upload-icon">📈</div>
+                <h2>음악 시장 분석</h2>
+                <p>장르별 트렌드와 시장 데이터를 분석하세요</p>
+            </div>
+
+            <!-- 분석 옵션 -->
+            <div class="market-options">
+                <div class="option-group">
+                    <h3>분석 유형</h3>
+                    <div class="radio-group">
+                        <label class="radio-label">
+                            <input type="radio" name="analysisType" value="single" checked>
+                            <span>개별 장르 분석</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="analysisType" value="compare">
+                            <span>장르 비교 분석</span>
+                        </label>
+                        <label class="radio-label">
+                            <input type="radio" name="analysisType" value="overview">
+                            <span>전체 시장 개관</span>
+                        </label>
+                    </div>
+                </div>
+
+                <!-- 단일 장르 분석 -->
+                <div class="option-group" id="singleGenreOption">
+                    <h3>장르 선택</h3>
+                    <select id="genreSelect" class="form-select">
+                        <option value="">장르를 선택하세요...</option>
+                    </select>
+                </div>
+
+                <!-- 장르 비교 분석 -->
+                <div class="option-group" id="compareGenreOption" style="display: none;">
+                    <h3>비교할 장르들 (2-5개)</h3>
+                    <div class="genre-checkboxes" id="genreCheckboxes"></div>
+                </div>
+
+                <!-- 분석 설정 -->
+                <div class="option-group">
+                    <h3>분석 설정</h3>
+                    <div class="settings-row">
+                        <div class="setting-item">
+                            <label for="timeframe">분석 기간:</label>
+                            <select id="timeframe" class="form-select">
+                                <option value="today 1-m">최근 1개월</option>
+                                <option value="today 3-m" selected>최근 3개월</option>
+                                <option value="today 12-m">최근 1년</option>
+                            </select>
+                        </div>
+                        <div class="setting-item">
+                            <label for="geoRegion">지역:</label>
+                            <select id="geoRegion" class="form-select">
+                                <option value="KR" selected>대한민국</option>
+                                <option value="US">미국</option>
+                                <option value="">전세계</option>
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 분석 실행 버튼 -->
+                <div class="option-group">
+                    <button class="btn btn-success btn-large" id="marketAnalyzeBtn" onclick="startMarketAnalysis()">
+                        📊 시장 분석 시작
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 시장 분석 진행 상황 -->
+        <section class="market-progress-section" id="marketProgressSection" style="display: none;">
+            <h3>📊 시장 분석 중...</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="marketProgressFill"></div>
+            </div>
+            <p class="progress-text" id="marketProgressText">분석 준비 중...</p>
+        </section>
+
+        <!-- 시장 분석 결과 -->
+        <section class="market-result-section" id="marketResultSection" style="display: none;">
+            <h3>✅ 시장 분석 완료!</h3>
+            <div class="market-result" id="marketResult"></div>
+            <div class="result-actions">
+                <button class="btn btn-secondary" onclick="resetMarketAnalysis()">
+                    새 분석
+                </button>
+            </div>
+        </section>
+    </div>
 </div>
 
 <!-- 파일 아이템 템플릿 -->

@@ -1,5 +1,365 @@
 /* Music Merger - 메인 스타일시트 */
 
+/* ===========================================
+   탭 네비게이션 스타일
+   ========================================== */
+
+.nav-tabs {
+    display: flex;
+    background: var(--surface);
+    border-radius: 12px;
+    padding: 8px;
+    margin-bottom: var(--spacing-lg);
+    box-shadow: var(--shadow-sm);
+    gap: 4px;
+}
+
+.nav-tab {
+    flex: 1;
+    padding: 12px 20px;
+    border: none;
+    background: transparent;
+    color: var(--text-secondary);
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    font-size: 14px;
+}
+
+.nav-tab:hover {
+    background: var(--background);
+    color: var(--text-primary);
+}
+
+.nav-tab.active {
+    background: var(--primary-color);
+    color: white;
+    box-shadow: var(--shadow-sm);
+}
+
+/* 탭 컨텐츠 스타일 */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ===========================================
+   시장 분석 UI 스타일
+   ========================================== */
+
+.market-section {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--border);
+}
+
+.market-header {
+    text-align: center;
+    margin-bottom: var(--spacing-xl);
+}
+
+.market-options {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-lg);
+}
+
+.option-group {
+    background: var(--background);
+    border-radius: 8px;
+    padding: var(--spacing-lg);
+    border: 1px solid var(--border);
+}
+
+.option-group h3 {
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.radio-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.radio-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    transition: background 0.2s ease;
+}
+
+.radio-label:hover {
+    background: var(--surface);
+}
+
+.radio-label input[type="radio"] {
+    margin: 0;
+}
+
+.genre-checkboxes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-sm);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-sm);
+    cursor: pointer;
+    padding: 8px 12px;
+    border-radius: 6px;
+    border: 1px solid var(--border);
+    transition: all 0.2s ease;
+}
+
+.checkbox-label:hover {
+    background: var(--surface);
+    border-color: var(--primary-color);
+}
+
+.checkbox-label input[type="checkbox"]:checked + span {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.settings-row {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.setting-item {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.setting-item label {
+    font-weight: 500;
+    color: var(--text-secondary);
+}
+
+.form-select {
+    padding: 10px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    background: var(--surface);
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px var(--primary-color)33;
+}
+
+/* ===========================================
+   분석 결과 스타일
+   ========================================== */
+
+.result-card {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--border);
+    margin: var(--spacing-lg) 0;
+}
+
+.result-card h4 {
+    margin: 0 0 var(--spacing-lg) 0;
+    color: var(--text-primary);
+    border-bottom: 2px solid var(--border);
+    padding-bottom: var(--spacing-md);
+}
+
+.metrics-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+    margin-bottom: var(--spacing-lg);
+}
+
+.metric-item {
+    background: var(--background);
+    padding: var(--spacing-md);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.metric-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+    font-weight: 500;
+}
+
+.metric-value {
+    display: block;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-primary);
+}
+
+.metric-value.grade-a {
+    color: #22c55e;
+}
+
+.metric-value.grade-b {
+    color: #3b82f6;
+}
+
+.metric-value.grade-c {
+    color: #f59e0b;
+}
+
+.metric-value.direction-rising {
+    color: #22c55e;
+}
+
+.metric-value.direction-falling {
+    color: #ef4444;
+}
+
+.metric-value.direction-stable {
+    color: #6b7280;
+}
+
+.forecast-section {
+    background: var(--background);
+    padding: var(--spacing-md);
+    border-radius: 8px;
+    margin: var(--spacing-md) 0;
+    border-left: 4px solid var(--primary-color);
+}
+
+.forecast-section h5 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--text-primary);
+    font-size: 14px;
+}
+
+.forecast-section p {
+    margin: var(--spacing-xs) 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
+.ranking-section, .growth-section, .summary-section, .insights-section, .recommendations-section {
+    margin: var(--spacing-lg) 0;
+}
+
+.ranking-section h5, .growth-section h5, .summary-section h5, .insights-section h5, .recommendations-section h5 {
+    margin: 0 0 var(--spacing-md) 0;
+    color: var(--text-primary);
+    font-size: 16px;
+    font-weight: 600;
+}
+
+.ranking-list {
+    background: var(--background);
+    padding: var(--spacing-md);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.ranking-list li {
+    padding: var(--spacing-xs) 0;
+    font-weight: 500;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.summary-item {
+    background: var(--background);
+    padding: var(--spacing-md);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+    text-align: center;
+}
+
+.summary-label {
+    display: block;
+    font-size: 12px;
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.summary-value {
+    display: block;
+    font-size: 16px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.insights-list, .recommendations-list {
+    background: var(--background);
+    padding: var(--spacing-md);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.insights-list li, .recommendations-list li {
+    padding: var(--spacing-xs) 0;
+    color: var(--text-secondary);
+    line-height: 1.5;
+}
+
+/* 음악 분석 스타일 */
+.analysis-section {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: var(--spacing-xl);
+    box-shadow: var(--shadow-md);
+    border: 2px solid var(--border);
+}
+
+.analysis-area {
+    text-align: center;
+    padding: var(--spacing-xl);
+}
+
+.video-info, .music-analysis, .comments-analysis {
+    background: var(--background);
+    padding: var(--spacing-md);
+    border-radius: 8px;
+    margin: var(--spacing-md) 0;
+    border: 1px solid var(--border);
+}
+
+.video-info h5, .music-analysis h5, .comments-analysis h5 {
+    margin: 0 0 var(--spacing-sm) 0;
+    color: var(--text-primary);
+    font-size: 14px;
+    font-weight: 600;
+}
+
+.video-info p, .music-analysis p, .comments-analysis p {
+    margin: var(--spacing-xs) 0;
+    font-size: 14px;
+    color: var(--text-secondary);
+}
+
 /* 동영상 생성 섹션 스타일 */
 .video-section {
     background: var(--surface);
