@@ -35,7 +35,8 @@
       "Bash(claude mcp:*)",
       "Bash(render services list)",
       "Bash(brew install:*)",
-      "Bash(render auth login)"
+      "Bash(render auth login)",
+      "Bash(pip3 list:*)"
     ],
     "deny": []
   }
