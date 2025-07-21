@@ -19,6 +19,7 @@ from keyword_trend_analyzer import KeywordTrendAnalyzer
 from comment_trend_analyzer import CommentTrendAnalyzer
 from trends_analyzer import TrendsAnalyzer
 from database import DatabaseManager
+from youtube_chart_collector import YouTubeChartCollector
 
 class MusicTrendAnalyzerV2:
     def __init__(self, console_log=None):
@@ -72,6 +73,13 @@ class MusicTrendAnalyzerV2:
         except Exception as e:
             self.console_log(f"[TrendV2] 데이터베이스 매니저 초기화 실패: {str(e)}")
             self.db_manager = None
+        
+        try:
+            self.youtube_chart_collector = YouTubeChartCollector(console_log=self.console_log)
+            self.console_log("[TrendV2] YouTube 차트 수집기 초기화 완료")
+        except Exception as e:
+            self.console_log(f"[TrendV2] YouTube 차트 수집기 초기화 실패: {str(e)}")
+            self.youtube_chart_collector = None
         
         # 분석 설정
         self.analysis_config = {
@@ -334,16 +342,32 @@ class MusicTrendAnalyzerV2:
             return {'success': False, 'error': str(e)}
     
     def _collect_spotify_chart_data(self) -> Dict:
-        """스포티파이 차트 데이터 수집 (기본 시작점)"""
+        """차트 데이터 수집 (YouTube 우선, Spotify 대체, Mock 최종)"""
         try:
             chart_result = {'success': True, 'chart_tracks': [], 'audio_features': {}}
             
-            # 실제 API 호출 시도 후 실패하면 Mock 데이터 사용
+            # 1. YouTube 차트 데이터 시도
+            all_tracks = []
+            if self.youtube_chart_collector:
+                self.console_log("[TrendV2] YouTube 차트 데이터 수집 시도")
+                regions = ['korea', 'global']
+                
+                for region in regions:
+                    youtube_data = self.youtube_chart_collector.collect_chart_data(region, 25)
+                    if youtube_data['success']:
+                        all_tracks.extend(youtube_data['chart_tracks'])
+                
+                if all_tracks:
+                    self.console_log(f"[TrendV2] YouTube 차트 데이터 수집 성공: {len(all_tracks)}개 트랙")
+                    chart_result['chart_tracks'] = all_tracks
+                    chart_result['data_source'] = 'youtube'
+                    return chart_result
+            
+            # 2. Spotify 차트 데이터 시도 (YouTube 실패 시)
+            self.console_log("[TrendV2] YouTube 실패, Spotify 차트 데이터 시도")
             regions = ['korea', 'global']
             
-            all_tracks = []
             for region in regions:
-                # Top 50 차트 수집
                 tracks_data = self.spotify_connector.get_trending_tracks(
                     region=region,
                     playlist_type='top',
@@ -358,28 +382,33 @@ class MusicTrendAnalyzerV2:
                         track['chart_type'] = 'top_50'
                     all_tracks.extend(tracks)
             
-            # 만약 실제 데이터가 없다면 Mock 데이터 사용
-            if not all_tracks:
-                self.console_log("[TrendV2] Spotify API 데이터가 없어서 Mock 차트 데이터 사용")
-                all_tracks = self._generate_mock_chart_data()
-            
-            chart_result['chart_tracks'] = all_tracks
-            
-            # 상위 20개 트랙의 오디오 특성 분석 (Mock 데이터에서는 생략)
-            if all_tracks and all_tracks[0].get('id', '').startswith('real_'):  # 실제 데이터인 경우만
+            if all_tracks:
+                chart_result['chart_tracks'] = all_tracks
+                chart_result['data_source'] = 'spotify'
+                
+                # 상위 20개 트랙의 오디오 특성 분석
                 track_ids = [track['id'] for track in all_tracks[:20]]
                 audio_features = self.spotify_connector.get_audio_features(track_ids)
                 if audio_features['success']:
                     chart_result['audio_features'] = audio_features
+                
+                self.console_log(f"[TrendV2] Spotify 차트 데이터 수집 성공: {len(all_tracks)}개 트랙")
+                return chart_result
             
-            self.console_log(f"[TrendV2] Spotify 차트 데이터 수집 완료: {len(all_tracks)}개 트랙")
+            # 3. 모든 API 실패 시 빈 데이터 반환
+            self.console_log("[TrendV2] 모든 API 실패, 차트 데이터 없음")
+            chart_result['chart_tracks'] = []
+            chart_result['data_source'] = 'unavailable'
+            chart_result['success'] = False
+            chart_result['error'] = '모든 API 연결 실패'
+            
+            self.console_log("[TrendV2] 차트 데이터 수집 실패")
             return chart_result
             
         except Exception as e:
-            self.console_log(f"[TrendV2] Spotify 차트 데이터 수집 오류: {str(e)}")
-            # 오류 발생 시에도 Mock 데이터 반환
-            mock_tracks = self._generate_mock_chart_data()
-            return {'success': True, 'chart_tracks': mock_tracks, 'audio_features': {}}
+            self.console_log(f"[TrendV2] 차트 데이터 수집 오류: {str(e)}")
+            # 오류 발생 시 빈 데이터 반환
+            return {'success': False, 'chart_tracks': [], 'data_source': 'error', 'error': str(e)}
     
     def _collect_reddit_reactions_for_tracks(self, tracks: List[Dict]) -> Dict:
         """차트 곡들에 대한 Reddit 반응 수집"""
@@ -454,31 +483,10 @@ class MusicTrendAnalyzerV2:
                     'total_comments': 0
                 }
                 
-                # YouTube API가 없으므로 간단한 mock 데이터 생성
-                # 실제 구현 시 YouTube API 연동 필요
-                mock_comments = [
-                    {
-                        'text': f"{track_title} is amazing! Love this song",
-                        'likes': 150,
-                        'timestamp': '2 days ago',
-                        'author': 'MusicLover123'
-                    },
-                    {
-                        'text': f"{artist_name} never disappoints! This is a banger",
-                        'likes': 89,
-                        'timestamp': '1 day ago',
-                        'author': 'KpopFan456'
-                    },
-                    {
-                        'text': f"The vocals in {track_title} are insane",
-                        'likes': 234,
-                        'timestamp': '3 hours ago',
-                        'author': 'VocalAnalyst'
-                    }
-                ]
-                
-                track_comment['comments'] = mock_comments
-                track_comment['total_comments'] = len(mock_comments)
+                # YouTube 댓글 데이터 없음 (실제 API 연동 필요)
+                track_comment['comments'] = []
+                track_comment['total_comments'] = 0
+                track_comment['error'] = 'YouTube 댓글 API 연동 필요'
                 
                 comments_result['track_comments'].append(track_comment)
             
@@ -568,76 +576,6 @@ class MusicTrendAnalyzerV2:
             self.console_log(f"[TrendV2] 대표 댓글 추출 오류: {str(e)}")
             return []
     
-    def _generate_mock_chart_data(self) -> List[Dict]:
-        """Mock 차트 데이터 생성 (API 실패 시 사용)"""
-        try:
-            # 한국 차트 Mock 데이터
-            korea_tracks = [
-                {'id': 'mock_kr_1', 'name': 'Spicy', 'main_artist': 'aespa', 'popularity': 92, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_2', 'name': 'UNFORGIVEN (feat. Nile Rodgers)', 'main_artist': 'LE SSERAFIM', 'popularity': 89, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_3', 'name': 'New Jeans', 'main_artist': 'NewJeans', 'popularity': 87, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_4', 'name': 'GODS', 'main_artist': 'NewJeans', 'popularity': 85, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_5', 'name': 'Seven (feat. Latto)', 'main_artist': 'Jung Kook', 'popularity': 84, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_6', 'name': 'ISTJ', 'main_artist': 'NMIXX', 'popularity': 82, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_7', 'name': 'Queencard', 'main_artist': '(G)I-DLE', 'popularity': 80, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_8', 'name': 'Eve, Psyche & The Bluebeard\'s wife', 'main_artist': 'LE SSERAFIM', 'popularity': 78, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_9', 'name': 'Perfect Night', 'main_artist': 'LE SSERAFIM', 'popularity': 76, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_10', 'name': 'Drama', 'main_artist': 'aespa', 'popularity': 74, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_11', 'name': 'Fast Forward', 'main_artist': 'NewJeans', 'popularity': 72, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_12', 'name': 'LALALALA', 'main_artist': 'Stray Kids', 'popularity': 70, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_13', 'name': 'S-Class', 'main_artist': 'Stray Kids', 'popularity': 68, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_14', 'name': 'Super Shy', 'main_artist': 'NewJeans', 'popularity': 66, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_15', 'name': 'Get Up', 'main_artist': 'NewJeans', 'popularity': 64, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_16', 'name': 'Cruel Summer', 'main_artist': 'Taylor Swift', 'popularity': 62, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_17', 'name': 'Paint The Town Red', 'main_artist': 'Doja Cat', 'popularity': 60, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_18', 'name': '사랑은 늘 도망가', 'main_artist': '임영웅', 'popularity': 58, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_19', 'name': 'Polaroid Love', 'main_artist': 'ENHYPEN', 'popularity': 56, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_20', 'name': 'After LIKE', 'main_artist': 'IVE', 'popularity': 54, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_21', 'name': 'LOVE DIVE', 'main_artist': 'IVE', 'popularity': 52, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_22', 'name': 'OMG', 'main_artist': 'NewJeans', 'popularity': 50, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_23', 'name': 'Hype Boy', 'main_artist': 'NewJeans', 'popularity': 48, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_24', 'name': 'Attention', 'main_artist': 'NewJeans', 'popularity': 46, 'chart_region': 'korea', 'chart_type': 'top_50'},
-                {'id': 'mock_kr_25', 'name': 'Cookie', 'main_artist': 'NewJeans', 'popularity': 44, 'chart_region': 'korea', 'chart_type': 'top_50'}
-            ]
-            
-            # 글로벌 차트 Mock 데이터
-            global_tracks = [
-                {'id': 'mock_gl_1', 'name': 'Cruel Summer', 'main_artist': 'Taylor Swift', 'popularity': 95, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_2', 'name': 'Paint The Town Red', 'main_artist': 'Doja Cat', 'popularity': 93, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_3', 'name': 'Flowers', 'main_artist': 'Miley Cyrus', 'popularity': 91, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_4', 'name': 'As It Was', 'main_artist': 'Harry Styles', 'popularity': 89, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_5', 'name': 'Anti-Hero', 'main_artist': 'Taylor Swift', 'popularity': 87, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_6', 'name': 'Seven (feat. Latto)', 'main_artist': 'Jung Kook', 'popularity': 85, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_7', 'name': 'vampire', 'main_artist': 'Olivia Rodrigo', 'popularity': 83, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_8', 'name': 'Blinding Lights', 'main_artist': 'The Weeknd', 'popularity': 81, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_9', 'name': 'Shivers', 'main_artist': 'Ed Sheeran', 'popularity': 79, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_10', 'name': 'Bad Habit', 'main_artist': 'Steve Lacy', 'popularity': 77, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_11', 'name': 'Stay', 'main_artist': 'The Kid LAROI, Justin Bieber', 'popularity': 75, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_12', 'name': 'Shape of You', 'main_artist': 'Ed Sheeran', 'popularity': 73, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_13', 'name': 'Watermelon Sugar', 'main_artist': 'Harry Styles', 'popularity': 71, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_14', 'name': 'Levitating', 'main_artist': 'Dua Lipa', 'popularity': 69, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_15', 'name': 'Good 4 U', 'main_artist': 'Olivia Rodrigo', 'popularity': 67, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_16', 'name': 'Starboy', 'main_artist': 'The Weeknd', 'popularity': 65, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_17', 'name': 'Peaches', 'main_artist': 'Justin Bieber', 'popularity': 63, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_18', 'name': 'Unholy', 'main_artist': 'Sam Smith', 'popularity': 61, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_19', 'name': 'Heat Waves', 'main_artist': 'Glass Animals', 'popularity': 59, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_20', 'name': 'Industry Baby', 'main_artist': 'Lil Nas X', 'popularity': 57, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_21', 'name': 'Somebody That I Used to Know', 'main_artist': 'Gotye', 'popularity': 55, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_22', 'name': 'Sunflower', 'main_artist': 'Post Malone', 'popularity': 53, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_23', 'name': 'Circles', 'main_artist': 'Post Malone', 'popularity': 51, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_24', 'name': 'Lucid Dreams', 'main_artist': 'Juice WRLD', 'popularity': 49, 'chart_region': 'global', 'chart_type': 'top_50'},
-                {'id': 'mock_gl_25', 'name': 'Perfect', 'main_artist': 'Ed Sheeran', 'popularity': 47, 'chart_region': 'global', 'chart_type': 'top_50'}
-            ]
-            
-            # 모든 트랙 합치기
-            all_tracks = korea_tracks + global_tracks
-            
-            self.console_log(f"[TrendV2] Mock 차트 데이터 생성 완료: {len(all_tracks)}개 트랙")
-            return all_tracks
-            
-        except Exception as e:
-            self.console_log(f"[TrendV2] Mock 데이터 생성 오류: {str(e)}")
-            return []
     
     def _get_reddit_post_comments(self, post_id: str) -> List[Dict]:
         """Reddit 게시물 댓글 수집"""

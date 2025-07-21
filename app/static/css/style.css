@@ -1445,6 +1445,25 @@ body {
     line-height: 1.4;
 }
 
+/* 데이터 없음 표시 */
+.no-data {
+    text-align: center;
+    padding: var(--spacing-xl);
+    color: var(--text-secondary);
+    font-size: 1.1em;
+    background: var(--surface);
+    border-radius: 8px;
+    border: 2px dashed var(--border);
+    margin: var(--spacing-md) 0;
+}
+
+.no-data::before {
+    content: "📭";
+    display: block;
+    font-size: 2em;
+    margin-bottom: var(--spacing-md);
+}
+
 /* 반응형 디자인 */
 @media (max-width: 768px) {
     .main-content {
