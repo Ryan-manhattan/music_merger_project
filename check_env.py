@@ -19,7 +19,11 @@ def check_env_setup():
     required_vars = {
         'YOUTUBE_API_KEY': 'YouTube Data API v3 키',
         'GOOGLE_CLOUD_PROJECT_ID': 'Google Cloud 프로젝트 ID',
-        'GOOGLE_APPLICATION_CREDENTIALS': '서비스 계정 JSON 파일 경로'
+        'GOOGLE_APPLICATION_CREDENTIALS': '서비스 계정 JSON 파일 경로',
+        'REDDIT_CLIENT_ID': 'Reddit API Client ID',
+        'REDDIT_CLIENT_SECRET': 'Reddit API Client Secret',
+        'SPOTIFY_CLIENT_ID': 'Spotify API Client ID',
+        'SPOTIFY_CLIENT_SECRET': 'Spotify API Client Secret'
     }
     
     # 선택적 환경 변수
@@ -119,6 +123,49 @@ def test_api_connections():
             print(f"❌ Google Cloud Vertex AI: 연결 실패 - {str(e)}")
     else:
         print("⚠️  Google Cloud Vertex AI: 설정 없음")
+    
+    # Reddit API 테스트
+    reddit_client_id = os.getenv('REDDIT_CLIENT_ID')
+    reddit_client_secret = os.getenv('REDDIT_CLIENT_SECRET')
+    
+    if reddit_client_id and reddit_client_secret:
+        try:
+            import praw
+            reddit = praw.Reddit(
+                client_id=reddit_client_id,
+                client_secret=reddit_client_secret,
+                user_agent=os.getenv('REDDIT_USER_AGENT', 'MusicTrendAnalyzer/1.0')
+            )
+            # 간단한 테스트 - 읽기 전용 액세스 확인
+            reddit.auth.limits
+            print("✅ Reddit API: 연결 성공")
+        except Exception as e:
+            print(f"❌ Reddit API: 연결 실패 - {str(e)}")
+    else:
+        print("⚠️  Reddit API: 설정 없음")
+    
+    # Spotify API 테스트
+    spotify_client_id = os.getenv('SPOTIFY_CLIENT_ID')
+    spotify_client_secret = os.getenv('SPOTIFY_CLIENT_SECRET')
+    
+    if spotify_client_id and spotify_client_secret:
+        try:
+            import spotipy
+            from spotipy.oauth2 import SpotifyClientCredentials
+            
+            auth_manager = SpotifyClientCredentials(
+                client_id=spotify_client_id,
+                client_secret=spotify_client_secret
+            )
+            sp = spotipy.Spotify(auth_manager=auth_manager)
+            
+            # 간단한 검색 테스트
+            results = sp.search(q='test', type='track', limit=1)
+            print("✅ Spotify API: 연결 성공")
+        except Exception as e:
+            print(f"❌ Spotify API: 연결 실패 - {str(e)}")
+    else:
+        print("⚠️  Spotify API: 설정 없음")
 
 def main():
     """메인 실행 함수"""

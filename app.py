@@ -29,6 +29,7 @@ from music_service import MusicService
 from database import DatabaseManager
 from trends_analyzer import TrendsAnalyzer
 from market_analyzer import MusicMarketAnalyzer
+from emotion_playlist_generator import EmotionPlaylistGenerator
 
 # Flask 앱 초기화 (Windows 경로 대응)
 app = Flask(__name__, 
@@ -103,6 +104,23 @@ except Exception as e:
     market_analyzer = None
     console.log(f"시장 분석기 초기화 실패: {str(e)}")
 
+# Music Trend Analyzer V2 초기화
+try:
+    from music_trend_analyzer_v2 import MusicTrendAnalyzerV2
+    trend_analyzer_v2 = MusicTrendAnalyzerV2(console_log=lambda msg: console.log(msg))
+    console.log("Music Trend Analyzer V2 초기화 완료")
+except Exception as e:
+    trend_analyzer_v2 = None
+    console.log(f"Music Trend Analyzer V2 초기화 실패: {str(e)}")
+
+# 감정 플레이리스트 생성기 초기화
+try:
+    emotion_playlist_generator = EmotionPlaylistGenerator(console_log=lambda msg: console.log(msg))
+    console.log("감정 플레이리스트 생성기 초기화 완료")
+except Exception as e:
+    emotion_playlist_generator = None
+    console.log(f"감정 플레이리스트 생성기 초기화 실패: {str(e)}")
+
 # 음악 분석 작업 저장소
 music_analysis_jobs = {}
 
@@ -133,6 +151,13 @@ def music_analysis():
     """음악 분석 페이지"""
     console.log("[Route] /music-analysis - 음악 분석 페이지 요청")
     return render_template('music_analysis.html')
+
+
+@app.route('/emotion-playlist')
+def emotion_playlist():
+    """감정 플레이리스트 페이지"""
+    console.log("[Route] /emotion-playlist - 감정 플레이리스트 페이지 요청")
+    return render_template('emotion_playlist.html')
 
 
 @app.route('/upload', methods=['POST'])
@@ -1279,6 +1304,325 @@ def generate_music_job(job_id, url, options):
         console.log(f"[Generate Job] {job_id} - 오류 발생: {str(e)}")
         music_analysis_jobs[job_id]['status'] = 'error'
         music_analysis_jobs[job_id]['message'] = f'오류: {str(e)}'
+
+
+# ============================================================================
+# Music Trend Analyzer V2 API 엔드포인트
+# ============================================================================
+
+@app.route('/api/trends/v2/status')
+def trend_analyzer_v2_status():
+    """Music Trend Analyzer V2 시스템 상태 확인"""
+    console.log("[Route] /api/trends/v2/status - V2 시스템 상태 확인")
+    
+    try:
+        if not trend_analyzer_v2:
+            return jsonify({
+                'success': False,
+                'error': 'Music Trend Analyzer V2가 초기화되지 않았습니다'
+            }), 500
+        
+        status = trend_analyzer_v2.get_system_status()
+        
+        return jsonify({
+            'success': True,
+            'system_status': status,
+            'version': 'v2.0',
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        console.log(f"[Route] V2 상태 확인 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/trends/v2/analyze', methods=['POST'])
+def trend_analyzer_v2_comprehensive():
+    """종합 음악 트렌드 분석"""
+    console.log("[Route] /api/trends/v2/analyze - 종합 트렌드 분석")
+    
+    try:
+        if not trend_analyzer_v2:
+            return jsonify({
+                'success': False,
+                'error': 'Music Trend Analyzer V2가 초기화되지 않았습니다'
+            }), 500
+        
+        data = request.get_json() or {}
+        
+        # 요청 파라미터 추출
+        categories = data.get('categories', ['kpop', 'hiphop', 'pop', 'rock', 'ballad'])
+        include_reddit = data.get('include_reddit', True)
+        include_spotify = data.get('include_spotify', True)
+        include_comments = data.get('include_comments', True)
+        
+        console.log(f"[Route] 분석 카테고리: {categories}")
+        
+        # 종합 트렌드 분석 실행
+        result = trend_analyzer_v2.analyze_current_music_trends(
+            categories=categories,
+            include_reddit=include_reddit,
+            include_spotify=include_spotify,
+            include_comments=include_comments
+        )
+        
+        if result.get('success'):
+            console.log("[Route] 종합 트렌드 분석 완료")
+            return jsonify(result)
+        else:
+            console.log(f"[Route] 종합 트렌드 분석 실패: {result.get('error')}")
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            }), 500
+            
+    except Exception as e:
+        console.log(f"[Route] 종합 트렌드 분석 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/spotify/charts')
+def get_spotify_charts():
+    """Spotify 차트 데이터만 가져오기"""
+    try:
+        if not trend_analyzer_v2:
+            return jsonify({'success': False, 'error': 'Music Trend Analyzer V2가 초기화되지 않았습니다'}), 500
+        
+        # Spotify 차트 데이터만 수집
+        chart_data = trend_analyzer_v2._collect_spotify_chart_data()
+        
+        if chart_data['success']:
+            return jsonify({
+                'success': True,
+                'timestamp': datetime.now().isoformat(),
+                'chart_data': chart_data,
+                'total_tracks': len(chart_data.get('chart_tracks', []))
+            })
+        else:
+            return jsonify({'success': False, 'error': chart_data.get('error', '차트 데이터 수집 실패')}), 500
+            
+    except Exception as e:
+        console.log(f"[API] Spotify 차트 API 오류: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/charts')
+def charts_page():
+    """Spotify 차트 전용 페이지"""
+    return render_template('charts.html')
+
+@app.route('/api/trends/v2/keywords', methods=['POST'])
+def trend_analyzer_v2_keywords():
+    """키워드 트렌드 검색 분석"""
+    console.log("[Route] /api/trends/v2/keywords - 키워드 트렌드 검색")
+    
+    try:
+        if not trend_analyzer_v2:
+            return jsonify({
+                'success': False,
+                'error': 'Music Trend Analyzer V2가 초기화되지 않았습니다'
+            }), 500
+        
+        data = request.get_json()
+        if not data or 'query' not in data:
+            return jsonify({
+                'success': False,
+                'error': '검색 키워드(query)가 필요합니다'
+            }), 400
+        
+        query = data['query']
+        deep_analysis = data.get('deep_analysis', True)
+        
+        console.log(f"[Route] 키워드 검색: {query}")
+        
+        # 키워드 트렌드 분석 실행
+        result = trend_analyzer_v2.search_trending_keywords(
+            query=query,
+            deep_analysis=deep_analysis
+        )
+        
+        if result.get('success'):
+            console.log(f"[Route] 키워드 검색 완료: {len(result.get('sources_analyzed', []))}개 소스")
+            return jsonify(result)
+        else:
+            console.log(f"[Route] 키워드 검색 실패: {result.get('error')}")
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            }), 500
+            
+    except Exception as e:
+        console.log(f"[Route] 키워드 검색 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+# === 감정 플레이리스트 API 엔드포인트 ===
+
+@app.route('/api/emotion-playlist/status')
+def emotion_playlist_status():
+    """감정 플레이리스트 생성기 상태 확인"""
+    console.log("[Route] /api/emotion-playlist/status - 상태 확인")
+    
+    try:
+        if not emotion_playlist_generator:
+            return jsonify({
+                'success': False,
+                'error': '감정 플레이리스트 생성기가 초기화되지 않았습니다'
+            }), 500
+        
+        status = emotion_playlist_generator.get_api_status()
+        return jsonify({
+            'success': True,
+            'status': status,
+            'available_emotions': list(emotion_playlist_generator.emotion_categories.keys())
+        })
+        
+    except Exception as e:
+        console.log(f"[Route] 감정 플레이리스트 상태 확인 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/emotion-playlist/generate', methods=['POST'])
+def generate_emotion_playlist():
+    """감정별 플레이리스트 생성"""
+    console.log("[Route] /api/emotion-playlist/generate - 플레이리스트 생성")
+    
+    try:
+        if not emotion_playlist_generator:
+            return jsonify({
+                'success': False,
+                'error': '감정 플레이리스트 생성기가 초기화되지 않았습니다'
+            }), 500
+        
+        data = request.get_json()
+        if not data:
+            return jsonify({
+                'success': False,
+                'error': '요청 데이터가 없습니다'
+            }), 400
+        
+        emotion_type = data.get('emotion_type')
+        if not emotion_type:
+            return jsonify({
+                'success': False,
+                'error': '감정 타입을 지정해주세요'
+            }), 400
+        
+        limit = data.get('limit', 30)
+        include_reddit = data.get('include_reddit', True)
+        include_spotify = data.get('include_spotify', True)
+        include_youtube = data.get('include_youtube', True)
+        
+        console.log(f"[Route] 감정 플레이리스트 생성: {emotion_type} ({limit}곡)")
+        
+        # 플레이리스트 생성
+        result = emotion_playlist_generator.generate_emotion_playlist(
+            emotion_type=emotion_type,
+            limit=limit,
+            include_reddit=include_reddit,
+            include_spotify=include_spotify,
+            include_youtube=include_youtube
+        )
+        
+        if result.get('success'):
+            console.log(f"[Route] 감정 플레이리스트 생성 완료: {result.get('total_tracks', 0)}곡")
+            return jsonify(result)
+        else:
+            console.log(f"[Route] 감정 플레이리스트 생성 실패: {result.get('error')}")
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            }), 500
+            
+    except Exception as e:
+        console.log(f"[Route] 감정 플레이리스트 생성 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/emotion-playlist/all')
+def get_all_emotion_playlists():
+    """모든 감정별 플레이리스트 생성"""
+    console.log("[Route] /api/emotion-playlist/all - 전체 플레이리스트 생성")
+    
+    try:
+        if not emotion_playlist_generator:
+            return jsonify({
+                'success': False,
+                'error': '감정 플레이리스트 생성기가 초기화되지 않았습니다'
+            }), 500
+        
+        limit_per_emotion = request.args.get('limit', 20, type=int)
+        
+        console.log(f"[Route] 전체 감정 플레이리스트 생성: 감정당 {limit_per_emotion}곡")
+        
+        # 모든 감정 플레이리스트 생성
+        result = emotion_playlist_generator.get_all_emotion_playlists(limit_per_emotion)
+        
+        if result.get('success'):
+            console.log(f"[Route] 전체 감정 플레이리스트 생성 완료: {result.get('total_playlists', 0)}개")
+            return jsonify(result)
+        else:
+            console.log(f"[Route] 전체 감정 플레이리스트 생성 실패: {result.get('error')}")
+            return jsonify({
+                'success': False,
+                'error': result.get('error', 'Unknown error')
+            }), 500
+            
+    except Exception as e:
+        console.log(f"[Route] 전체 감정 플레이리스트 생성 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/emotion-playlist/categories')
+def get_emotion_categories():
+    """감정 카테고리 목록 및 설명"""
+    console.log("[Route] /api/emotion-playlist/categories - 카테고리 목록")
+    
+    try:
+        if not emotion_playlist_generator:
+            return jsonify({
+                'success': False,
+                'error': '감정 플레이리스트 생성기가 초기화되지 않았습니다'
+            }), 500
+        
+        categories = {}
+        for emotion_type, config in emotion_playlist_generator.emotion_categories.items():
+            categories[emotion_type] = {
+                'name': config['name'],
+                'description': config['description'],
+                'keywords': config['keywords'][:5],  # 상위 5개 키워드만
+                'comment_prompt': config['comment_prompt']
+            }
+        
+        return jsonify({
+            'success': True,
+            'categories': categories,
+            'total_categories': len(categories)
+        })
+        
+    except Exception as e:
+        console.log(f"[Route] 감정 카테고리 목록 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
 
 
 @app.errorhandler(413)

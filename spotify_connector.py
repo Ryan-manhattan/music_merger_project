@@ -14,6 +14,12 @@ from collections import Counter
 import base64
 
 try:
+    from dotenv import load_dotenv
+    load_dotenv()  # 환경변수 로드
+except ImportError:
+    pass
+
+try:
     import spotipy
     from spotipy.oauth2 import SpotifyClientCredentials
     SPOTIPY_AVAILABLE = True
@@ -37,15 +43,16 @@ class SpotifyConnector:
             self._initialize_spotify()
         
         # 음악 시장 관련 플레이리스트 ID들 (한국/글로벌)
+        # 2024년 최신 Spotify 차트 플레이리스트 ID
         self.trending_playlists = {
             'korea': {
                 'viral': '37i9dQZEVXbJZGli0rRP3r',  # Viral 50 - South Korea
-                'top': '37i9dQZEVXbNxXF4SkHj9F',     # Top 50 - South Korea
+                'top': '37i9dQZEVXbMDoHDwVN2tF',     # Top 50 - South Korea (업데이트)
                 'kpop': '37i9dQZF1DX9tPFwDMOaN1'     # K-pop Central
             },
             'global': {
                 'viral': '37i9dQZEVXbLiRSasKsNU9',  # Viral 50 - Global
-                'top': '37i9dQZEVXbMDoHDwVN2tF',     # Global Top 50
+                'top': '37i9dQZEVXbNG2KDcFcKOF',     # Global Top 50 (업데이트)
                 'trends': '37i9dQZF1DX0XUsuxWHRQd'   # RapCaviar (Hip-Hop)
             }
         }
@@ -515,6 +522,87 @@ class SpotifyConnector:
             self.console_log(f"[Spotify] 플레이리스트 분석 오류: {str(e)}")
             return {'success': False, 'error': str(e)}
     
+    def search_popular_tracks_by_keywords(self, keywords: List[str], limit: int = 50) -> Dict:
+        """
+        키워드 기반 인기 트랙 검색
+        
+        Args:
+            keywords: 검색 키워드 리스트
+            limit: 수집할 트랙 수
+            
+        Returns:
+            트랙 정보 딕셔너리
+        """
+        try:
+            if not self.spotify:
+                return {'success': False, 'error': 'Spotify API가 초기화되지 않았습니다'}
+            
+            self.console_log(f"[Spotify] 키워드 기반 트랙 검색: {keywords}")
+            
+            all_tracks = []
+            
+            for keyword in keywords[:3]:  # 상위 3개 키워드만 사용
+                try:
+                    # 인기도 순으로 검색
+                    results = self.spotify.search(
+                        q=f'{keyword}',
+                        type='track',
+                        limit=20,
+                        market='KR'
+                    )
+                    
+                    for item in results['tracks']['items']:
+                        if item['popularity'] > 30:  # 인기도 필터
+                            track_info = {
+                                'id': item['id'],
+                                'name': item['name'],
+                                'main_artist': item['artists'][0]['name'] if item['artists'] else '',
+                                'all_artists': [artist['name'] for artist in item['artists']],
+                                'album': item['album']['name'],
+                                'popularity': item['popularity'],
+                                'duration_ms': item['duration_ms'],
+                                'explicit': item['explicit'],
+                                'preview_url': item['preview_url'],
+                                'external_urls': item['external_urls'],
+                                'release_date': item['album']['release_date'],
+                                'search_keyword': keyword
+                            }
+                            all_tracks.append(track_info)
+                    
+                    time.sleep(0.1)
+                    
+                except Exception as e:
+                    self.console_log(f"[Spotify] 키워드 '{keyword}' 검색 오류: {str(e)}")
+                    continue
+            
+            # 인기도순 정렬 후 중복 제거
+            seen_ids = set()
+            unique_tracks = []
+            
+            for track in sorted(all_tracks, key=lambda x: x['popularity'], reverse=True):
+                if track['id'] not in seen_ids:
+                    seen_ids.add(track['id'])
+                    unique_tracks.append(track)
+                    
+                if len(unique_tracks) >= limit:
+                    break
+            
+            result = {
+                'success': True,
+                'keywords': keywords,
+                'total_tracks': len(unique_tracks),
+                'tracks': unique_tracks,
+                'analyzed_at': datetime.now().isoformat()
+            }
+            
+            self.console_log(f"[Spotify] 키워드 기반 트랙 {len(unique_tracks)}개 수집 완료")
+            return result
+            
+        except Exception as e:
+            error_msg = f"키워드 기반 트랙 검색 중 오류: {str(e)}"
+            self.console_log(f"[Spotify] {error_msg}")
+            return {'success': False, 'error': error_msg}
+
     def get_api_status(self) -> Dict:
         """Spotify API 연결 상태 확인"""
         return {

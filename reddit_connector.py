@@ -13,6 +13,12 @@ from typing import Dict, List, Optional, Tuple
 from collections import Counter
 
 try:
+    from dotenv import load_dotenv
+    load_dotenv()  # 환경변수 로드
+except ImportError:
+    pass
+
+try:
     import praw
     PRAW_AVAILABLE = True
 except ImportError:

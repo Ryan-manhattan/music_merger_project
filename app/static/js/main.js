@@ -13,7 +13,6 @@ document.addEventListener('DOMContentLoaded', () => {
     console.log("[Init] DOM 로드 완료, 이벤트 리스너 설정");
     setupEventListeners();
     updateNavigation();
-    loadGenres();
     setupMarketAnalysisListeners();
 });
 
@@ -902,62 +901,27 @@ function populateGenreSelects() {
 
 // 시장 분석 이벤트 리스너 설정
 function setupMarketAnalysisListeners() {
-    // 분석 유형 변경 시
-    document.querySelectorAll('input[name="analysisType"]').forEach(radio => {
-        radio.addEventListener('change', function() {
-            const singleOption = document.getElementById('singleGenreOption');
-            const compareOption = document.getElementById('compareGenreOption');
-            
-            if (this.value === 'single') {
-                singleOption.style.display = 'block';
-                compareOption.style.display = 'none';
-            } else if (this.value === 'compare') {
-                singleOption.style.display = 'none';
-                compareOption.style.display = 'block';
-            } else {
-                singleOption.style.display = 'none';
-                compareOption.style.display = 'none';
-            }
-        });
+    // V2 모드 변경 시 (나중에 추가되는 요소들을 위해 이벤트 위임 사용)
+    document.addEventListener('change', function(e) {
+        if (e.target.name === 'v2Mode') {
+            handleV2ModeChange();
+        }
     });
+    
+    console.log("[Init] 트렌드 분석 V2 리스너 설정 완료");
 }
 
-// 시장 분석 시작
+// 시장 분석 시작 (V2 전용)
 async function startMarketAnalysis() {
-    const analysisType = document.querySelector('input[name="analysisType"]:checked').value;
-    const timeframe = document.getElementById('timeframe').value;
-    const geo = document.getElementById('geoRegion').value;
-    
-    console.log(`[Market] 시장 분석 시작: ${analysisType}`);
+    console.log(`[Market] 트렌드 분석 V2 시작`);
     
     showMarketProgress();
     
     try {
-        let result;
-        
-        if (analysisType === 'single') {
-            const genre = document.getElementById('genreSelect').value;
-            if (!genre) {
-                alert('장르를 선택해주세요.');
-                hideMarketProgress();
-                return;
-            }
-            result = await analyzeSingleGenre(genre, timeframe, geo);
-        } else if (analysisType === 'compare') {
-            const selectedGenres = Array.from(document.querySelectorAll('input[name="compareGenres"]:checked'))
-                .map(cb => cb.value);
-            if (selectedGenres.length < 2) {
-                alert('비교할 장르를 2개 이상 선택해주세요.');
-                hideMarketProgress();
-                return;
-            }
-            result = await compareGenres(selectedGenres, timeframe, geo);
-        } else {
-            result = await getMarketOverview(timeframe, geo);
-        }
+        const result = await startTrendsV2Analysis();
         
         if (result.success) {
-            displayMarketResult(result, analysisType);
+            displayMarketResult(result, 'trends_v2');
         } else {
             alert('분석 실패: ' + result.error);
         }
@@ -1011,6 +975,22 @@ function showMarketProgress() {
     }, 100);
 }
 
+// 진행 상황 업데이트
+function updateMarketProgress(percentage, message) {
+    const progressBar = document.getElementById('marketProgressFill');
+    const progressText = document.getElementById('marketProgressText');
+    
+    if (progressBar) {
+        progressBar.style.width = percentage + '%';
+    }
+    
+    if (progressText && message) {
+        progressText.textContent = message;
+    }
+    
+    console.log(`[Market Progress] ${percentage}% - ${message}`);
+}
+
 // 진행 상황 숨김
 function hideMarketProgress() {
     document.getElementById('marketProgressSection').style.display = 'none';
@@ -1028,6 +1008,11 @@ function displayMarketResult(result, analysisType) {
         html = formatSingleGenreResult(result);
     } else if (analysisType === 'compare') {
         html = formatCompareResult(result);
+    } else if (analysisType === 'trends_v2') {
+        // V2 트렌드 분석 결과 처리
+        displayTrendsV2Result(result, analysisType);
+        resultSection.style.display = 'block';
+        return;
     } else {
         html = formatOverviewResult(result);
     }
@@ -1316,10 +1301,401 @@ function displayAnalysisResult(result) {
     document.getElementById('analysisResultSection').style.display = 'block';
 }
 
+// ============================================================================
+// Music Trend Analyzer V2 Functions
+// ============================================================================
+
+// V2 트렌드 분석 시작
+async function startTrendsV2Analysis() {
+    const v2Mode = document.querySelector('input[name="v2Mode"]:checked').value;
+    
+    console.log(`[TrendsV2] V2 트렌드 분석 시작: ${v2Mode}`);
+    
+    try {
+        let result;
+        
+        if (v2Mode === 'comprehensive') {
+            result = await runComprehensiveAnalysis();
+        } else {
+            result = await runKeywordSearch();
+        }
+        
+        return result;
+    } catch (error) {
+        console.error("[TrendsV2] 분석 오류:", error);
+        throw error;
+    }
+}
+
+// 종합 트렌드 분석 실행
+async function runComprehensiveAnalysis() {
+    console.log("[TrendsV2] 종합 트렌드 분석 실행");
+    
+    // 선택된 카테고리 수집
+    const categories = Array.from(document.querySelectorAll('input[name="v2Categories"]:checked'))
+        .map(cb => cb.value);
+    
+    // 선택된 데이터 소스 수집
+    const sources = Array.from(document.querySelectorAll('input[name="v2Sources"]:checked'))
+        .map(cb => cb.value);
+    
+    if (categories.length === 0) {
+        throw new Error('분석할 카테고리를 하나 이상 선택해주세요.');
+    }
+    
+    const requestData = {
+        categories: categories,
+        include_reddit: sources.includes('reddit'),
+        include_spotify: sources.includes('spotify'),
+        include_comments: sources.includes('comments')
+    };
+    
+    console.log("[TrendsV2] 요청 데이터:", requestData);
+    updateMarketProgress(20, "Reddit 및 Spotify 데이터 수집 중...");
+    
+    const response = await fetch('/api/trends/v2/analyze', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    });
+    
+    updateMarketProgress(80, "분석 결과 처리 중...");
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    updateMarketProgress(100, "분석 완료!");
+    
+    return result;
+}
+
+// 키워드 검색 분석 실행
+async function runKeywordSearch() {
+    console.log("[TrendsV2] 키워드 검색 분석 실행");
+    
+    const keyword = document.getElementById('v2SearchKeyword').value.trim();
+    
+    if (!keyword) {
+        throw new Error('검색할 키워드를 입력해주세요.');
+    }
+    
+    const requestData = {
+        query: keyword,
+        deep_analysis: true
+    };
+    
+    console.log("[TrendsV2] 키워드 검색:", requestData);
+    updateMarketProgress(30, `"${keyword}" 키워드 검색 중...`);
+    
+    const response = await fetch('/api/trends/v2/keywords', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(requestData)
+    });
+    
+    updateMarketProgress(80, "검색 결과 처리 중...");
+    
+    if (!response.ok) {
+        throw new Error(`HTTP ${response.status}: ${response.statusText}`);
+    }
+    
+    const result = await response.json();
+    
+    updateMarketProgress(100, "검색 완료!");
+    
+    return result;
+}
+
+// V2 키워드 설정 헬퍼 함수
+function setV2Keyword(keyword) {
+    document.getElementById('v2SearchKeyword').value = keyword;
+    console.log(`[TrendsV2] 키워드 설정: ${keyword}`);
+}
+
+// V2 분석 모드 전환 처리
+function handleV2ModeChange() {
+    const mode = document.querySelector('input[name="v2Mode"]:checked').value;
+    const comprehensiveOptions = document.getElementById('v2ComprehensiveOptions');
+    const keywordOptions = document.getElementById('v2KeywordOptions');
+    
+    if (mode === 'comprehensive') {
+        comprehensiveOptions.style.display = 'block';
+        keywordOptions.style.display = 'none';
+    } else {
+        comprehensiveOptions.style.display = 'none';
+        keywordOptions.style.display = 'block';
+    }
+    
+    console.log(`[TrendsV2] 모드 전환: ${mode}`);
+}
+
+// 시장 분석 결과 표시 함수 확장 (V2 결과 처리)
+function displayTrendsV2Result(result, analysisType) {
+    const resultDiv = document.getElementById('marketResult');
+    
+    if (analysisType === 'trends_v2') {
+        const v2Mode = document.querySelector('input[name="v2Mode"]:checked').value;
+        
+        if (v2Mode === 'comprehensive') {
+            displayComprehensiveResult(result, resultDiv);
+        } else {
+            displayKeywordSearchResult(result, resultDiv);
+        }
+    }
+}
+
+// 종합 분석 결과 표시 (새로운 차트 기반)
+function displayComprehensiveResult(result, container) {
+    const trendInsights = result.trend_insights || {};
+    const recommendations = result.recommendations || [];
+    const dataSources = result.data_sources || [];
+    const chartTracks = result.chart_tracks || [];
+    const representativeOpinions = result.representative_opinions || [];
+    const representativeComments = result.representative_comments || [];
+    
+    const html = `
+        <div class="v2-result-container">
+            <div class="v2-header">
+                <h4>🔥 Spotify 차트 기반 트렌드 분석 결과</h4>
+                <p class="analysis-time">분석 시간: ${new Date(result.analysis_timestamp).toLocaleString()}</p>
+            </div>
+            
+            <div class="v2-summary">
+                <div class="summary-card">
+                    <h5>📊 분석 개요</h5>
+                    <p><strong>분석된 데이터 소스:</strong> ${dataSources.join(', ')}</p>
+                    <p><strong>분석된 차트 곡 수:</strong> ${chartTracks.length}개</p>
+                    <p><strong>전체 트렌드 점수:</strong> ${(trendInsights.overall_trend_score || 0).toFixed(1)}</p>
+                    <p><strong>트렌드 방향:</strong> ${getTrendDirectionText(trendInsights.trend_direction)}</p>
+                    <p><strong>신뢰도:</strong> ${((trendInsights.confidence_level || 0) * 100).toFixed(1)}%</p>
+                </div>
+            </div>
+            
+            ${chartTracks.length > 0 ? `
+                <div class="v2-chart-tracks">
+                    <h5>🎵 현재 차트 상위 곡들</h5>
+                    <div class="chart-tracks-list">
+                        ${chartTracks.slice(0, 10).map((track, index) => `
+                            <div class="track-card">
+                                <div class="track-rank">#${index + 1}</div>
+                                <div class="track-info">
+                                    <div class="track-title">${track.name}</div>
+                                    <div class="track-artist">${track.main_artist}</div>
+                                    <div class="track-details">
+                                        <span class="popularity">인기도: ${track.popularity}</span>
+                                        <span class="chart-region">${track.chart_region === 'korea' ? '🇰🇷 한국' : '🌍 글로벌'}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${representativeOpinions.length > 0 ? `
+                <div class="v2-reddit-opinions">
+                    <h5>💬 Reddit 커뮤니티 대표 의견</h5>
+                    ${representativeOpinions.map(trackOpinion => `
+                        <div class="opinion-card">
+                            <h6>🎵 ${trackOpinion.track_title} - ${trackOpinion.artist}</h6>
+                            <div class="opinions-list">
+                                ${trackOpinion.opinions.map(opinion => `
+                                    <div class="opinion-item">
+                                        <div class="opinion-header">
+                                            <strong>${opinion.title}</strong>
+                                            <span class="opinion-meta">
+                                                👍 ${opinion.score} | 💬 ${opinion.comments_count} | 📍 r/${opinion.subreddit}
+                                            </span>
+                                        </div>
+                                        ${opinion.content ? `<div class="opinion-content">${opinion.content}</div>` : ''}
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            ${representativeComments.length > 0 ? `
+                <div class="v2-youtube-comments">
+                    <h5>🎬 YouTube 대표 댓글</h5>
+                    ${representativeComments.map(trackComment => `
+                        <div class="comment-card">
+                            <h6>🎵 ${trackComment.track_title} - ${trackComment.artist}</h6>
+                            <div class="comments-list">
+                                ${trackComment.comments.map(comment => `
+                                    <div class="comment-item">
+                                        <div class="comment-header">
+                                            <strong>@${comment.author}</strong>
+                                            <span class="comment-meta">
+                                                👍 ${comment.likes} | ${comment.timestamp}
+                                            </span>
+                                        </div>
+                                        <div class="comment-text">${comment.text}</div>
+                                    </div>
+                                `).join('')}
+                            </div>
+                        </div>
+                    `).join('')}
+                </div>
+            ` : ''}
+            
+            ${trendInsights.category_scores ? `
+                <div class="v2-categories">
+                    <h5>🎵 장르별 트렌드 점수</h5>
+                    <div class="category-scores">
+                        ${Object.entries(trendInsights.category_scores)
+                            .sort(([,a], [,b]) => b - a)
+                            .map(([category, score]) => `
+                                <div class="category-item">
+                                    <span class="category-name">${category.toUpperCase()}</span>
+                                    <div class="score-bar">
+                                        <div class="score-fill" style="width: ${Math.min(score, 100)}%"></div>
+                                        <span class="score-text">${score.toFixed(1)}</span>
+                                    </div>
+                                </div>
+                            `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${recommendations.length > 0 ? `
+                <div class="v2-recommendations">
+                    <h5>💡 추천사항</h5>
+                    <ul class="recommendation-list">
+                        ${recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// 키워드 검색 결과 표시
+function displayKeywordSearchResult(result, container) {
+    const spotifyResults = result.spotify_results || {};
+    const sourcesAnalyzed = result.sources_analyzed || [];
+    
+    const html = `
+        <div class="v2-result-container">
+            <div class="v2-header">
+                <h4>🔍 키워드 트렌드 검색 결과</h4>
+                <p class="search-query">검색어: <strong>"${result.query}"</strong></p>
+                <p class="analysis-time">검색 시간: ${new Date(result.analysis_timestamp).toLocaleString()}</p>
+            </div>
+            
+            <div class="v2-summary">
+                <div class="summary-card">
+                    <h5>📊 검색 개요</h5>
+                    <p><strong>분석된 소스:</strong> ${sourcesAnalyzed.join(', ')}</p>
+                    <p><strong>총 결과 수:</strong> ${spotifyResults.total_results || 0}개</p>
+                    <p><strong>평균 인기도:</strong> ${(spotifyResults.average_popularity || 0).toFixed(1)}</p>
+                    <p><strong>트렌드 점수:</strong> ${(spotifyResults.trend_score || 0).toFixed(1)}</p>
+                </div>
+            </div>
+            
+            ${spotifyResults.results && spotifyResults.results.length > 0 ? `
+                <div class="v2-spotify-results">
+                    <h5>🎧 Spotify 검색 결과 (상위 10개)</h5>
+                    <div class="spotify-tracks">
+                        ${spotifyResults.results.slice(0, 10).map(track => `
+                            <div class="track-card">
+                                <div class="track-info">
+                                    <div class="track-title">${track.name}</div>
+                                    <div class="track-artist">${track.artist}</div>
+                                    <div class="track-details">
+                                        <span class="popularity">인기도: ${track.popularity}</span>
+                                        <span class="release-date">발매: ${track.release_date}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('')}
+                    </div>
+                </div>
+            ` : ''}
+            
+            ${result.trend_analysis ? `
+                <div class="v2-trend-analysis">
+                    <h5>📈 트렌드 분석</h5>
+                    <p><strong>성장 잠재력:</strong> ${getTrendPotentialText(result.trend_analysis.growth_potential)}</p>
+                    <p><strong>시장 침투도:</strong> ${getMarketPenetrationText(result.trend_analysis.market_penetration)}</p>
+                    <p><strong>종합 점수:</strong> ${(result.trend_analysis.trend_score || 0).toFixed(1)}</p>
+                </div>
+            ` : ''}
+        </div>
+    `;
+    
+    container.innerHTML = html;
+}
+
+// 헬퍼 함수들
+function getTrendDirectionText(direction) {
+    const directions = {
+        'rising': '🔥 상승세',
+        'stable': '📊 안정적',
+        'declining': '📉 하락세'
+    };
+    return directions[direction] || direction;
+}
+
+function getTrendPotentialText(potential) {
+    const potentials = {
+        'high': '🚀 높음',
+        'medium': '📈 보통',
+        'low': '📉 낮음'
+    };
+    return potentials[potential] || potential;
+}
+
+function getMarketPenetrationText(penetration) {
+    const penetrations = {
+        'mainstream': '🌟 메인스트림',
+        'emerging': '🌱 새로운 트렌드',
+        'niche': '🎯 틈새시장',
+        'underground': '🔍 언더그라운드'
+    };
+    return penetrations[penetration] || penetration;
+}
+
+// 직접 V2 분석 시작 함수 (버튼에서 호출)
+async function startTrendsV2AnalysisDirect() {
+    console.log("[TrendsV2] 직접 V2 분석 시작");
+    
+    showMarketProgress();
+    
+    try {
+        const result = await startTrendsV2Analysis();
+        
+        if (result.success) {
+            displayTrendsV2Result(result, 'trends_v2');
+            document.getElementById('marketResultSection').style.display = 'block';
+        } else {
+            alert('분석 실패: ' + result.error);
+        }
+    } catch (error) {
+        console.error("[TrendsV2] 분석 오류:", error);
+        alert('분석 중 오류가 발생했습니다: ' + error.message);
+    }
+    
+    hideMarketProgress();
+}
+
 // 전역 함수로 노출
 window.showTab = showTab;
 window.startMarketAnalysis = startMarketAnalysis;
+window.startTrendsV2Analysis = startTrendsV2AnalysisDirect;
 window.resetMarketAnalysis = resetMarketAnalysis;
 window.analyzeMusic = analyzeMusic;
+window.setV2Keyword = setV2Keyword;
+window.handleV2ModeChange = handleV2ModeChange;
 
-console.log("[Music Merger] 모든 함수 정의 완료");
+console.log("[Music Merger] 모든 함수 정의 완료 (V2 포함)");

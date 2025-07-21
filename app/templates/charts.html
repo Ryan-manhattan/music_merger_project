@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify 차트 - Music Merger</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <style>
+        /* 차트 전용 추가 스타일 */
+        .charts-container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: var(--spacing-lg);
+        }
+        
+        .charts-header {
+            text-align: center;
+            margin-bottom: var(--spacing-xl);
+            background: var(--surface);
+            padding: var(--spacing-xl);
+            border-radius: 12px;
+            box-shadow: var(--shadow-md);
+        }
+        
+        .charts-header h1 {
+            color: var(--primary-color);
+            margin-bottom: var(--spacing-md);
+        }
+        
+        .charts-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: var(--spacing-md);
+            margin-bottom: var(--spacing-xl);
+        }
+        
+        .stat-card {
+            background: var(--surface);
+            padding: var(--spacing-lg);
+            border-radius: 8px;
+            box-shadow: var(--shadow-sm);
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: var(--primary-color);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .stat-label {
+            color: var(--text-secondary);
+            font-size: 0.9rem;
+        }
+        
+        .chart-filters {
+            background: var(--surface);
+            padding: var(--spacing-lg);
+            border-radius: 8px;
+            margin-bottom: var(--spacing-lg);
+            box-shadow: var(--shadow-sm);
+        }
+        
+        .filter-group {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            flex-wrap: wrap;
+        }
+        
+        .filter-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--background);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .filter-btn.active {
+            background: var(--primary-color);
+            color: white;
+            border-color: var(--primary-color);
+        }
+        
+        .chart-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+            gap: var(--spacing-lg);
+        }
+        
+        .chart-section {
+            background: var(--surface);
+            border-radius: 12px;
+            padding: var(--spacing-lg);
+            box-shadow: var(--shadow-md);
+        }
+        
+        .chart-section h3 {
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-lg);
+            padding-bottom: var(--spacing-md);
+            border-bottom: 2px solid var(--border);
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-sm);
+        }
+        
+        .track-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--spacing-sm);
+        }
+        
+        .track-item {
+            display: flex;
+            align-items: center;
+            gap: var(--spacing-md);
+            padding: var(--spacing-md);
+            background: var(--background);
+            border-radius: 8px;
+            border: 1px solid var(--border);
+            transition: all 0.2s ease;
+        }
+        
+        .track-item:hover {
+            box-shadow: var(--shadow-sm);
+            border-color: var(--primary-color);
+        }
+        
+        .track-rank {
+            font-size: 1.2em;
+            font-weight: bold;
+            color: var(--primary-color);
+            min-width: 35px;
+            text-align: center;
+        }
+        
+        .track-info {
+            flex: 1;
+        }
+        
+        .track-title {
+            font-weight: 600;
+            color: var(--text-primary);
+            margin-bottom: var(--spacing-xs);
+        }
+        
+        .track-artist {
+            color: var(--text-secondary);
+            font-size: 0.9em;
+        }
+        
+        .track-meta {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-end;
+            gap: var(--spacing-xs);
+        }
+        
+        .popularity-bar {
+            width: 60px;
+            height: 4px;
+            background: var(--border);
+            border-radius: 2px;
+            overflow: hidden;
+        }
+        
+        .popularity-fill {
+            height: 100%;
+            background: linear-gradient(90deg, var(--success-color), var(--primary-color));
+            transition: width 0.3s ease;
+        }
+        
+        .region-badge {
+            font-size: 0.7em;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        
+        .region-korea {
+            background: #ff6b6b;
+            color: white;
+        }
+        
+        .region-global {
+            background: #4ecdc4;
+            color: white;
+        }
+        
+        .loading-spinner {
+            display: none;
+            text-align: center;
+            padding: var(--spacing-xl);
+            color: var(--text-secondary);
+        }
+        
+        .error-message {
+            display: none;
+            background: #fee;
+            color: #c53030;
+            padding: var(--spacing-lg);
+            border-radius: 8px;
+            margin: var(--spacing-lg) 0;
+            border: 1px solid #fed7d7;
+        }
+        
+        /* 반응형 디자인 */
+        @media (max-width: 768px) {
+            .charts-container {
+                padding: var(--spacing-md);
+            }
+            
+            .chart-grid {
+                grid-template-columns: 1fr;
+            }
+            
+            .filter-group {
+                justify-content: center;
+            }
+            
+            .track-item {
+                flex-direction: column;
+                align-items: flex-start;
+                text-align: left;
+            }
+            
+            .track-meta {
+                align-items: flex-start;
+                flex-direction: row;
+                gap: var(--spacing-md);
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <header class="header">
+            <h1 class="logo">🎵 Music Merger</h1>
+            <p class="tagline">Spotify 실시간 차트</p>
+            <nav class="nav">
+                <ul class="nav-list">
+                    <li class="nav-item"><a href="/" class="nav-link">홈</a></li>
+                    <li class="nav-item"><a href="/charts" class="nav-link active">차트</a></li>
+                </ul>
+            </nav>
+        </header>
+
+        <!-- 메인 컨텐츠 -->
+        <main class="main-content">
+            <div class="charts-container">
+                <!-- 차트 헤더 -->
+                <div class="charts-header">
+                    <h1>🎧 Spotify 실시간 차트</h1>
+                    <p>한국과 글로벌 Top 50 차트를 실시간으로 확인하세요</p>
+                    <button id="refreshBtn" class="btn btn-primary">🔄 새로고침</button>
+                </div>
+
+                <!-- 통계 정보 -->
+                <div class="charts-stats" id="chartsStats">
+                    <div class="stat-card">
+                        <div class="stat-value" id="totalTracks">-</div>
+                        <div class="stat-label">총 트랙 수</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="koreaCount">-</div>
+                        <div class="stat-label">한국 차트</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="globalCount">-</div>
+                        <div class="stat-label">글로벌 차트</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-value" id="lastUpdated">-</div>
+                        <div class="stat-label">마지막 업데이트</div>
+                    </div>
+                </div>
+
+                <!-- 필터 -->
+                <div class="chart-filters">
+                    <div class="filter-group">
+                        <span><strong>필터:</strong></span>
+                        <button class="filter-btn active" data-filter="all">전체</button>
+                        <button class="filter-btn" data-filter="korea">🇰🇷 한국</button>
+                        <button class="filter-btn" data-filter="global">🌍 글로벌</button>
+                    </div>
+                </div>
+
+                <!-- 로딩 스피너 -->
+                <div class="loading-spinner" id="loadingSpinner">
+                    <p>📊 차트 데이터를 불러오는 중...</p>
+                </div>
+
+                <!-- 에러 메시지 -->
+                <div class="error-message" id="errorMessage"></div>
+
+                <!-- 차트 그리드 -->
+                <div class="chart-grid" id="chartGrid">
+                    <!-- 한국 차트 섹션 -->
+                    <div class="chart-section">
+                        <h3>🇰🇷 한국 Top 25</h3>
+                        <div class="track-list" id="koreaChart"></div>
+                    </div>
+
+                    <!-- 글로벌 차트 섹션 -->
+                    <div class="chart-section">
+                        <h3>🌍 글로벌 Top 25</h3>
+                        <div class="track-list" id="globalChart"></div>
+                    </div>
+                </div>
+            </div>
+        </main>
+
+        <!-- 푸터 -->
+        <footer class="footer">
+            <p>&copy; 2024 Music Merger. Powered by Spotify API.</p>
+        </footer>
+    </div>
+
+    <script src="{{ url_for('static', filename='js/charts.js') }}"></script>
+</body>
+</html>

@@ -1047,6 +1047,404 @@ body {
     border-top: 1px solid var(--border);
 }
 
+/* ============================================
+   Music Trend Analyzer V2 스타일
+   ============================================ */
+
+/* V2 분석 옵션 */
+.v2-analysis-mode {
+    margin-bottom: var(--spacing-md);
+}
+
+.v2-analysis-mode h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.category-checkboxes,
+.source-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-sm);
+    margin-bottom: var(--spacing-md);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-xs);
+    padding: 8px 12px;
+    border: 1px solid var(--border);
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.2s ease;
+    background: var(--surface);
+}
+
+.checkbox-label:hover {
+    background: var(--background);
+    border-color: var(--primary-color);
+}
+
+.checkbox-label input[type="checkbox"] {
+    margin: 0;
+}
+
+.checkbox-label input[type="checkbox"]:checked + span {
+    color: var(--primary-color);
+    font-weight: 600;
+}
+
+.v2-keyword-options {
+    margin-top: var(--spacing-md);
+}
+
+.v2-keyword-options h4 {
+    margin-bottom: var(--spacing-sm);
+    color: var(--text-primary);
+}
+
+.keyword-suggestions {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+    margin-top: var(--spacing-sm);
+}
+
+.suggestion-btn {
+    padding: 6px 12px;
+    border: 1px solid var(--border);
+    border-radius: 20px;
+    background: var(--surface);
+    color: var(--text-secondary);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 12px;
+}
+
+.suggestion-btn:hover {
+    background: var(--primary-color);
+    color: white;
+    border-color: var(--primary-color);
+}
+
+/* V2 결과 표시 스타일 */
+.v2-result-container {
+    background: var(--surface);
+    border-radius: 12px;
+    padding: var(--spacing-lg);
+    margin-bottom: var(--spacing-lg);
+}
+
+.v2-header {
+    text-align: center;
+    margin-bottom: var(--spacing-lg);
+    padding-bottom: var(--spacing-md);
+    border-bottom: 1px solid var(--border);
+}
+
+.v2-header h4 {
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-sm);
+}
+
+.analysis-time,
+.search-query {
+    font-size: 0.9em;
+    color: var(--text-secondary);
+    margin: var(--spacing-xs) 0;
+}
+
+.v2-summary {
+    margin-bottom: var(--spacing-lg);
+}
+
+.summary-card {
+    background: var(--background);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    border: 1px solid var(--border);
+}
+
+.summary-card h5 {
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-sm);
+}
+
+.summary-card p {
+    margin: var(--spacing-xs) 0;
+    color: var(--text-secondary);
+}
+
+/* 카테고리 점수 표시 */
+.v2-categories {
+    margin-bottom: var(--spacing-lg);
+}
+
+.category-scores {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.category-item {
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+    padding: var(--spacing-sm);
+    background: var(--background);
+    border-radius: 6px;
+}
+
+.category-name {
+    font-weight: 600;
+    color: var(--text-primary);
+    min-width: 80px;
+}
+
+.score-bar {
+    flex: 1;
+    height: 20px;
+    background: var(--border);
+    border-radius: 10px;
+    position: relative;
+    overflow: hidden;
+}
+
+.score-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--primary-color), var(--secondary-color));
+    border-radius: 10px;
+    transition: width 0.3s ease;
+}
+
+.score-text {
+    position: absolute;
+    right: 8px;
+    top: 50%;
+    transform: translateY(-50%);
+    font-size: 12px;
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+/* Spotify 트랙 표시 */
+.track-item {
+    padding: var(--spacing-sm);
+    background: var(--background);
+    border-radius: 6px;
+    margin-bottom: var(--spacing-xs);
+}
+
+.track-card {
+    background: var(--background);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-sm);
+    border: 1px solid var(--border);
+}
+
+.track-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.track-artist {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.track-details {
+    display: flex;
+    gap: var(--spacing-md);
+    font-size: 0.9em;
+}
+
+.popularity,
+.release-date {
+    color: var(--text-secondary);
+}
+
+/* 추천사항 */
+.v2-recommendations {
+    margin-top: var(--spacing-lg);
+}
+
+.recommendation-list {
+    list-style: none;
+    padding: 0;
+}
+
+.recommendation-list li {
+    background: var(--background);
+    border-radius: 6px;
+    padding: var(--spacing-sm);
+    margin-bottom: var(--spacing-xs);
+    border-left: 4px solid var(--primary-color);
+}
+
+/* 차트 기반 분석 결과 스타일 */
+.v2-chart-tracks {
+    margin-bottom: var(--spacing-lg);
+}
+
+.chart-tracks-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-sm);
+}
+
+.track-card {
+    background: var(--background);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    border: 1px solid var(--border);
+    display: flex;
+    align-items: center;
+    gap: var(--spacing-md);
+}
+
+.track-rank {
+    font-size: 1.2em;
+    font-weight: bold;
+    color: var(--primary-color);
+    min-width: 40px;
+}
+
+.track-info {
+    flex: 1;
+}
+
+.track-title {
+    font-weight: 600;
+    color: var(--text-primary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.track-artist {
+    color: var(--text-secondary);
+    margin-bottom: var(--spacing-xs);
+}
+
+.track-details {
+    display: flex;
+    gap: var(--spacing-md);
+    font-size: 0.9em;
+}
+
+.popularity,
+.chart-region {
+    color: var(--text-secondary);
+    background: var(--surface);
+    padding: 2px 6px;
+    border-radius: 4px;
+}
+
+/* Reddit 의견 스타일 */
+.v2-reddit-opinions {
+    margin-bottom: var(--spacing-lg);
+}
+
+.opinion-card {
+    background: var(--background);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    border: 1px solid var(--border);
+}
+
+.opinion-card h6 {
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-md);
+    font-size: 1.1em;
+}
+
+.opinions-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.opinion-item {
+    background: var(--surface);
+    padding: var(--spacing-sm);
+    border-radius: 6px;
+    border-left: 4px solid var(--primary-color);
+}
+
+.opinion-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-sm);
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+}
+
+.opinion-meta {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+.opinion-content {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
+/* YouTube 댓글 스타일 */
+.v2-youtube-comments {
+    margin-bottom: var(--spacing-lg);
+}
+
+.comment-card {
+    background: var(--background);
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    margin-bottom: var(--spacing-md);
+    border: 1px solid var(--border);
+}
+
+.comment-card h6 {
+    color: var(--primary-color);
+    margin-bottom: var(--spacing-md);
+    font-size: 1.1em;
+}
+
+.comments-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--spacing-md);
+}
+
+.comment-item {
+    background: var(--surface);
+    padding: var(--spacing-sm);
+    border-radius: 6px;
+    border-left: 4px solid var(--success-color);
+}
+
+.comment-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--spacing-sm);
+    flex-wrap: wrap;
+    gap: var(--spacing-xs);
+}
+
+.comment-meta {
+    font-size: 0.85em;
+    color: var(--text-secondary);
+}
+
+.comment-text {
+    color: var(--text-secondary);
+    font-size: 0.9em;
+    line-height: 1.4;
+}
+
 /* 반응형 디자인 */
 @media (max-width: 768px) {
     .main-content {
@@ -1060,5 +1458,37 @@ body {
     
     .file-actions {
         flex-wrap: wrap;
+    }
+    
+    .category-checkboxes,
+    .source-checkboxes {
+        flex-direction: column;
+    }
+    
+    .category-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: var(--spacing-xs);
+    }
+    
+    .track-details {
+        flex-direction: column;
+        gap: var(--spacing-xs);
+    }
+    
+    .track-card {
+        flex-direction: column;
+        align-items: flex-start;
+        text-align: left;
+    }
+    
+    .track-rank {
+        align-self: flex-start;
+    }
+    
+    .opinion-header,
+    .comment-header {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }

@@ -36,7 +36,10 @@
       "Bash(render services list)",
       "Bash(brew install:*)",
       "Bash(render auth login)",
-      "Bash(pip3 list:*)"
+      "Bash(pip3 list:*)",
+      "Bash(source:*)",
+      "Bash(npx:*)",
+      "Bash(pkill:*)"
     ],
     "deny": []
   }
