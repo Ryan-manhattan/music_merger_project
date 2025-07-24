@@ -14,6 +14,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     updateNavigation();
     setupMarketAnalysisListeners();
+    setupPitchSlider();
 });
 
 // 이벤트 리스너 설정
@@ -135,6 +136,21 @@ function addFileToList(fileInfo) {
     const fileDiv = fileItem.querySelector('.file-item');
     fileDiv.dataset.filename = fileInfo.filename;
     
+    // 링크 추출 소스인지 확인하여 추가 버튼 표시
+    const isExtracted = fileInfo.source === 'link_extract';
+    if (isExtracted) {
+        const extractedButtons = fileItem.querySelectorAll('.extracted-only');
+        extractedButtons.forEach(btn => {
+            btn.style.display = 'inline-block';
+        });
+        
+        // 키 조절 섹션도 표시
+        const pitchSection = fileItem.querySelector('.pitch-adjust-section');
+        if (pitchSection) {
+            pitchSection.style.display = 'block';
+        }
+    }
+    
     // 파일 이름과 정보 설정
     const fileName = fileItem.querySelector('.file-name');
     fileName.innerHTML = `
@@ -145,6 +161,7 @@ function addFileToList(fileInfo) {
             <span>${fileInfo.duration_str}</span>
             <span>•</span>
             <span>${fileInfo.size_mb} MB</span>
+            ${isExtracted ? '<span>• 🔗 링크 추출</span>' : ''}
         </div>
     `;
     
@@ -420,6 +437,7 @@ async function extractFromLink() {
     
     const linkInput = document.getElementById('linkInput');
     const extractBtn = document.getElementById('extractBtn');
+    
     const url = linkInput.value.trim();
     
     if (!url) {
@@ -1264,8 +1282,12 @@ function monitorAnalysisJob(jobId) {
     }, 2000);
 }
 
-// 분석 결과 표시
+// 분석 결과 표시 (상세 버전)
 function displayAnalysisResult(result) {
+    // 상세 분석 결과 표시
+    displayDetailedAnalysisResults(result);
+    
+    // 기존 간단한 결과도 유지 (호환성)
     const resultDiv = document.getElementById('analysisResult');
     
     let html = `
@@ -1299,6 +1321,124 @@ function displayAnalysisResult(result) {
     
     resultDiv.innerHTML = html;
     document.getElementById('analysisResultSection').style.display = 'block';
+}
+
+// 상세 분석 결과 표시 함수
+function displayDetailedAnalysisResults(analysis) {
+    const musicInfo = document.getElementById('detailedMusicInfo');
+    const musicFeatures = document.getElementById('detailedMusicFeatures');
+    const audioAnalysis = document.getElementById('detailedAudioAnalysis');
+    const emotionAnalysis = document.getElementById('detailedEmotionAnalysis');
+    const promptInfo = document.getElementById('detailedPromptInfo');
+    
+    const videoInfo = analysis.video_info || {};
+    const musicAnalysis = analysis.music_analysis || {};
+    
+    // 음악 정보
+    musicInfo.innerHTML = `
+        <div class="analysis-item">
+            <span class="analysis-label">제목:</span>
+            <span class="analysis-value">${videoInfo.title || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">아티스트:</span>
+            <span class="analysis-value">${musicAnalysis.artist || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">곡명:</span>
+            <span class="analysis-value">${musicAnalysis.song || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">길이:</span>
+            <span class="analysis-value">${videoInfo.duration_str || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">조회수:</span>
+            <span class="analysis-value">${(videoInfo.view_count || 0).toLocaleString()}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">좋아요:</span>
+            <span class="analysis-value">${(videoInfo.like_count || 0).toLocaleString()}</span>
+        </div>
+    `;
+    
+    // 음악 특성
+    const genre = musicAnalysis.genre || {};
+    const mood = musicAnalysis.mood || {};
+    
+    musicFeatures.innerHTML = `
+        <div class="analysis-item">
+            <span class="analysis-label">주 장르:</span>
+            <span class="analysis-value">${genre.primary_genre || musicAnalysis.genre || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">예상 장르:</span>
+            <span class="analysis-value">${genre.predicted_genres ? genre.predicted_genres.join(', ') : 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">주 분위기:</span>
+            <span class="analysis-value">${mood.primary_mood || musicAnalysis.mood || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">예상 분위기:</span>
+            <span class="analysis-value">${mood.predicted_moods ? mood.predicted_moods.join(', ') : 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">장르 신뢰도:</span>
+            <span class="analysis-value">${genre.confidence ? Math.round(genre.confidence * 100) + '%' : 'N/A'}</span>
+        </div>
+    `;
+    
+    // 오디오 분석
+    audioAnalysis.innerHTML = `
+        <div class="analysis-item">
+            <span class="analysis-label">예상 BPM:</span>
+            <span class="analysis-value">${musicAnalysis.estimated_bpm || musicAnalysis.bpm || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">예상 키:</span>
+            <span class="analysis-value">${musicAnalysis.estimated_key || musicAnalysis.key || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">에너지 레벨:</span>
+            <span class="analysis-value">${musicAnalysis.energy_level || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">댄스 가능성:</span>
+            <span class="analysis-value">${musicAnalysis.danceability || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">발랜스:</span>
+            <span class="analysis-value">${musicAnalysis.valence || 'N/A'}</span>
+        </div>
+    `;
+    
+    // 감정 분석
+    const sentiment = musicAnalysis.sentiment || {};
+    emotionAnalysis.innerHTML = `
+        <div class="analysis-item">
+            <span class="analysis-label">전체 감정:</span>
+            <span class="analysis-value">${sentiment.overall || 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">긍정도:</span>
+            <span class="analysis-value">${sentiment.positive ? Math.round(sentiment.positive * 100) + '%' : 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">부정도:</span>
+            <span class="analysis-value">${sentiment.negative ? Math.round(sentiment.negative * 100) + '%' : 'N/A'}</span>
+        </div>
+        <div class="analysis-item">
+            <span class="analysis-label">중성도:</span>
+            <span class="analysis-value">${sentiment.neutral ? Math.round(sentiment.neutral * 100) + '%' : 'N/A'}</span>
+        </div>
+    `;
+    
+    // 프롬프트 정보
+    const promptOptions = analysis.prompt_options || {};
+    const selectedPrompt = analysis.selected_prompt || '';
+    
+    promptInfo.innerHTML = selectedPrompt || promptOptions.basic || '프롬프트 정보를 생성할 수 없습니다.';
 }
 
 // ============================================================================
@@ -1689,6 +1829,481 @@ async function startTrendsV2AnalysisDirect() {
     hideMarketProgress();
 }
 
+// 추출된 파일 MP3 다운로드 (팝업 없음)
+async function downloadExtractedFileMp3(btn) {
+    const fileItem = btn.closest('.file-item');
+    const filename = fileItem.dataset.filename;
+    
+    console.log("[Download] MP3 다운로드:", filename);
+    
+    try {
+        // MP3로 변환하여 다운로드
+        const downloadUrl = `/download/${encodeURIComponent(filename)}?mp3=true`;
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log("[Download] MP3 다운로드 시작:", filename);
+        
+    } catch (error) {
+        console.error("[Download] MP3 다운로드 오류:", error);
+        alert('MP3 다운로드 중 오류가 발생했습니다: ' + error.message);
+    }
+}
+
+// 추출된 파일 원본 다운로드
+async function downloadExtractedFileOriginal(btn) {
+    const fileItem = btn.closest('.file-item');
+    const filename = fileItem.dataset.filename;
+    
+    console.log("[Download] 원본 다운로드:", filename);
+    
+    try {
+        // 원본 형식으로 다운로드
+        const downloadUrl = `/download/${encodeURIComponent(filename)}?mp3=false`;
+        const link = document.createElement('a');
+        link.href = downloadUrl;
+        link.download = filename;
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        
+        console.log("[Download] 원본 다운로드 시작:", filename);
+        
+    } catch (error) {
+        console.error("[Download] 원본 다운로드 오류:", error);
+        alert('원본 다운로드 중 오류가 발생했습니다: ' + error.message);
+    }
+}
+
+// 기존 함수는 호환성을 위해 유지 (기본값: MP3 다운로드)
+async function downloadExtractedFile(btn) {
+    return downloadExtractedFileMp3(btn);
+}
+
+// 추출된 파일 30초 자르기 (바로 다운로드)
+async function trimExtractedFile(btn) {
+    const fileItem = btn.closest('.file-item');
+    const filename = fileItem.dataset.filename;
+    
+    console.log("[Trim] 30초 자르기 및 다운로드:", filename);
+    
+    if (!confirm('이 파일을 30초로 잘라서 바로 다운로드하시겠습니까?')) {
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    
+    try {
+        const response = await fetch('/trim-audio-download', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ filename: filename })
+        });
+        
+        if (response.ok) {
+            // Content-Type 확인
+            const contentType = response.headers.get('content-type');
+            console.log("[Trim] 응답 Content-Type:", contentType);
+            
+            // 오디오 파일이나 바이너리 파일인 경우 (MP3 다운로드)
+            if (contentType && (
+                contentType.includes('audio/') || 
+                contentType.includes('application/octet-stream') ||
+                contentType.includes('attachment')
+            )) {
+                // 파일 다운로드
+                const blob = await response.blob();
+                const downloadUrl = window.URL.createObjectURL(blob);
+                
+                // 30초 파일명 생성
+                const baseName = filename.replace(/\.(mp4|webm|m4a|mp3)$/i, '');
+                const downloadFilename = `${baseName}_30s.mp3`;
+                
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = downloadFilename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // URL 해제
+                window.URL.revokeObjectURL(downloadUrl);
+                
+                console.log("[Trim] 30초 파일 다운로드 완료:", downloadFilename);
+                alert('30초 파일이 성공적으로 다운로드되었습니다!');
+                
+            } else if (contentType && contentType.includes('application/json')) {
+                // JSON 응답인 경우 (오류 처리)
+                try {
+                    const result = await response.json();
+                    
+                    if (result.success && result.download_url) {
+                        // 다운로드 URL이 제공된 경우
+                        const link = document.createElement('a');
+                        link.href = result.download_url;
+                        link.download = result.filename || `${filename}_30s.mp3`;
+                        document.body.appendChild(link);
+                        link.click();
+                        document.body.removeChild(link);
+                        
+                        console.log("[Trim] 30초 파일 다운로드 완료:", result.filename);
+                        alert('30초 파일이 성공적으로 다운로드되었습니다!');
+                    } else {
+                        throw new Error(result.error || '30초 자르기 처리 실패');
+                    }
+                } catch (jsonError) {
+                    console.error("[Trim] JSON 파싱 오류:", jsonError);
+                    throw new Error('서버 응답 처리 중 오류가 발생했습니다');
+                }
+            } else {
+                // Content-Type을 알 수 없는 경우 바이너리로 처리
+                console.log("[Trim] 알 수 없는 Content-Type, 바이너리로 처리");
+                const blob = await response.blob();
+                
+                // blob 크기 확인
+                if (blob.size === 0) {
+                    throw new Error('서버에서 빈 파일이 전송되었습니다');
+                }
+                
+                const downloadUrl = window.URL.createObjectURL(blob);
+                
+                // 30초 파일명 생성
+                const baseName = filename.replace(/\.(mp4|webm|m4a|mp3)$/i, '');
+                const downloadFilename = `${baseName}_30s.mp3`;
+                
+                const link = document.createElement('a');
+                link.href = downloadUrl;
+                link.download = downloadFilename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                
+                // URL 해제
+                window.URL.revokeObjectURL(downloadUrl);
+                
+                console.log("[Trim] 30초 파일 다운로드 완료:", downloadFilename);
+                alert('30초 파일이 성공적으로 다운로드되었습니다!');
+            }
+        } else {
+            // 응답이 실패인 경우
+            const contentType = response.headers.get('content-type');
+            
+            if (contentType && contentType.includes('application/json')) {
+                try {
+                    const errorResult = await response.json();
+                    throw new Error(errorResult.error || '서버 오류 발생');
+                } catch (jsonError) {
+                    throw new Error(`서버 오류 (${response.status}): 응답 처리 실패`);
+                }
+            } else {
+                throw new Error(`서버 오류 (${response.status}): ${response.statusText}`);
+            }
+        }
+        
+    } catch (error) {
+        console.error("[Trim] 30초 자르기 오류:", error);
+        alert('30초 자르기 중 오류가 발생했습니다: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '✂️';
+    }
+}
+
+// 키 조절 UI 표시
+function showPitchAdjust(btn) {
+    const fileItem = btn.closest('.file-item');
+    const pitchSection = fileItem.querySelector('.pitch-adjust-section');
+    
+    // 토글
+    const isVisible = pitchSection.style.display !== 'none';
+    pitchSection.style.display = isVisible ? 'none' : 'block';
+    
+    // 키 조절 슬라이더 이벤트 등록 (처음에만)
+    if (!isVisible) {
+        const pitchSlider = pitchSection.querySelector('.pitch-slider');
+        const pitchValue = pitchSection.querySelector('.pitch-value');
+        
+        pitchSlider.addEventListener('input', function() {
+            const value = parseInt(this.value);
+            let displayValue = value > 0 ? `+${value}` : `${value}`;
+            pitchValue.textContent = displayValue;
+            
+            // 값에 따른 색상 변경
+            if (value > 0) {
+                pitchValue.style.background = '#e8f5e8';
+                pitchValue.style.color = '#2e7d32';
+            } else if (value < 0) {
+                pitchValue.style.background = '#ffeaa7';
+                pitchValue.style.color = '#d35400';
+            } else {
+                pitchValue.style.background = 'var(--primary-light)';
+                pitchValue.style.color = 'var(--primary-color)';
+            }
+        });
+    }
+}
+
+// 키 조절 적용
+async function applyPitchAdjust(btn) {
+    const fileItem = btn.closest('.file-item');
+    const filename = fileItem.dataset.filename;
+    const pitchSlider = fileItem.querySelector('.pitch-slider');
+    const semitones = parseInt(pitchSlider.value);
+    
+    console.log("[Pitch] 키 조절 적용:", filename, semitones);
+    
+    if (semitones === 0) {
+        alert('키 조절이 필요하지 않습니다.');
+        return;
+    }
+    
+    if (!confirm(`이 파일의 키를 ${semitones > 0 ? '+' : ''}${semitones} 반음 조절하시겠습니까? 원본 파일은 유지됩니다.`)) {
+        return;
+    }
+    
+    btn.disabled = true;
+    btn.textContent = '⏳';
+    
+    try {
+        const response = await fetch('/adjust-pitch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ 
+                filename: filename,
+                semitones: semitones
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // 진행 상황 모니터링
+            document.getElementById('progressSection').style.display = 'block';
+            updateProgress(0, `키 조절 중... (${semitones > 0 ? '+' : ''}${semitones} 반음)`);
+            monitorPitchProgress(result.job_id);
+        } else {
+            throw new Error(result.error);
+        }
+        
+    } catch (error) {
+        console.error("[Pitch] 키 조절 오류:", error);
+        alert('키 조절 중 오류가 발생했습니다: ' + error.message);
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '적용';
+    }
+}
+
+// 30초 자르기 진행 상황 모니터링
+async function monitorTrimProgress(jobId) {
+    console.log("[Trim Monitor] 진행 상황 모니터링 시작:", jobId);
+    
+    const checkProgress = async () => {
+        try {
+            const response = await fetch(`/status/${jobId}`);
+            const status = await response.json();
+            
+            console.log("[Trim Monitor] 진행 상황:", status);
+            
+            if (status.status === 'completed') {
+                updateProgress(100, '30초 자르기 완료!');
+                
+                // 새 파일을 리스트에 추가
+                if (status.result && status.result.new_filename) {
+                    // 새 파일 정보 생성 (기존 파일 기준)
+                    const originalFile = uploadedFiles.find(f => f.filename === status.result.original_filename);
+                    if (originalFile) {
+                        const newFile = {
+                            ...originalFile,
+                            filename: status.result.new_filename,
+                            original_name: originalFile.original_name + ' (30초)',
+                            duration: 30,
+                            duration_str: '00:30',
+                            source: 'link_extract'
+                        };
+                        
+                        addFileToList(newFile);
+                        updateTotalInfo();
+                    }
+                }
+                
+                setTimeout(() => {
+                    document.getElementById('progressSection').style.display = 'none';
+                }, 2000);
+                
+            } else if (status.status === 'error') {
+                throw new Error(status.message || '30초 자르기 중 오류 발생');
+                
+            } else {
+                updateProgress(status.progress || 0, status.message || '처리 중...');
+                setTimeout(checkProgress, 1000);
+            }
+            
+        } catch (error) {
+            console.error("[Trim Monitor] 오류:", error);
+            updateProgress(0, `오류: ${error.message}`);
+            setTimeout(() => {
+                document.getElementById('progressSection').style.display = 'none';
+            }, 3000);
+        }
+    };
+    
+    checkProgress();
+}
+
+// 키 조절 진행 상황 모니터링
+async function monitorPitchProgress(jobId) {
+    console.log("[Pitch Monitor] 진행 상황 모니터링 시작:", jobId);
+    
+    const checkProgress = async () => {
+        try {
+            const response = await fetch(`/status/${jobId}`);
+            const status = await response.json();
+            
+            console.log("[Pitch Monitor] 진행 상황:", status);
+            
+            if (status.status === 'completed') {
+                const semitones = status.result?.semitones || 0;
+                updateProgress(100, `키 조절 완료! (${semitones > 0 ? '+' : ''}${semitones} 반음)`);
+                
+                // 새 파일을 리스트에 추가
+                if (status.result && status.result.new_filename) {
+                    // 새 파일 정보 생성 (기존 파일 기준)
+                    const originalFile = uploadedFiles.find(f => f.filename === status.result.original_filename);
+                    if (originalFile) {
+                        const pitchStr = semitones > 0 ? `+${semitones}` : `${semitones}`;
+                        const newFile = {
+                            ...originalFile,
+                            filename: status.result.new_filename,
+                            original_name: originalFile.original_name + ` (${pitchStr} 반음)`,
+                            source: 'link_extract'
+                        };
+                        
+                        addFileToList(newFile);
+                        updateTotalInfo();
+                    }
+                }
+                
+                setTimeout(() => {
+                    document.getElementById('progressSection').style.display = 'none';
+                }, 2000);
+                
+            } else if (status.status === 'error') {
+                throw new Error(status.message || '키 조절 중 오류 발생');
+                
+            } else {
+                updateProgress(status.progress || 0, status.message || '처리 중...');
+                setTimeout(checkProgress, 1000);
+            }
+            
+        } catch (error) {
+            console.error("[Pitch Monitor] 오류:", error);
+            updateProgress(0, `오류: ${error.message}`);
+            setTimeout(() => {
+                document.getElementById('progressSection').style.display = 'none';
+            }, 3000);
+        }
+    };
+    
+    checkProgress();
+}
+
+// 키 조절 슬라이더 설정 (기존 함수 - 사용 안함)
+function setupPitchSlider() {
+    // 이제 파일별로 개별적으로 처리하므로 빈 함수
+}
+
+// 모든 파일 보기
+async function showAllFiles() {
+    console.log("[Files] 모든 파일 보기 요청");
+    
+    try {
+        const response = await fetch('/files/list');
+        const result = await response.json();
+        
+        if (result.success) {
+            const files = result.files;
+            console.log(`[Files] ${files.length}개 파일 발견`);
+            
+            // 모달 창으로 파일 목록 표시
+            const modal = document.createElement('div');
+            modal.className = 'file-list-modal';
+            modal.innerHTML = `
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h3>📂 저장된 파일 목록 (${files.length}개)</h3>
+                        <button class="close-btn" onclick="this.closest('.file-list-modal').remove()">✕</button>
+                    </div>
+                    <div class="modal-body">
+                        <div class="files-grid">
+                            ${files.map(file => `
+                                <div class="file-card ${file.is_extracted ? 'extracted-file' : ''}">
+                                    <div class="file-info">
+                                        <div class="file-name" title="${file.filename}">${file.filename}</div>
+                                        <div class="file-meta">
+                                            <span>${file.size_mb} MB</span>
+                                            <span>•</span>
+                                            <span>${file.modified}</span>
+                                            ${file.is_extracted ? '<span>• 🔗 추출</span>' : ''}
+                                        </div>
+                                    </div>
+                                    <div class="file-actions">
+                                        <button class="btn-small" onclick="downloadFileByName('${file.filename}')" title="다운로드">💾</button>
+                                        <button class="btn-small btn-danger" onclick="deleteFile('${file.filename}')" title="삭제">🗑️</button>
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            
+            // 모달 외부 클릭 시 닫기
+            modal.addEventListener('click', (e) => {
+                if (e.target === modal) {
+                    modal.remove();
+                }
+            });
+            
+        } else {
+            throw new Error(result.error || '파일 목록을 가져올 수 없습니다');
+        }
+        
+    } catch (error) {
+        console.error("[Files] 파일 목록 오류:", error);
+        alert('파일 목록을 가져오는 중 오류가 발생했습니다: ' + error.message);
+    }
+}
+
+// 파일명으로 다운로드
+function downloadFileByName(filename) {
+    console.log("[Download] 파일 다운로드:", filename);
+    
+    const downloadUrl = `/download/${encodeURIComponent(filename)}?mp3=false`;
+    const link = document.createElement('a');
+    link.href = downloadUrl;
+    link.download = filename;
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+}
+
+// 파일 삭제 (미구현)
+function deleteFile(filename) {
+    alert('파일 삭제 기능은 아직 구현되지 않았습니다.');
+}
+
 // 전역 함수로 노출
 window.showTab = showTab;
 window.startMarketAnalysis = startMarketAnalysis;
@@ -1697,5 +2312,15 @@ window.resetMarketAnalysis = resetMarketAnalysis;
 window.analyzeMusic = analyzeMusic;
 window.setV2Keyword = setV2Keyword;
 window.handleV2ModeChange = handleV2ModeChange;
+window.extractFromLink = extractFromLink;
+window.downloadExtractedFile = downloadExtractedFile;
+window.downloadExtractedFileMp3 = downloadExtractedFileMp3;
+window.downloadExtractedFileOriginal = downloadExtractedFileOriginal;
+window.trimExtractedFile = trimExtractedFile;
+window.showPitchAdjust = showPitchAdjust;
+window.applyPitchAdjust = applyPitchAdjust;
+window.showAllFiles = showAllFiles;
+window.downloadFileByName = downloadFileByName;
+window.deleteFile = deleteFile;
 
 console.log("[Music Merger] 모든 함수 정의 완료 (V2 포함)");

@@ -349,6 +349,79 @@ def process_status(job_id):
     return jsonify(job_info)
 
 
+@app.route('/files/list')
+def list_files():
+    """업로드된 파일 목록 확인"""
+    console.log("[Route] /files/list - 파일 목록 요청")
+    
+    try:
+        upload_folder = app.config['UPLOAD_FOLDER']
+        files = []
+        
+        if os.path.exists(upload_folder):
+            for filename in os.listdir(upload_folder):
+                if filename.lower().endswith(('.mp3', '.mp4', '.webm', '.m4a', '.wav')):
+                    filepath = os.path.join(upload_folder, filename)
+                    file_stat = os.stat(filepath)
+                    
+                    files.append({
+                        'filename': filename,
+                        'size': file_stat.st_size,
+                        'size_mb': round(file_stat.st_size / (1024 * 1024), 2),
+                        'modified': datetime.fromtimestamp(file_stat.st_mtime).strftime('%Y-%m-%d %H:%M:%S'),
+                        'is_extracted': any(pattern in filename.lower() for pattern in ['youtube_', '_30s.', '_plus', '_minus'])
+                    })
+        
+        # 최신 파일 순으로 정렬
+        files.sort(key=lambda x: x['modified'], reverse=True)
+        
+        console.log(f"[Files] 총 {len(files)}개 파일 발견")
+        
+        return jsonify({
+            'success': True,
+            'files': files,
+            'total': len(files)
+        })
+        
+    except Exception as e:
+        console.log(f"[Files] 파일 목록 조회 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/status/<job_id>')
+def job_status(job_id):
+    """모든 작업 상태 확인 (통합 엔드포인트)"""
+    console.log(f"[Route] /status/{job_id} - 작업 상태 확인")
+    
+    if job_id not in processing_jobs:
+        return jsonify({'error': '작업을 찾을 수 없습니다'}), 404
+    
+    job_info = processing_jobs[job_id]
+    
+    # 완료된 작업은 정보 제거 (메모리 정리) - 단, 결과를 먼저 반환
+    if job_info['status'] in ['completed', 'error']:
+        result = job_info.copy()  # 복사본 생성
+        # 5초 후에 정리하도록 지연 (클라이언트가 결과를 받을 시간 확보)
+        import threading
+        def cleanup():
+            import time
+            time.sleep(5)
+            if job_id in processing_jobs:
+                del processing_jobs[job_id]
+                console.log(f"[Cleanup] 작업 정보 정리: {job_id}")
+        
+        cleanup_thread = threading.Thread(target=cleanup)
+        cleanup_thread.daemon = True
+        cleanup_thread.start()
+        
+        return jsonify(result)
+    
+    return jsonify(job_info)
+
+
 @app.route('/extract', methods=['POST'])
 def extract_from_link():
     """링크에서 음악 추출"""
@@ -589,14 +662,150 @@ def get_video_presets():
 
 @app.route('/download/<filename>')
 def download_file(filename):
-    """처리된 파일 다운로드"""
-    console.log(f"[Route] /download/{filename} - 파일 다운로드 요청")
+    """파일 다운로드 (처리된 파일과 업로드된 파일 모두 지원)"""
+    mp3_param = request.args.get('mp3', 'true')
+    console.log(f"[Route] /download/{filename} - 파일 다운로드 요청 (mp3={mp3_param})")
     
-    filepath = os.path.join(app.config['PROCESSED_FOLDER'], secure_filename(filename))
-    if os.path.exists(filepath):
-        return send_file(filepath, as_attachment=True)
-    else:
-        return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
+    try:
+        # 디버깅: 원본 파일명과 안전 파일명 비교
+        safe_filename = secure_filename(filename)
+        console.log(f"[Debug] 원본 파일명: '{filename}'")
+        console.log(f"[Debug] 안전 파일명: '{safe_filename}'")
+        console.log(f"[Debug] 파일명 변경됨: {filename != safe_filename}")
+        
+        file_path = None
+        is_extracted_file = False
+        
+        # 처리된 파일 폴더에서 먼저 찾기
+        processed_path = os.path.join(app.config['PROCESSED_FOLDER'], safe_filename)
+        console.log(f"[Debug] 처리된 파일 경로 확인: {processed_path}")
+        console.log(f"[Debug] 처리된 파일 존재: {os.path.exists(processed_path)}")
+        
+        if os.path.exists(processed_path):
+            console.log(f"[Download] 처리된 파일 다운로드: {processed_path}")
+            return send_file(processed_path, as_attachment=True)
+        
+        # 업로드 폴더에서 찾기 (링크 추출 파일 등)
+        upload_path = os.path.join(app.config['UPLOAD_FOLDER'], safe_filename)
+        console.log(f"[Debug] 업로드 파일 경로 확인: {upload_path}")
+        console.log(f"[Debug] 업로드 파일 존재: {os.path.exists(upload_path)}")
+        
+        # 안전 파일명으로 찾지 못한 경우 원본 파일명으로 다시 시도
+        if not os.path.exists(upload_path):
+            original_upload_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            console.log(f"[Debug] 원본 파일명으로 재시도: {original_upload_path}")
+            console.log(f"[Debug] 원본 파일명 존재: {os.path.exists(original_upload_path)}")
+            
+            if os.path.exists(original_upload_path):
+                upload_path = original_upload_path
+                safe_filename = filename  # 원본 파일명 사용
+        
+        # 여전히 파일이 없으면 유사한 파일명 검색
+        if not os.path.exists(upload_path):
+            console.log(f"[Debug] 파일 검색 실패, 유사 파일명 검색 시작...")
+            upload_folder = app.config['UPLOAD_FOLDER']
+            
+            # 업로드 폴더의 모든 파일 확인
+            try:
+                all_files = os.listdir(upload_folder)
+                console.log(f"[Debug] 업로드 폴더 파일 개수: {len(all_files)}")
+                
+                # 요청된 파일명과 유사한 파일 찾기
+                target_base = os.path.splitext(filename)[0].lower()
+                console.log(f"[Debug] 검색 대상 기본명: '{target_base}'")
+                
+                for file in all_files:
+                    file_base = os.path.splitext(file)[0].lower()
+                    # 부분 매칭으로 검색
+                    if target_base in file_base or file_base in target_base:
+                        potential_path = os.path.join(upload_folder, file)
+                        console.log(f"[Debug] 유사 파일 발견: {file}")
+                        console.log(f"[Debug] 유사 파일 경로: {potential_path}")
+                        
+                        if os.path.exists(potential_path):
+                            upload_path = potential_path
+                            safe_filename = file
+                            console.log(f"[Debug] 유사 파일 매칭 성공: {file}")
+                            break
+                            
+            except Exception as e:
+                console.log(f"[Debug] 파일 검색 중 오류: {str(e)}")
+        
+        if os.path.exists(upload_path):
+            file_path = upload_path
+            # 링크 추출 파일인지 확인 (다양한 패턴 체크)
+            filename_lower = safe_filename.lower()
+            is_extracted_file = (
+                'youtube_' in filename_lower or  # 링크 추출 파일
+                '_30s.' in filename_lower or     # 30초 자른 파일
+                '_30s_' in filename_lower or     # 30초 자른 파일 (다른 패턴)
+                '_plus' in filename_lower or     # 키 올린 파일
+                '_minus' in filename_lower or    # 키 내린 파일
+                any(ext in filename_lower for ext in ['.mp4', '.webm', '.m4a']) and 'youtube' in filename_lower
+            )
+            console.log(f"[Download] 업로드된 파일 발견: {upload_path}, 추출 파일: {is_extracted_file}")
+            console.log(f"[Download] 파일명 분석: {safe_filename}")
+        
+        if not file_path:
+            console.log(f"[Download] 파일을 찾을 수 없음 - 최종 확인")
+            console.log(f"[Download] 요청 파일명: '{filename}'")
+            console.log(f"[Download] 안전 파일명: '{safe_filename}'")
+            console.log(f"[Download] 업로드 폴더: {app.config['UPLOAD_FOLDER']}")
+            return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
+        
+        # URL 파라미터로 형식 선택 (기본값: MP3 변환)
+        force_mp3 = request.args.get('mp3', 'true').lower() == 'true'
+        
+        # 추출된 파일인 경우 처리
+        if is_extracted_file:
+            console.log(f"[Download] 추출된 파일 다운로드: {file_path}, MP3 변환: {force_mp3}")
+            
+            # MP3 변환을 원하지 않는 경우만 원본 다운로드
+            if not force_mp3:
+                console.log(f"[Download] 원본 파일 다운로드: {file_path}")
+                return send_file(file_path, as_attachment=True)
+            
+            # 이미 MP3인 경우 바로 다운로드
+            if file_path.lower().endswith('.mp3'):
+                console.log(f"[Download] 이미 MP3 파일: {file_path}")
+                return send_file(file_path, as_attachment=True)
+            
+            # MP3로 변환 (바로 uploads 폴더에)
+            console.log(f"[Download] MP3 변환 시작: {file_path}")
+            from link_extractor import LinkExtractor
+            extractor = LinkExtractor(console_log=console.log)
+            
+            # uploads 폴더에서 직접 변환
+            mp3_path = extractor.convert_to_mp3(file_path, app.config['UPLOAD_FOLDER'])
+            
+            if mp3_path and os.path.exists(mp3_path):
+                console.log(f"[Download] MP3 변환 성공: {mp3_path}")
+                
+                # 파일 크기 확인
+                file_size = os.path.getsize(mp3_path)
+                console.log(f"[Download] 변환된 MP3 파일 크기: {file_size} bytes")
+                
+                if file_size == 0:
+                    console.log(f"[Download-Error] MP3 변환 실패 - 파일이 비어있음")
+                    return jsonify({'error': 'MP3 변환에 실패했습니다. 파일이 손상되었을 수 있습니다.'}), 500
+                
+                # MP3 파일명으로 다운로드
+                base_name = os.path.splitext(safe_filename)[0]
+                mp3_filename = f"{base_name}.mp3"
+                
+                # 변환된 파일은 이미 uploads 폴더에 있으므로 바로 다운로드
+                return send_file(mp3_path, as_attachment=True, download_name=mp3_filename)
+            else:
+                console.log(f"[Download-Error] MP3 변환 완전 실패: {file_path}")
+                return jsonify({'error': 'MP3 변환에 실패했습니다. FFmpeg 오류가 발생했을 수 있습니다.'}), 500
+        else:
+            # 일반 파일 다운로드
+            console.log(f"[Download] 일반 파일 다운로드: {file_path}")
+            return send_file(file_path, as_attachment=True)
+        
+    except Exception as e:
+        console.log(f"[Download] 다운로드 오류: {str(e)}")
+        return jsonify({'error': str(e)}), 500
 
 
 # ===========================================
@@ -1623,6 +1832,241 @@ def get_emotion_categories():
             'success': False,
             'error': str(e)
         }), 500
+
+
+
+
+@app.route('/trim-audio', methods=['POST'])
+def trim_audio():
+    """추출된 음원 30초 자르기"""
+    console.log("[Route] /trim-audio - 30초 자르기 요청")
+    
+    data = request.get_json()
+    filename = data.get('filename', '').strip()
+    
+    if not filename:
+        return jsonify({'error': '파일명이 필요합니다'}), 400
+    
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(file_path):
+        return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
+    
+    # 작업 ID 생성
+    job_id = str(uuid.uuid4())
+    
+    # 자르기 작업 시작
+    thread = threading.Thread(
+        target=trim_audio_job,
+        args=(job_id, filename)
+    )
+    thread.start()
+    
+    return jsonify({
+        'success': True,
+        'job_id': job_id,
+        'message': '30초 자르기 작업을 시작했습니다'
+    })
+
+
+@app.route('/trim-audio-download', methods=['POST'])
+def trim_audio_download():
+    """추출된 음원 30초 자르기 후 바로 다운로드"""
+    console.log("[Route] /trim-audio-download - 30초 자르기 후 다운로드 요청")
+    
+    data = request.get_json()
+    filename = data.get('filename', '').strip()
+    
+    if not filename:
+        return jsonify({'error': '파일명이 필요합니다'}), 400
+    
+    try:
+        # 파일 경로 확인
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        if not os.path.exists(file_path):
+            console.log(f"[Trim-Download] 파일을 찾을 수 없음: {file_path}")
+            return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
+        
+        console.log(f"[Trim-Download] 30초 자르기 시작: {file_path}")
+        
+        # LinkExtractor를 사용하여 30초 자르기
+        from link_extractor import LinkExtractor
+        extractor = LinkExtractor(console_log=console.log)
+        
+        # 30초 자른 파일 생성
+        trimmed_path = extractor._trim_audio_to_30_seconds(file_path, app.config['UPLOAD_FOLDER'])
+        
+        if not trimmed_path or not os.path.exists(trimmed_path):
+            console.log(f"[Trim-Download] 30초 자르기 실패: {filename}")
+            return jsonify({'error': '30초 자르기에 실패했습니다'}), 500
+        
+        # 파일 크기 검증
+        file_size = os.path.getsize(trimmed_path)
+        if file_size == 0:
+            console.log(f"[Trim-Download] 자른 파일이 비어있음: {trimmed_path}")
+            return jsonify({'error': '자른 파일이 비어있습니다'}), 500
+        
+        console.log(f"[Trim-Download] 30초 자르기 성공: {trimmed_path} ({file_size} bytes)")
+        
+        # 다운로드 파일명 생성
+        base_name = os.path.splitext(filename)[0]
+        download_filename = f"{base_name}_30s.mp3"
+        
+        # 파일을 바로 다운로드로 전송
+        return send_file(
+            trimmed_path, 
+            as_attachment=True, 
+            download_name=download_filename,
+            mimetype='audio/mpeg'
+        )
+        
+    except Exception as e:
+        console.log(f"[Trim-Download] 오류 발생: {str(e)}")
+        import traceback
+        console.log(f"[Trim-Download] 상세 오류: {traceback.format_exc()}")
+        return jsonify({'error': f'30초 자르기 처리 중 오류: {str(e)}'}), 500
+
+
+@app.route('/adjust-pitch', methods=['POST'])
+def adjust_pitch():
+    """추출된 음원 키 조절"""
+    console.log("[Route] /adjust-pitch - 키 조절 요청")
+    
+    data = request.get_json()
+    filename = data.get('filename', '').strip()
+    semitones = data.get('semitones', 0)
+    
+    if not filename:
+        return jsonify({'error': '파일명이 필요합니다'}), 400
+    
+    file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(file_path):
+        return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
+    
+    # 키 조절 값 검증 (-12 ~ +12 반음)
+    try:
+        semitones = int(semitones)
+        if semitones < -12 or semitones > 12:
+            return jsonify({'error': '키 조절은 -12 ~ +12 반음 범위만 가능합니다'}), 400
+    except (ValueError, TypeError):
+        return jsonify({'error': '올바른 반음 값이 아닙니다'}), 400
+    
+    if semitones == 0:
+        return jsonify({'error': '키 조절이 필요하지 않습니다'}), 400
+    
+    # 작업 ID 생성
+    job_id = str(uuid.uuid4())
+    
+    # 키 조절 작업 시작
+    thread = threading.Thread(
+        target=pitch_adjust_job,
+        args=(job_id, filename, semitones)
+    )
+    thread.start()
+    
+    return jsonify({
+        'success': True,
+        'job_id': job_id,
+        'message': f'키 조절 작업을 시작했습니다 ({semitones:+d} 반음)'
+    })
+
+
+def trim_audio_job(job_id, filename):
+    """백그라운드 30초 자르기 작업"""
+    console.log(f"[Trim Job] {job_id} - 30초 자르기 시작: {filename}")
+    
+    # 처리 상태 초기화
+    processing_jobs[job_id] = {
+        'status': 'processing',
+        'progress': 0,
+        'message': '30초 자르기 준비 중...',
+        'result': None
+    }
+    
+    try:
+        # LinkExtractor 사용
+        extractor = LinkExtractor(console_log=console.log)
+        
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # 진행률 업데이트
+        processing_jobs[job_id]['progress'] = 50
+        processing_jobs[job_id]['message'] = '30초 자르기 중...'
+        
+        # 30초 자르기 실행
+        result_path = extractor._trim_audio_to_30_seconds(file_path, app.config['UPLOAD_FOLDER'])
+        
+        if result_path and os.path.exists(result_path):
+            # 성공
+            processing_jobs[job_id]['status'] = 'completed'
+            processing_jobs[job_id]['progress'] = 100
+            processing_jobs[job_id]['message'] = '30초 자르기 완료!'
+            processing_jobs[job_id]['result'] = {
+                'type': 'trim',
+                'original_filename': filename,
+                'new_filename': os.path.basename(result_path)
+            }
+            
+            console.log(f"[Trim Job] {job_id} - 완료: {result_path}")
+        else:
+            # 실패
+            processing_jobs[job_id]['status'] = 'error'
+            processing_jobs[job_id]['message'] = '30초 자르기 실패'
+            console.log(f"[Trim Job] {job_id} - 실패")
+        
+    except Exception as e:
+        console.log(f"[Trim Job] {job_id} - 오류: {str(e)}")
+        processing_jobs[job_id]['status'] = 'error'
+        processing_jobs[job_id]['message'] = f'오류: {str(e)}'
+
+
+def pitch_adjust_job(job_id, filename, semitones):
+    """백그라운드 키 조절 작업"""
+    console.log(f"[Pitch Job] {job_id} - 키 조절 시작: {filename} ({semitones:+d} 반음)")
+    
+    # 처리 상태 초기화
+    processing_jobs[job_id] = {
+        'status': 'processing',
+        'progress': 0,
+        'message': f'키 조절 준비 중... ({semitones:+d} 반음)',
+        'result': None
+    }
+    
+    try:
+        # LinkExtractor 사용
+        extractor = LinkExtractor(console_log=console.log)
+        
+        file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        # 진행률 업데이트
+        processing_jobs[job_id]['progress'] = 50
+        processing_jobs[job_id]['message'] = f'키 조절 중... ({semitones:+d} 반음)'
+        
+        # 키 조절 실행
+        result_path = extractor.adjust_pitch(file_path, app.config['UPLOAD_FOLDER'], semitones)
+        
+        if result_path and os.path.exists(result_path):
+            # 성공
+            processing_jobs[job_id]['status'] = 'completed'
+            processing_jobs[job_id]['progress'] = 100
+            processing_jobs[job_id]['message'] = f'키 조절 완료! ({semitones:+d} 반음)'
+            processing_jobs[job_id]['result'] = {
+                'type': 'pitch',
+                'original_filename': filename,
+                'new_filename': os.path.basename(result_path),
+                'semitones': semitones
+            }
+            
+            console.log(f"[Pitch Job] {job_id} - 완료: {result_path}")
+        else:
+            # 실패
+            processing_jobs[job_id]['status'] = 'error'
+            processing_jobs[job_id]['message'] = f'키 조절 실패 ({semitones:+d} 반음)'
+            console.log(f"[Pitch Job] {job_id} - 실패")
+        
+    except Exception as e:
+        console.log(f"[Pitch Job] {job_id} - 오류: {str(e)}")
+        processing_jobs[job_id]['status'] = 'error'
+        processing_jobs[job_id]['message'] = f'오류: {str(e)}'
 
 
 @app.errorhandler(413)
