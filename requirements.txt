@@ -80,5 +80,4 @@ html5lib==1.1
 # 웹 요청
 requests>=2.31.0
 
-# 해시 및 암호화
-hashlib-compat==1.0.1
+# 해시 및 암호화 (hashlib는 Python 내장 모듈)
