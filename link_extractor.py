@@ -111,7 +111,7 @@ class LinkExtractor:
             
             # yt-dlp 설정 (output_folder에 직접 다운로드)
             ydl_opts = {
-                'format': 'worst[ext=mp4]/worst',
+                'format': 'best[height<=720][ext=mp4]/best[ext=mp4]/best',
                 'outtmpl': os.path.join(download_folder, f'{safe_filename}_%(title)s.%(ext)s'),
                 'noplaylist': True,
                 'progress_hooks': [progress_hook],
@@ -305,6 +305,8 @@ class LinkExtractor:
     def get_video_info(self, url):
         """YouTube Data API v3로 비디오 정보 가져오기"""
         try:
+            self.console_log(f"[Extract] 비디오 정보 요청 시작: {url}")
+            
             # YouTube API가 없으면 yt-dlp fallback
             if not self.youtube:
                 self.console_log("[Extract] YouTube API 없음, yt-dlp 사용")
@@ -312,18 +314,23 @@ class LinkExtractor:
             
             # URL에서 video ID 추출
             video_id = self.extract_video_id(url)
+            self.console_log(f"[Extract] 추출된 비디오 ID: {video_id}")
             if not video_id:
+                self.console_log("[Extract] 비디오 ID 추출 실패")
                 return {'success': False, 'error': '유효하지 않은 YouTube URL'}
             
             # YouTube Data API 호출
+            self.console_log("[Extract] YouTube Data API 호출 중...")
             request = self.youtube.videos().list(
                 part='snippet,contentDetails,statistics',
                 id=video_id
             )
             
             response = request.execute()
+            self.console_log(f"[Extract] API 응답 수신, 아이템 수: {len(response.get('items', []))}")
             
             if not response.get('items'):
+                self.console_log("[Extract] API 응답에서 비디오를 찾을 수 없음")
                 return {'success': False, 'error': '비디오를 찾을 수 없습니다'}
             
             video = response['items'][0]
@@ -335,7 +342,7 @@ class LinkExtractor:
             duration_str = content_details.get('duration', 'PT0S')
             duration = self._parse_duration(duration_str)
             
-            return {
+            video_info = {
                 'success': True,
                 'title': snippet.get('title', 'Unknown'),
                 'duration': duration,
@@ -344,8 +351,12 @@ class LinkExtractor:
                 'thumbnail': snippet.get('thumbnails', {}).get('high', {}).get('url', '')
             }
             
+            self.console_log(f"[Extract] 비디오 정보 성공 획득: {video_info['title']} ({duration}초)")
+            return video_info
+            
         except Exception as e:
             self.console_log(f"[Extract] YouTube API 오류: {str(e)}")
+            self.console_log("[Extract] yt-dlp fallback 시도")
             # API 실패 시 yt-dlp fallback
             return self._get_video_info_ytdlp(url)
 
