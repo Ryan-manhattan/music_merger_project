@@ -22,13 +22,18 @@ class LinkExtractor:
         
         # YouTube API 설정
         self.youtube_api_key = os.getenv('YOUTUBE_API_KEY')
+        self.console_log(f"[Extract] YouTube API 키 확인: {'있음' if self.youtube_api_key else '없음'}")
+        
         if self.youtube_api_key:
             try:
+                self.console_log("[Extract] YouTube Data API v3 클라이언트 초기화 중...")
                 self.youtube = build('youtube', 'v3', developerKey=self.youtube_api_key)
+                self.console_log("[Extract] YouTube Data API v3 클라이언트 초기화 성공")
             except Exception as e:
                 self.console_log(f"[Extract] YouTube API 초기화 실패: {str(e)}")
                 self.youtube = None
         else:
+            self.console_log("[Extract] YouTube API 키가 설정되지 않음, yt-dlp만 사용")
             self.youtube = None
         
     def extract_audio(self, url, output_folder, progress_callback=None):
