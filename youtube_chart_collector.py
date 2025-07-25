@@ -88,13 +88,13 @@ class YouTubeChartCollector:
             keywords = self.chart_keywords.get(region, self.chart_keywords['global'])
             
             for keyword in keywords[:3]:  # 상위 3개 키워드만 사용
-                videos = self._search_music_videos(keyword, max_results // len(keywords[:3]))
+                videos = self._search_music_videos(keyword, max_results // len(keywords[:3]), min_view_count=50000)
                 all_videos.extend(videos)
                 time.sleep(0.1)  # API 호출 간격
             
-            # 조회수 기준으로 정렬하고 중복 제거
+            # 업로드 날짜 기준으로 정렬하고 중복 제거 (최신순)
             unique_videos = self._deduplicate_videos(all_videos)
-            sorted_videos = sorted(unique_videos, key=lambda x: x.get('view_count', 0), reverse=True)
+            sorted_videos = sorted(unique_videos, key=lambda x: x.get('published_at', ''), reverse=True)
             
             # 상위 결과만 선택
             top_videos = sorted_videos[:max_results]
@@ -136,7 +136,7 @@ class YouTubeChartCollector:
                 'source': 'youtube_error'
             }
     
-    def _search_music_videos(self, query: str, max_results: int = 10) -> List[Dict]:
+    def _search_music_videos(self, query: str, max_results: int = 10, min_view_count: int = 50000) -> List[Dict]:
         """YouTube에서 음악 동영상 검색"""
         try:
             search_url = f"{self.base_url}/search"
@@ -146,9 +146,9 @@ class YouTubeChartCollector:
                 'part': 'snippet',
                 'type': 'video',
                 'videoCategoryId': '10',  # 음악 카테고리
-                'order': 'viewCount',     # 조회수 순
-                'maxResults': max_results,
-                'publishedAfter': (datetime.now() - timedelta(days=365)).isoformat() + 'Z'  # 최근 1년
+                'order': 'date',          # 최신순
+                'maxResults': max_results * 3,  # 조회수 필터링을 위해 더 많이 가져옴
+                'publishedAfter': (datetime.now() - timedelta(days=90)).isoformat() + 'Z'  # 최근 3개월
             }
             
             response = requests.get(search_url, params=params)
@@ -159,7 +159,14 @@ class YouTubeChartCollector:
             
             # 상세 정보 가져오기
             if video_ids:
-                return self._get_video_details(video_ids)
+                all_videos = self._get_video_details(video_ids)
+                # 조회수 임계값 및 플레이리스트/모음 필터링
+                filtered_videos = []
+                for v in all_videos:
+                    if (v.get('view_count', 0) >= min_view_count and 
+                        not self._is_playlist_or_compilation(v.get('title', ''))):
+                        filtered_videos.append(v)
+                return filtered_videos[:max_results]  # 원하는 수만큼만 반환
             
             return []
             
@@ -283,3 +290,28 @@ class YouTubeChartCollector:
             
         except Exception as e:
             return "Unknown Artist", title[:50]
+    
+    def _is_playlist_or_compilation(self, title: str) -> bool:
+        """플레이리스트나 모음 동영상인지 확인"""
+        title_lower = title.lower()
+        
+        # 플레이리스트/모음 관련 키워드들 (핵심만)
+        playlist_keywords = [
+            '플레이리스트', '노래모음', '최신가요', '인기가요',
+            '랜덤플레이', 'random play',
+            '1시간', '2시간', '3시간', 'hours',
+            '연속재생', '무한재생', 'non-stop', 'nonstop',
+            'compilation', 'best of'
+        ]
+        
+        # 키워드 포함 여부 확인
+        for keyword in playlist_keywords:
+            if keyword in title_lower:
+                return True
+        
+        # 숫자 + 곡, 트랙 패턴 (예: "10곡 모음", "20 tracks")
+        import re
+        if re.search(r'\d+\s*(곡|tracks?|songs?)', title_lower):
+            return True
+        
+        return False

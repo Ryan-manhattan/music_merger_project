@@ -8,7 +8,9 @@ import os
 import yt_dlp
 import tempfile
 import subprocess
+import re
 from datetime import datetime
+from googleapiclient.discovery import build
 from utils import generate_safe_filename, validate_audio_file, get_file_size_mb
 
 class LinkExtractor:
@@ -17,6 +19,17 @@ class LinkExtractor:
         # FFmpeg 경로 설정
         ffmpeg_path = os.path.join(os.path.dirname(__file__), 'ffmpeg', 'ffmpeg-master-latest-win64-gpl', 'bin')
         self.ffmpeg_exe = os.path.join(ffmpeg_path, 'ffmpeg.exe') if os.path.exists(ffmpeg_path) else 'ffmpeg'
+        
+        # YouTube API 설정
+        self.youtube_api_key = os.getenv('YOUTUBE_API_KEY')
+        if self.youtube_api_key:
+            try:
+                self.youtube = build('youtube', 'v3', developerKey=self.youtube_api_key)
+            except Exception as e:
+                self.console_log(f"[Extract] YouTube API 초기화 실패: {str(e)}")
+                self.youtube = None
+        else:
+            self.youtube = None
         
     def extract_audio(self, url, output_folder, progress_callback=None):
         """URL에서 오디오 추출"""
@@ -275,27 +288,120 @@ class LinkExtractor:
             self.console_log(f"[Extract] 오류: {str(e)}")
             return {'success': False, 'error': f'추출 중 오류 발생: {str(e)}'}
     
+    def extract_video_id(self, url):
+        """YouTube URL에서 video ID 추출"""
+        patterns = [
+            r'(?:v=|\/)([0-9A-Za-z_-]{11}).*',  # v= 또는 /
+            r'(?:youtu\.be\/)([0-9A-Za-z_-]{11})',  # youtu.be 단축 URL
+            r'(?:embed\/)([0-9A-Za-z_-]{11})',  # embed URL
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, url)
+            if match:
+                return match.group(1)
+        return None
+
     def get_video_info(self, url):
-        """링크에서 비디오 정보만 가져오기"""
+        """YouTube Data API v3로 비디오 정보 가져오기"""
         try:
-            ydl_opts = {
-                'quiet': True,
-                'http_headers': {
-                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
-                }
+            # YouTube API가 없으면 yt-dlp fallback
+            if not self.youtube:
+                self.console_log("[Extract] YouTube API 없음, yt-dlp 사용")
+                return self._get_video_info_ytdlp(url)
+            
+            # URL에서 video ID 추출
+            video_id = self.extract_video_id(url)
+            if not video_id:
+                return {'success': False, 'error': '유효하지 않은 YouTube URL'}
+            
+            # YouTube Data API 호출
+            request = self.youtube.videos().list(
+                part='snippet,contentDetails,statistics',
+                id=video_id
+            )
+            
+            response = request.execute()
+            
+            if not response.get('items'):
+                return {'success': False, 'error': '비디오를 찾을 수 없습니다'}
+            
+            video = response['items'][0]
+            snippet = video['snippet']
+            content_details = video['contentDetails']
+            statistics = video['statistics']
+            
+            # ISO 8601 duration을 초로 변환
+            duration_str = content_details.get('duration', 'PT0S')
+            duration = self._parse_duration(duration_str)
+            
+            return {
+                'success': True,
+                'title': snippet.get('title', 'Unknown'),
+                'duration': duration,
+                'uploader': snippet.get('channelTitle', 'Unknown'),
+                'view_count': int(statistics.get('viewCount', 0)),
+                'thumbnail': snippet.get('thumbnails', {}).get('high', {}).get('url', '')
             }
-            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
-                info = ydl.extract_info(url, download=False)
-                return {
-                    'success': True,
-                    'title': info.get('title', 'Unknown'),
-                    'duration': info.get('duration', 0),
-                    'uploader': info.get('uploader', 'Unknown'),
-                    'view_count': info.get('view_count', 0),
-                    'thumbnail': info.get('thumbnail', '')
-                }
+            
         except Exception as e:
-            return {'success': False, 'error': str(e)}
+            self.console_log(f"[Extract] YouTube API 오류: {str(e)}")
+            # API 실패 시 yt-dlp fallback
+            return self._get_video_info_ytdlp(url)
+
+    def _parse_duration(self, duration_str):
+        """ISO 8601 duration을 초로 변환"""
+        import re
+        pattern = re.compile(r'PT(?:(\d+)H)?(?:(\d+)M)?(?:(\d+)S)?')
+        match = pattern.match(duration_str)
+        if not match:
+            return 0
+        
+        hours = int(match.group(1) or 0)
+        minutes = int(match.group(2) or 0)
+        seconds = int(match.group(3) or 0)
+        
+        return hours * 3600 + minutes * 60 + seconds
+
+    def _get_video_info_ytdlp(self, url):
+        """yt-dlp를 사용한 fallback 비디오 정보 가져오기 (timeout 포함)"""
+        import threading
+        
+        result = {'success': False, 'error': 'Timeout'}
+        
+        def extract_info():
+            try:
+                ydl_opts = {
+                    'quiet': True,
+                    'socket_timeout': 10,
+                    'http_headers': {
+                        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                    }
+                }
+                with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                    info = ydl.extract_info(url, download=False)
+                    result.update({
+                        'success': True,
+                        'title': info.get('title', 'Unknown'),
+                        'duration': info.get('duration', 0),
+                        'uploader': info.get('uploader', 'Unknown'),
+                        'view_count': info.get('view_count', 0),
+                        'thumbnail': info.get('thumbnail', '')
+                    })
+            except Exception as e:
+                result.update({'success': False, 'error': str(e)})
+        
+        # 15초 timeout으로 실행
+        thread = threading.Thread(target=extract_info)
+        thread.daemon = True
+        thread.start()
+        thread.join(timeout=15)
+        
+        if thread.is_alive():
+            self.console_log(f"[Extract] yt-dlp 비디오 정보 가져오기 타임아웃 (15초)")
+            return {'success': False, 'error': 'Video info extraction timeout'}
+        
+        return result
     
     def _format_duration(self, seconds):
         """초를 mm:ss 형식으로 변환"""

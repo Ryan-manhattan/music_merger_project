@@ -70,3 +70,15 @@ tqdm==4.66.1
 # 시각화 (선택적)
 matplotlib==3.7.3
 plotly==5.17.0
+
+# 새로운 차트 API 의존성
+# HTML 파싱 (Billboard)
+beautifulsoup4==4.12.2
+lxml==4.9.3
+html5lib==1.1
+
+# 웹 요청
+requests>=2.31.0
+
+# 해시 및 암호화
+hashlib-compat==1.0.1

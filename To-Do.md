@@ -205,3 +205,170 @@ vaderSentiment==3.3.2          # 감정 분석
 scikit-learn==1.3.2            # 머신러닝 (토픽모델링)
 textblob==0.17.1               # 영어 자연어 처리
 ```
+
+---
+
+## 🎯 **새로운 차트 API 통합 시스템** (2025-07-22)
+
+### ✅ **완료된 작업**
+
+#### **1. 새로운 차트 데이터 소스 통합**
+- [x] **Last.fm API 연동 모듈** (`lastfm_connector.py`)
+  - 글로벌 실시간 사용자 청취 데이터
+  - Top 트랙/아티스트 차트 (7일/1개월/전체 기간)
+  - 트렌딩 태그 및 장르 분석
+  - Rate limiting 및 오류 처리
+
+- [x] **Billboard 차트 모듈** (`billboard_connector.py`)
+  - Hot 100, Billboard 200, Global 200 차트
+  - 웹 스크래핑 기반 데이터 수집
+  - BeautifulSoup 의존성 없이도 작동하는 대체 파싱
+  - 차트 히스토리 검색 기능
+
+- [x] **통합 차트 수집기** (`integrated_chart_collector.py`)
+  - 4개 차트 소스 통합 (Last.fm, Billboard, Spotify, YouTube)
+  - 가중치 기반 종합 점수 계산 시스템
+  - 차트 간 겹침 분석 및 비교
+  - 일관성 및 트렌드 강도 측정
+
+- [x] **기존 시스템 통합**
+  - `music_trend_analyzer_v2.py`에 새 API들 연결
+  - 모든 모듈이 통합 분석 시스템에 완전 통합
+
+#### **2. 의존성 설치 지원 시스템**
+- [x] **requirements.txt 업데이트**
+  - 새로운 차트 API 의존성 추가
+  - BeautifulSoup4, lxml, html5lib (Billboard용)
+  - requests, hashlib-compat 등 필수 라이브러리
+
+- [x] **자동 설치 도구 개발**
+  - `install_dependencies.py` - Python 자동 설치 스크립트
+  - `install.sh` - Linux/macOS 자동 설치 스크립트
+  - `install.bat` - Windows 자동 설치 스크립트
+  - `SETUP_GUIDE.md` - 상세 설치 및 설정 가이드
+
+- [x] **환경 설정 지원**
+  - `.env.template` 자동 생성
+  - API 키 발급 가이드 포함
+  - 시스템별 의존성 설치 지원
+
+#### **3. 테스트 및 검증 시스템**
+- [x] **통합 테스트 스크립트** (`test_new_chart_apis.py`)
+  - 모든 새로운 API 개별 테스트
+  - 통합 시스템 호환성 검증
+  - 의존성 설치 상태 확인
+
+### 🚨 **우선순위 높음 - 남은 작업**
+
+#### **1. API 키 설정 및 전체 시스템 테스트**
+- [ ] **Last.fm API 키 설정**
+  - Last.fm Developer 계정 생성
+  - API 키 발급 및 환경변수 설정
+  - 실제 데이터 수집 테스트
+
+- [ ] **의존성 라이브러리 설치 완료**
+  - BeautifulSoup4 설치 (`pip install beautifulsoup4`)
+  - pandas, numpy 최신 버전 설치
+  - 누락된 라이브러리 설치 완료
+
+- [ ] **통합 차트 시스템 실전 테스트**
+  - 4개 소스 동시 데이터 수집 테스트
+  - 통합 점수 계산 알고리즘 검증
+  - 성능 최적화 및 오류 처리
+
+#### **2. 웹 인터페이스 업데이트**
+- [ ] **새로운 차트 탭 추가**
+  - 통합 차트 대시보드 UI 개발
+  - Last.fm, Billboard 차트 표시
+  - 차트 간 비교 및 분석 UI
+
+- [ ] **차트 시각화 기능**
+  - 실시간 차트 순위 표시
+  - 트렌드 강도 및 일관성 시각화
+  - 소스별 가중치 및 기여도 표시
+
+#### **3. Flask API 엔드포인트 확장**
+- [ ] **새로운 차트 API 엔드포인트 추가**
+  - `/api/charts/integrated` - 통합 차트 데이터
+  - `/api/charts/lastfm` - Last.fm 차트
+  - `/api/charts/billboard` - Billboard 차트
+  - `/api/charts/comparison` - 차트 간 비교 분석
+
+### 📊 **우선순위 중간 - 기능 확장**
+
+#### **1. 차트 분석 기능 고도화**
+- [ ] **예측 알고리즘 개발**
+  - 차트 순위 변동 예측
+  - 트렌드 지속성 분석
+  - 바이럴 가능성 예측
+
+- [ ] **사용자 맞춤 차트**
+  - 지역별 차트 필터링
+  - 장르별 차트 분류
+  - 개인화된 추천 차트
+
+#### **2. 데이터 저장 및 히스토리**
+- [ ] **차트 데이터 히스토리 저장**
+  - SQLite 데이터베이스 스키마 확장
+  - 일별/주별 차트 변화 추적
+  - 장기 트렌드 분석 데이터
+
+### 📝 **우선순위 낮음 - 최적화**
+
+#### **1. 성능 최적화**
+- [ ] **API 호출 최적화**
+  - 캐싱 시스템 구현
+  - 병렬 처리 최적화
+  - Rate limiting 개선
+
+- [ ] **데이터 품질 개선**
+  - 중복 데이터 제거 알고리즘
+  - 데이터 정규화 개선
+  - 오류 데이터 필터링
+
+#### **2. 문서화 완성**
+- [ ] **API 문서 작성**
+  - 새로운 엔드포인트 문서화
+  - 차트 데이터 구조 설명
+  - 사용 예시 및 샘플 코드
+
+### 🎯 **새로운 차트 시스템 특징**
+
+#### **데이터 소스 및 가중치**
+| 소스 | 특징 | 가중치 | 업데이트 주기 |
+|------|------|--------|---------------|
+| **Last.fm** | 실제 사용자 청취 데이터 | 25% | 실시간 |
+| **Billboard** | 공식 상업적 성공 차트 | 30% | 주간 |
+| **Spotify** | 스트리밍 인기도 | 25% | 일간 |
+| **YouTube** | 동영상 조회수/바이럴 | 20% | 동적 |
+
+#### **핵심 기능**
+- **통합 점수 계산**: 4개 소스 가중치 기반 종합 점수
+- **트렌드 강도 분류**: Very Strong, Strong, Moderate, Weak
+- **일관성 측정**: 차트 간 순위 일관성 0-1 점수
+- **겹침 분석**: 차트 간 공통 트랙 비율 분석
+
+### 📋 **환경변수 추가 설정**
+```bash
+# 새로운 차트 API 키
+LASTFM_API_KEY=your_lastfm_api_key_here
+LASTFM_API_SECRET=your_lastfm_secret_here
+
+# 기존 API 키들 (유지)
+SPOTIFY_CLIENT_ID=your_spotify_client_id_here
+SPOTIFY_CLIENT_SECRET=your_spotify_client_secret_here
+YOUTUBE_API_KEY=your_youtube_api_key_here
+```
+
+### 🔧 **설치 명령어**
+```bash
+# 자동 설치 (권장)
+python install_dependencies.py
+
+# 또는 플랫폼별 스크립트
+./install.sh  # Linux/macOS
+install.bat   # Windows
+
+# 수동 설치
+pip install -r requirements.txt
+```

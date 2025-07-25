@@ -20,6 +20,8 @@ from comment_trend_analyzer import CommentTrendAnalyzer
 from trends_analyzer import TrendsAnalyzer
 from database import DatabaseManager
 from youtube_chart_collector import YouTubeChartCollector
+from lastfm_connector import LastfmConnector
+from billboard_connector import BillboardConnector
 
 class MusicTrendAnalyzerV2:
     def __init__(self, console_log=None):
@@ -80,6 +82,20 @@ class MusicTrendAnalyzerV2:
         except Exception as e:
             self.console_log(f"[TrendV2] YouTube 차트 수집기 초기화 실패: {str(e)}")
             self.youtube_chart_collector = None
+        
+        try:
+            self.lastfm_connector = LastfmConnector(console_log=self.console_log)
+            self.console_log("[TrendV2] Last.fm 연결기 초기화 완료")
+        except Exception as e:
+            self.console_log(f"[TrendV2] Last.fm 연결기 초기화 실패: {str(e)}")
+            self.lastfm_connector = None
+        
+        try:
+            self.billboard_connector = BillboardConnector(console_log=self.console_log)
+            self.console_log("[TrendV2] Billboard 연결기 초기화 완료")
+        except Exception as e:
+            self.console_log(f"[TrendV2] Billboard 연결기 초기화 실패: {str(e)}")
+            self.billboard_connector = None
         
         # 분석 설정
         self.analysis_config = {
