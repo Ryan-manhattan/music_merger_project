@@ -74,7 +74,7 @@ class VideoProcessor:
             final_clip = image_clip.with_audio(audio_clip)
             
             if progress_callback:
-                progress_callback(10, "동영상 파일 생성 중...")
+                progress_callback(70, "동영상 파일 생성 중...")
             
             # MoviePy 진행률을 추정하는 간단한 방법
             import threading
@@ -86,7 +86,7 @@ class VideoProcessor:
                 """출력 파일 크기를 모니터링하여 진행률 추정"""
                 expected_size = None
                 last_size = 0
-                progress = 10
+                progress = 70
                 
                 while not stop_monitoring.is_set() and progress < 95:
                     try:
