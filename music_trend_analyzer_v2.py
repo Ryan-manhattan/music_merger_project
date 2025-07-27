@@ -17,7 +17,7 @@ from reddit_connector import RedditConnector
 from spotify_connector import SpotifyConnector
 from keyword_trend_analyzer import KeywordTrendAnalyzer
 from comment_trend_analyzer import CommentTrendAnalyzer
-from trends_analyzer import TrendsAnalyzer
+#from trends_analyzer import TrendsAnalyzer
 from database import DatabaseManager
 from youtube_chart_collector import YouTubeChartCollector
 from lastfm_connector import LastfmConnector
@@ -62,12 +62,12 @@ class MusicTrendAnalyzerV2:
             self.console_log(f"[TrendV2] 댓글 분석기 초기화 실패: {str(e)}")
             self.comment_analyzer = None
         
-        try:
-            self.trends_analyzer = TrendsAnalyzer(console_log=self.console_log)
-            self.console_log("[TrendV2] Google Trends 분석기 초기화 완료")
-        except Exception as e:
-            self.console_log(f"[TrendV2] Google Trends 분석기 초기화 실패: {str(e)}")
-            self.trends_analyzer = None
+        #try:
+        #    self.trends_analyzer = TrendsAnalyzer(console_log=self.console_log)
+        #    self.console_log("[TrendV2] Google Trends 분석기 초기화 완료")
+        #except Exception as e:
+        #    self.console_log(f"[TrendV2] Google Trends 분석기 초기화 실패: {str(e)}")
+        #    self.trends_analyzer = None
         
         try:
             self.db_manager = DatabaseManager(console_log=self.console_log)

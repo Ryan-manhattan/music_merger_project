@@ -1,0 +1,564 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>음원 영상 만들기 - Music Merger</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container">
+        <!-- 헤더 -->
+        <header class="header">
+            <h1 class="logo">🎵 Music Merger</h1>
+            <p class="tagline">음악 파일 이어붙이기 서비스</p>
+            
+            <!-- 네비게이션 -->
+            <nav class="nav">
+                <ul class="nav-list">
+                    <li class="nav-item">
+                        <a href="{{ url_for('index') }}" class="nav-link">🎵 음악 병합</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('music_analysis') }}" class="nav-link">🤖 AI 음악 생성</a>
+                    </li>
+                    <li class="nav-item">
+                        <a href="{{ url_for('music_video') }}" class="nav-link active">🎬 음원 영상 만들기</a>
+                    </li>
+                </ul>
+            </nav>
+        </header>
+
+        <!-- 메인 컨텐츠 -->
+        <main class="main-content">
+            <div class="music-video-wrapper">
+                <!-- 헤더 -->
+                <section class="video-header">
+                    <div class="video-header-content">
+                        <div class="upload-icon">🎬</div>
+                        <h1>음원 영상 만들기</h1>
+                        <p>음악 파일과 이미지를 조합하여 뮤직비디오를 생성하세요</p>
+                    </div>
+                </section>
+
+                <!-- 단계별 진행 표시 -->
+                <section class="progress-steps">
+                    <div class="step active" id="step1">
+                        <div class="step-number">1</div>
+                        <span>음원 업로드</span>
+                    </div>
+                    <div class="step" id="step2">
+                        <div class="step-number">2</div>
+                        <span>이미지 선택</span>
+                    </div>
+                    <div class="step" id="step3">
+                        <div class="step-number">3</div>
+                        <span>영상 생성</span>
+                    </div>
+                </section>
+
+                <!-- 1단계: 음원 업로드 -->
+                <section class="video-step" id="audioStep">
+                    <div class="step-content">
+                        <h2>🎵 음원 파일 업로드</h2>
+                        <div class="upload-area" id="audioUploadArea">
+                            <div class="upload-icon">🎵</div>
+                            <h3>음악 파일을 선택하거나 드래그 앤 드롭하세요</h3>
+                            <p>MP3, WAV, M4A, FLAC 파일을 지원합니다</p>
+                            <input type="file" id="audioFileInput" accept=".mp3,.wav,.m4a,.flac" hidden>
+                            <button class="btn btn-primary" onclick="document.getElementById('audioFileInput').click()">
+                                파일 선택
+                            </button>
+                        </div>
+                        
+                        <!-- 업로드된 음원 정보 -->
+                        <div class="audio-info" id="audioInfo" style="display: none;">
+                            <div class="file-card">
+                                <div class="file-header">
+                                    <span class="file-icon">🎵</span>
+                                    <div class="file-details">
+                                        <h4 id="audioFileName">파일명</h4>
+                                        <p id="audioFileDetails">파일 정보</p>
+                                    </div>
+                                    <button class="btn btn-outline btn-small" onclick="changeAudioFile()">다른 파일 선택</button>
+                                </div>
+                            </div>
+                            <button class="btn btn-success btn-large" onclick="proceedToImageStep()">
+                                다음 단계 →
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 2단계: 이미지 선택 -->
+                <section class="video-step" id="imageStep" style="display: none;">
+                    <div class="step-content">
+                        <h2>🖼️ 배경 이미지 선택</h2>
+                        
+                        <!-- 이미지 선택 옵션 -->
+                        <div class="image-options">
+                            <!-- 직접 업로드 -->
+                            <div class="option-card">
+                                <h3>📁 이미지 직접 업로드</h3>
+                                <div class="upload-area" id="imageUploadArea">
+                                    <div class="upload-icon">🖼️</div>
+                                    <p>JPG, PNG, BMP 파일을 업로드하세요</p>
+                                    <input type="file" id="imageFileInput" accept=".jpg,.jpeg,.png,.bmp,.gif" hidden>
+                                    <label class="checkbox-label" style="margin-top: 10px;">
+                                        <input type="checkbox" id="applyLogoCheckbox" name="apply_logo">
+                                        <span>로고 합성 적용 (Music Merger 로고)</span>
+                                    </label>
+                                    <button class="btn btn-primary" onclick="document.getElementById('imageFileInput').click()">
+                                        이미지 선택
+                                    </button>
+                                </div>
+                            </div>
+
+                            <!-- AI 자동 생성 -->
+                            <div class="option-card">
+                                <h3>🤖 AI로 이미지 자동 생성</h3>
+                                <div class="ai-generation">
+                                    <div class="input-group">
+                                        <label for="imagePrompt">이미지 설명을 입력하세요:</label>
+                                        <textarea id="imagePrompt" placeholder="예: 아름다운 석양과 바다, 미래적인 도시 풍경, 꽃밭과 나비..." rows="3"></textarea>
+                                    </div>
+                                    <div class="generation-options">
+                                        <label>
+                                            <input type="radio" name="imageStyle" value="realistic" checked>
+                                            <span>사실적</span>
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="imageStyle" value="artistic">
+                                            <span>예술적</span>
+                                        </label>
+                                        <label>
+                                            <input type="radio" name="imageStyle" value="cartoon">
+                                            <span>만화풍</span>
+                                        </label>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="imageQuality">품질:</label>
+                                        <select id="imageQuality" class="form-select">
+                                            <option value="standard">Standard (표준)</option>
+                                            <option value="hd">HD (고화질)</option>
+                                        </select>
+                                    </div>
+                                    <div class="input-group">
+                                        <label for="imageSize">크기:</label>
+                                        <select id="imageSize" class="form-select">
+                                            <option value="1024x1024">정방형 (1:1)</option>
+                                            <option value="1792x1024">유튜브 썸네일 (16:9)</option>
+                                            <option value="1024x1792">유튜브 쇼츠 (9:16)</option>
+                                        </select>
+                                    </div>
+                                    <button class="btn btn-success" onclick="generateAIImage()">
+                                        🎨 AI 이미지 생성
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- 선택된 이미지 미리보기 -->
+                        <div class="image-preview" id="imagePreview" style="display: none;">
+                            <h3>선택된 이미지</h3>
+                            <div class="preview-container">
+                                <img id="previewImage" src="" alt="미리보기">
+                                <div class="preview-info">
+                                    <p id="imageDetails">이미지 정보</p>
+                                    <button class="btn btn-outline" onclick="changeImage()">다른 이미지 선택</button>
+                                </div>
+                            </div>
+                            <button class="btn btn-success btn-large" onclick="proceedToVideoStep()">
+                                다음 단계 →
+                            </button>
+                        </div>
+
+                        <!-- AI 생성 진행 상황 -->
+                        <div class="ai-progress" id="aiProgress" style="display: none;">
+                            <div class="progress-indicator">
+                                <div class="spinner"></div>
+                                <p>AI가 이미지를 생성하고 있습니다...</p>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 3단계: 영상 생성 -->
+                <section class="video-step" id="videoStep" style="display: none;">
+                    <div class="step-content">
+                        <h2>🎬 영상 생성 설정</h2>
+                        
+                        <div class="video-settings">
+                            <div class="settings-group">
+                                <h3>영상 품질 설정</h3>
+                                <select id="videoQuality" class="form-select">
+                                    <option value="youtube_hd">유튜브 HD (1080p, 30fps)</option>
+                                    <option value="youtube_hd_60">유튜브 HD (1080p, 60fps)</option>
+                                    <option value="youtube_standard">유튜브 표준 (720p)</option>
+                                    <option value="youtube_mobile">모바일 최적화 (720p)</option>
+                                </select>
+                            </div>
+
+                            <div class="settings-group">
+                                <h3>추가 옵션</h3>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="addWatermark">
+                                    <span>워터마크 추가</span>
+                                </label>
+                                <label class="checkbox-label">
+                                    <input type="checkbox" id="fadeInOut" checked>
+                                    <span>페이드 인/아웃 효과</span>
+                                </label>
+                            </div>
+
+                            <!-- 미리보기 -->
+                            <div class="preview-summary">
+                                <h3>생성될 영상 미리보기</h3>
+                                <div class="summary-card">
+                                    <div class="summary-item">
+                                        <strong>음원:</strong> <span id="summaryAudio">선택된 음원</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <strong>이미지:</strong> <span id="summaryImage">선택된 이미지</span>
+                                    </div>
+                                    <div class="summary-item">
+                                        <strong>예상 길이:</strong> <span id="summaryDuration">0:00</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <button class="btn btn-success btn-large" onclick="startVideoGeneration()">
+                                🎬 영상 생성 시작
+                            </button>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- 영상 생성 진행 상황 -->
+                <section class="video-progress" id="videoProgress" style="display: none;">
+                    <h2>🎬 영상 생성 중...</h2>
+                    <div class="progress-bar">
+                        <div class="progress-fill" id="videoProgressFill"></div>
+                    </div>
+                    <p class="progress-text" id="videoProgressText">영상 생성 준비 중...</p>
+                </section>
+
+                <!-- 완성된 영상 결과 -->
+                <section class="video-result" id="videoResult" style="display: none;">
+                    <h2>✅ 영상 생성 완료!</h2>
+                    <div class="result-content">
+                        <div class="video-player">
+                            <video id="resultVideo" controls width="100%" height="400">
+                                <source id="videoSource" src="" type="video/mp4">
+                                브라우저가 비디오를 지원하지 않습니다.
+                            </video>
+                        </div>
+                        <div class="result-info">
+                            <p id="resultDetails">영상 정보</p>
+                            <div class="result-actions">
+                                <button class="btn btn-primary" id="downloadVideoBtn">
+                                    📥 영상 다운로드
+                                </button>
+                                <button class="btn btn-secondary" onclick="resetVideoCreation()">
+                                    🔄 새로 만들기
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+        </main>
+
+        <!-- 푸터 -->
+        <footer class="footer">
+            <p>&copy; 2024 Music Merger. All rights reserved.</p>
+        </footer>
+    </div>
+
+    <!-- 스타일 -->
+    <style>
+    .music-video-wrapper {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+
+    .video-header {
+        text-align: center;
+        margin-bottom: 40px;
+    }
+
+    .video-header-content .upload-icon {
+        font-size: 4rem;
+        margin-bottom: 20px;
+    }
+
+    .progress-steps {
+        display: flex;
+        justify-content: center;
+        margin-bottom: 40px;
+        position: relative;
+    }
+
+    .progress-steps::before {
+        content: '';
+        position: absolute;
+        top: 20px;
+        left: 25%;
+        right: 25%;
+        height: 2px;
+        background: #e0e0e0;
+        z-index: 1;
+    }
+
+    .step {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        position: relative;
+        z-index: 2;
+        background: white;
+        padding: 0 20px;
+    }
+
+    .step-number {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        background: #e0e0e0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: bold;
+        margin-bottom: 10px;
+        transition: all 0.3s;
+    }
+
+    .step.active .step-number {
+        background: #4CAF50;
+        color: white;
+    }
+
+    .step.completed .step-number {
+        background: #2196F3;
+        color: white;
+    }
+
+    .video-step {
+        background: white;
+        border-radius: 12px;
+        padding: 30px;
+        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        margin-bottom: 20px;
+    }
+
+    .upload-area {
+        border: 2px dashed #ddd;
+        border-radius: 12px;
+        padding: 40px;
+        text-align: center;
+        transition: all 0.3s;
+        cursor: pointer;
+    }
+
+    .upload-area:hover {
+        border-color: #4CAF50;
+        background: #f8fff8;
+    }
+
+    .upload-area.drag-over {
+        border-color: #4CAF50;
+        background: #f0fff0;
+    }
+
+    .file-card {
+        background: #f5f5f5;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+
+    .file-header {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    .file-icon {
+        font-size: 2rem;
+    }
+
+    .file-details h4 {
+        margin: 0;
+        color: #333;
+    }
+
+    .file-details p {
+        margin: 5px 0 0 0;
+        color: #666;
+        font-size: 0.9rem;
+    }
+
+    .image-options {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 30px;
+        margin-bottom: 30px;
+    }
+
+    .option-card {
+        border: 1px solid #ddd;
+        border-radius: 12px;
+        padding: 25px;
+        text-align: center;
+    }
+
+    .option-card h3 {
+        margin-bottom: 20px;
+        color: #333;
+    }
+
+    .input-group {
+        margin-bottom: 20px;
+    }
+
+    .input-group label {
+        display: block;
+        margin-bottom: 8px;
+        font-weight: 500;
+    }
+
+    .input-group textarea {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-family: inherit;
+        resize: vertical;
+    }
+
+    .generation-options {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+        margin-bottom: 20px;
+    }
+
+    .generation-options label {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+        cursor: pointer;
+    }
+
+    .preview-container {
+        display: flex;
+        gap: 20px;
+        align-items: flex-start;
+        margin: 20px 0;
+    }
+
+    .preview-container img {
+        max-width: 300px;
+        max-height: 200px;
+        border-radius: 8px;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    }
+
+    .preview-info {
+        flex: 1;
+    }
+
+    .video-settings {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    .settings-group {
+        margin-bottom: 30px;
+    }
+
+    .settings-group h3 {
+        margin-bottom: 15px;
+        color: #333;
+    }
+
+    .form-select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid #ddd;
+        border-radius: 6px;
+        font-size: 16px;
+    }
+
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin-bottom: 10px;
+        cursor: pointer;
+    }
+
+    .summary-card {
+        background: #f8f9fa;
+        border-radius: 8px;
+        padding: 20px;
+        margin: 20px 0;
+    }
+
+    .summary-item {
+        margin-bottom: 10px;
+    }
+
+    .progress-indicator {
+        text-align: center;
+        padding: 40px;
+    }
+
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f3f3;
+        border-top: 4px solid #4CAF50;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto 20px;
+    }
+
+    @keyframes spin {
+        0% { transform: rotate(0deg); }
+        100% { transform: rotate(360deg); }
+    }
+
+    .video-player {
+        margin-bottom: 20px;
+    }
+
+    .result-actions {
+        display: flex;
+        gap: 15px;
+        justify-content: center;
+    }
+
+    @media (max-width: 768px) {
+        .image-options {
+            grid-template-columns: 1fr;
+        }
+        
+        .preview-container {
+            flex-direction: column;
+        }
+        
+        .progress-steps {
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+    }
+    </style>
+
+    <!-- JavaScript -->
+    <script src="{{ url_for('static', filename='js/music_video.js') }}"></script>
+</body>
+</html>

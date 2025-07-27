@@ -42,7 +42,12 @@
       "Bash(pkill:*)",
       "Bash(pip3 install:*)",
       "Bash(git log:*)",
-      "Bash(git config:*)"
+      "Bash(git config:*)",
+      "Bash(sed:*)",
+      "Bash(npm run lint)",
+      "Bash(npm run test:*)",
+      "Bash(find:*)",
+      "WebFetch(domain:cookbook.openai.com)"
     ],
     "deny": []
   }

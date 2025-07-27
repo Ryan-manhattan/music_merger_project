@@ -12,7 +12,7 @@ from dotenv import load_dotenv
 
 from music_analyzer import MusicAnalyzer
 from lyria_client import LyriaClient
-from prompt_generator import PromptGenerator
+#from prompt_generator import PromptGenerator
 
 # 환경 변수 로드
 load_dotenv()
@@ -59,8 +59,8 @@ class MusicService:
                 self.lyria_client = None
                 self.console_log("[Music Service] Google Cloud 프로젝트 ID가 없습니다")
             
-            self.prompt_generator = PromptGenerator(console_log=self.console_log)
-            self.console_log("[Music Service] 프롬프트 생성기 초기화 완료")
+            #self.prompt_generator = PromptGenerator(console_log=self.console_log)
+            #self.console_log("[Music Service] 프롬프트 생성기 초기화 완료")
             
         except Exception as e:
             self.console_log(f"[Music Service] 초기화 오류: {str(e)}")

@@ -6,9 +6,7 @@
     <nav class="nav-tabs">
         <button class="nav-tab active" onclick="showTab('upload')">🎵 음악 합치기</button>
         <button class="nav-tab" onclick="showTab('analysis')">📊 음악 분석</button>
-        <button class="nav-tab" onclick="showTab('market')">📈 시장 분석</button>
         <button class="nav-tab" onclick="location.href='/charts'">🎧 실시간 차트</button>
-        <button class="nav-tab" onclick="showTab('emotion')">💝 감정 플레이리스트</button>
     </nav>
 
     <!-- 음악 합치기 탭 -->
@@ -239,121 +237,6 @@
         </section>
     </div>
 
-    <!-- 시장 분석 탭 -->
-    <div id="marketTab" class="tab-content">
-        <section class="market-section">
-            <div class="market-header">
-                <div class="upload-icon">📈</div>
-                <h2>음악 시장 분석</h2>
-                <p>장르별 트렌드와 시장 데이터를 분석하세요</p>
-            </div>
-
-            <!-- 트렌드 분석 V2 옵션 -->
-            <div class="market-options">
-                <!-- V2 트렌드 분석 -->
-                <div class="option-group" id="trendsV2Option">
-                    <h3>🔥 실시간 트렌드 분석 V2</h3>
-                    
-                    <!-- 분석 모드 -->
-                    <div class="v2-analysis-mode">
-                        <h4>분석 모드</h4>
-                        <div class="radio-group">
-                            <label class="radio-label">
-                                <input type="radio" name="v2Mode" value="comprehensive" checked>
-                                <span>종합 트렌드 분석</span>
-                            </label>
-                            <label class="radio-label">
-                                <input type="radio" name="v2Mode" value="keyword">
-                                <span>키워드 트렌드 검색</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- 종합 분석 옵션 -->
-                    <div class="v2-comprehensive-options" id="v2ComprehensiveOptions">
-                        <h4>분석 카테고리</h4>
-                        <div class="category-checkboxes">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="v2Categories" value="kpop" checked>
-                                <span>K-Pop</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="v2Categories" value="hiphop" checked>
-                                <span>Hip-Hop</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="v2Categories" value="pop" checked>
-                                <span>Pop</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="v2Categories" value="rock">
-                                <span>Rock</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="v2Categories" value="ballad">
-                                <span>Ballad</span>
-                            </label>
-                        </div>
-                        
-                        <h4>데이터 소스</h4>
-                        <div class="source-checkboxes">
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="v2Sources" value="reddit" checked>
-                                <span>Reddit 음악 커뮤니티</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="v2Sources" value="spotify" checked>
-                                <span>Spotify 차트</span>
-                            </label>
-                            <label class="checkbox-label">
-                                <input type="checkbox" name="v2Sources" value="comments" checked>
-                                <span>댓글 감정 분석</span>
-                            </label>
-                        </div>
-                    </div>
-
-                    <!-- 키워드 검색 옵션 -->
-                    <div class="v2-keyword-options" id="v2KeywordOptions" style="display: none;">
-                        <h4>검색 키워드</h4>
-                        <input type="text" id="v2SearchKeyword" class="form-input" placeholder="예: NewJeans, 아이브, (여자)아이들..." maxlength="50">
-                        <div class="keyword-suggestions">
-                            <button type="button" class="suggestion-btn" onclick="setV2Keyword('NewJeans')">NewJeans</button>
-                            <button type="button" class="suggestion-btn" onclick="setV2Keyword('aespa')">aespa</button>
-                            <button type="button" class="suggestion-btn" onclick="setV2Keyword('BTS')">BTS</button>
-                            <button type="button" class="suggestion-btn" onclick="setV2Keyword('BLACKPINK')">BLACKPINK</button>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- 분석 실행 버튼 -->
-                <div class="option-group">
-                    <button class="btn btn-success btn-large" id="marketAnalyzeBtn" onclick="startTrendsV2Analysis()">
-                        🔥 트렌드 분석 시작
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- 시장 분석 진행 상황 -->
-        <section class="market-progress-section" id="marketProgressSection" style="display: none;">
-            <h3>📊 시장 분석 중...</h3>
-            <div class="progress-bar">
-                <div class="progress-fill" id="marketProgressFill"></div>
-            </div>
-            <p class="progress-text" id="marketProgressText">분석 준비 중...</p>
-        </section>
-
-        <!-- 시장 분석 결과 -->
-        <section class="market-result-section" id="marketResultSection" style="display: none;">
-            <h3>✅ 시장 분석 완료!</h3>
-            <div class="market-result" id="marketResult"></div>
-            <div class="result-actions">
-                <button class="btn btn-secondary" onclick="resetMarketAnalysis()">
-                    새 분석
-                </button>
-            </div>
-        </section>
-    </div>
 </div>
 
 <!-- 파일 아이템 템플릿 -->
@@ -405,35 +288,6 @@
                 </div>
             </div>
         </div>
-    </div>
-</template>
-
-    <!-- 감정 플레이리스트 탭 -->
-    <div id="emotionTab" class="tab-content">
-        <section class="emotion-section">
-            <div class="emotion-header">
-                <div class="upload-icon">💝</div>
-                <h2>감정 플레이리스트 생성</h2>
-                <p>감정 기반으로 맞춤형 플레이리스트를 생성하세요</p>
-            </div>
-            
-            <div class="emotion-redirect">
-                <div class="redirect-card">
-                    <h3>🎵 감정 플레이리스트 생성기</h3>
-                    <p>Reddit, Spotify, YouTube 데이터를 분석하여 감정별 플레이리스트를 생성합니다</p>
-                    <ul>
-                        <li>🔥 에너지 플레이리스트</li>
-                        <li>💝 로맨틱 플레이리스트</li>
-                        <li>😢 감성 플레이리스트</li>
-                        <li>🧘 힐링 플레이리스트</li>
-                        <li>🎉 파티 플레이리스트</li>
-                    </ul>
-                    <button class="btn btn-primary btn-large" onclick="window.location.href='/emotion-playlist'">
-                        💝 감정 플레이리스트 생성하기
-                    </button>
-                </div>
-            </div>
-        </section>
     </div>
 </template>
 {% endblock %}

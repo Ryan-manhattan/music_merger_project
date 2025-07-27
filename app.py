@@ -25,11 +25,27 @@ from utils import validate_audio_file, generate_safe_filename, get_file_size_mb
 from audio_processor import AudioProcessor
 from link_extractor import LinkExtractor
 from video_processor import VideoProcessor
-from music_service import MusicService
-from database import DatabaseManager
-from trends_analyzer import TrendsAnalyzer
-from market_analyzer import MusicMarketAnalyzer
-from emotion_playlist_generator import EmotionPlaylistGenerator
+# 무거운 의존성들을 선택적으로 로드
+try:
+    from music_service import MusicService
+    music_service_available = True
+except ImportError as e:
+    print(f"MusicService 로드 실패: {e}")
+    music_service_available = False
+
+try:
+    from database import DatabaseManager
+    database_available = True
+except ImportError as e:
+    print(f"DatabaseManager 로드 실패: {e}")
+    database_available = False
+
+try:
+    from music_trend_analyzer_v2 import MusicTrendAnalyzerV2
+    trend_analyzer_available = True
+except ImportError as e:
+    print(f"MusicTrendAnalyzerV2 로드 실패: {e}")
+    trend_analyzer_available = False
 
 # Flask 앱 초기화 (Windows 경로 대응)
 app = Flask(__name__, 
@@ -82,44 +98,34 @@ except Exception as e:
     music_analyzer = None
     console.log(f"YouTube 분석기 초기화 실패: {str(e)}")
 
-try:
-    # 프로젝트 루트의 기본 DB 파일 사용
-    db_path = os.path.join(os.path.dirname(__file__), 'music_analysis.db')
-    db_manager = DatabaseManager(db_path=db_path, console_log=lambda msg: console.log(msg))
-    console.log("데이터베이스 매니저 초기화 완료")
-except Exception as e:
-    console.log(f"데이터베이스 매니저 초기화 실패: {str(e)}")
+if database_available:
+    try:
+        # 프로젝트 루트의 기본 DB 파일 사용
+        db_path = os.path.join(os.path.dirname(__file__), 'music_analysis.db')
+        db_manager = DatabaseManager(db_path=db_path, console_log=lambda msg: console.log(msg))
+        console.log("데이터베이스 매니저 초기화 완료")
+    except Exception as e:
+        db_manager = None
+        console.log(f"데이터베이스 매니저 초기화 실패: {str(e)}")
+else:
+    db_manager = None
+    console.log("데이터베이스 기능 비활성화")
 
-try:
-    trends_analyzer = TrendsAnalyzer(console_log=lambda msg: console.log(msg))
-    console.log("트렌드 분석기 초기화 완료")
-except Exception as e:
+if trend_analyzer_available:
+    try:
+        trends_analyzer = MusicTrendAnalyzerV2(console_log=lambda msg: console.log(msg))
+        console.log("트렌드 분석기 초기화 완료")
+    except Exception as e:
+        trends_analyzer = None
+        console.log(f"트렌드 분석기 초기화 실패: {str(e)}")
+else:
     trends_analyzer = None
-    console.log(f"트렌드 분석기 초기화 실패: {str(e)}")
+    console.log("트렌드 분석 기능 비활성화")
 
-try:
-    market_analyzer = MusicMarketAnalyzer(console_log=lambda msg: console.log(msg))
-    console.log("시장 분석기 초기화 완료")
-except Exception as e:
-    market_analyzer = None
-    console.log(f"시장 분석기 초기화 실패: {str(e)}")
 
-# Music Trend Analyzer V2 초기화
-try:
-    from music_trend_analyzer_v2 import MusicTrendAnalyzerV2
-    trend_analyzer_v2 = MusicTrendAnalyzerV2(console_log=lambda msg: console.log(msg))
-    console.log("Music Trend Analyzer V2 초기화 완료")
-except Exception as e:
-    trend_analyzer_v2 = None
-    console.log(f"Music Trend Analyzer V2 초기화 실패: {str(e)}")
+# Music Trend Analyzer V2는 위에서 trends_analyzer로 이미 초기화됨
+trend_analyzer_v2 = trends_analyzer
 
-# 감정 플레이리스트 생성기 초기화
-try:
-    emotion_playlist_generator = EmotionPlaylistGenerator(console_log=lambda msg: console.log(msg))
-    console.log("감정 플레이리스트 생성기 초기화 완료")
-except Exception as e:
-    emotion_playlist_generator = None
-    console.log(f"감정 플레이리스트 생성기 초기화 실패: {str(e)}")
 
 # 음악 분석 작업 저장소
 music_analysis_jobs = {}
@@ -153,11 +159,13 @@ def music_analysis():
     return render_template('music_analysis.html')
 
 
-@app.route('/emotion-playlist')
-def emotion_playlist():
-    """감정 플레이리스트 페이지"""
-    console.log("[Route] /emotion-playlist - 감정 플레이리스트 페이지 요청")
-    return render_template('emotion_playlist.html')
+@app.route('/music-video')
+def music_video():
+    """음원 영상 만들기 페이지"""
+    console.log("[Route] /music-video - 음원 영상 만들기 페이지 요청")
+    return render_template('music_video.html')
+
+
 
 
 @app.route('/upload', methods=['POST'])
@@ -524,6 +532,51 @@ def upload_image():
         # 파일 저장
         file.save(filepath)
         console.log(f"[Upload Image] 이미지 저장 완료: {filename}")
+        
+        # 로고 합성 여부 확인
+        apply_logo = request.form.get('apply_logo') == 'on'
+
+        # Frame 1.png 합성 처리
+        if apply_logo:
+            try:
+                from PIL import Image
+                
+                # Frame 1.png 경로
+                frame_path = os.path.join(os.path.dirname(__file__), 'app', 'Frame 1.png')
+                
+                if os.path.exists(frame_path):
+                    # 업로드된 이미지 열기
+                    uploaded_image = Image.open(filepath)
+                    
+                    # Frame 이미지 열기 (RGBA 모드로 변환하여 투명도 유지)
+                    frame_image = Image.open(frame_path).convert('RGBA')
+                    
+                    # Frame 이미지 크기를 업로드된 이미지의 30%로 조절
+                    img_width, img_height = uploaded_image.size
+                    frame_size = min(img_width, img_height) // 4  # 25%
+                    frame_image = frame_image.resize((frame_size, frame_size), Image.Resampling.LANCZOS)
+                    
+                    # 업로드된 이미지를 RGBA 모드로 변환
+                    if uploaded_image.mode != 'RGBA':
+                        uploaded_image = uploaded_image.convert('RGBA')
+                    
+                    # Frame 이미지를 업로드된 이미지 중앙에 합성
+                    frame_x = (img_width - frame_size) // 2
+                    frame_y = (img_height - frame_size) // 2
+                    
+                    # 합성 (투명도 유지)
+                    uploaded_image.paste(frame_image, (frame_x, frame_y), frame_image)
+                    
+                    # 합성된 이미지를 PNG로 저장
+                    uploaded_image.save(filepath, 'PNG')
+                    
+                    console.log(f"[Upload Image] Frame 1.png 합성 완료: {frame_size}x{frame_size} at ({frame_x}, {frame_y})")
+                else:
+                    console.log(f"[Upload Image] Frame 1.png 파일을 찾을 수 없음: {frame_path}")
+                    
+            except Exception as frame_error:
+                console.log(f"[Upload Image] Frame 합성 오류: {str(frame_error)}")
+                # Frame 합성 실패해도 업로드된 이미지는 유지
         
         # 파일 정보 반환
         file_info = {
@@ -1264,131 +1317,6 @@ def get_keyword_suggestions():
         })
 
 
-# ===========================================
-# 시장 분석 API 라우팅
-# ===========================================
-
-@app.route('/api/market/analyze/<genre>')
-def analyze_genre_market(genre):
-    """특정 장르의 시장 분석"""
-    console.log(f"[Route] /api/market/analyze/{genre} - 장르 시장 분석")
-    
-    try:
-        if not market_analyzer:
-            return jsonify({
-                'success': False,
-                'error': '시장 분석기가 초기화되지 않았습니다'
-            }), 500
-        
-        timeframe = request.args.get('timeframe', 'today 12-m')
-        geo = request.args.get('geo', 'KR')
-        
-        result = market_analyzer.analyze_genre_market(genre, timeframe, geo)
-        return jsonify(result)
-        
-    except Exception as e:
-        console.log(f"[Route] 장르 시장 분석 오류: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-
-
-@app.route('/api/market/compare', methods=['POST'])
-def compare_genre_markets():
-    """여러 장르의 시장 비교 분석"""
-    console.log("[Route] /api/market/compare - 장르 시장 비교")
-    
-    try:
-        if not market_analyzer:
-            return jsonify({
-                'success': False,
-                'error': '시장 분석기가 초기화되지 않았습니다'
-            }), 500
-        
-        data = request.get_json()
-        genres = data.get('genres', [])
-        timeframe = data.get('timeframe', 'today 12-m')
-        geo = data.get('geo', 'KR')
-        
-        if not genres or len(genres) < 2:
-            return jsonify({
-                'success': False,
-                'error': '비교할 장르를 2개 이상 입력해주세요'
-            }), 400
-        
-        result = market_analyzer.compare_genre_markets(genres, timeframe, geo)
-        return jsonify(result)
-        
-    except Exception as e:
-        console.log(f"[Route] 장르 시장 비교 오류: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-
-
-@app.route('/api/market/overview')
-def get_market_overview():
-    """전체 음악 시장 개관"""
-    console.log("[Route] /api/market/overview - 전체 시장 개관")
-    
-    try:
-        if not market_analyzer:
-            return jsonify({
-                'success': False,
-                'error': '시장 분석기가 초기화되지 않았습니다'
-            }), 500
-        
-        timeframe = request.args.get('timeframe', 'today 12-m')
-        geo = request.args.get('geo', 'KR')
-        
-        result = market_analyzer.get_market_overview(timeframe, geo)
-        return jsonify(result)
-        
-    except Exception as e:
-        console.log(f"[Route] 시장 개관 분석 오류: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
-
-
-@app.route('/api/market/genres')
-def get_supported_genres():
-    """지원되는 장르 목록"""
-    console.log("[Route] /api/market/genres - 지원 장르 목록")
-    
-    try:
-        if not market_analyzer:
-            return jsonify({
-                'success': False,
-                'error': '시장 분석기가 초기화되지 않았습니다'
-            }), 500
-        
-        genres = market_analyzer.genre_mapping
-        genre_list = []
-        
-        for genre_id, genre_info in genres.items():
-            genre_list.append({
-                'id': genre_id,
-                'korean': genre_info['ko'],
-                'english': genre_info['en'],
-                'category': genre_info['category']
-            })
-        
-        return jsonify({
-            'success': True,
-            'genres': genre_list,
-            'count': len(genre_list)
-        })
-        
-    except Exception as e:
-        console.log(f"[Route] 장르 목록 조회 오류: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        })
 
 
 def analyze_music_job(job_id, url):
@@ -1673,165 +1601,6 @@ def trend_analyzer_v2_keywords():
         }), 500
 
 
-# === 감정 플레이리스트 API 엔드포인트 ===
-
-@app.route('/api/emotion-playlist/status')
-def emotion_playlist_status():
-    """감정 플레이리스트 생성기 상태 확인"""
-    console.log("[Route] /api/emotion-playlist/status - 상태 확인")
-    
-    try:
-        if not emotion_playlist_generator:
-            return jsonify({
-                'success': False,
-                'error': '감정 플레이리스트 생성기가 초기화되지 않았습니다'
-            }), 500
-        
-        status = emotion_playlist_generator.get_api_status()
-        return jsonify({
-            'success': True,
-            'status': status,
-            'available_emotions': list(emotion_playlist_generator.emotion_categories.keys())
-        })
-        
-    except Exception as e:
-        console.log(f"[Route] 감정 플레이리스트 상태 확인 오류: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/emotion-playlist/generate', methods=['POST'])
-def generate_emotion_playlist():
-    """감정별 플레이리스트 생성"""
-    console.log("[Route] /api/emotion-playlist/generate - 플레이리스트 생성")
-    
-    try:
-        if not emotion_playlist_generator:
-            return jsonify({
-                'success': False,
-                'error': '감정 플레이리스트 생성기가 초기화되지 않았습니다'
-            }), 500
-        
-        data = request.get_json()
-        if not data:
-            return jsonify({
-                'success': False,
-                'error': '요청 데이터가 없습니다'
-            }), 400
-        
-        emotion_type = data.get('emotion_type')
-        if not emotion_type:
-            return jsonify({
-                'success': False,
-                'error': '감정 타입을 지정해주세요'
-            }), 400
-        
-        limit = data.get('limit', 30)
-        include_reddit = data.get('include_reddit', True)
-        include_spotify = data.get('include_spotify', True)
-        include_youtube = data.get('include_youtube', True)
-        
-        console.log(f"[Route] 감정 플레이리스트 생성: {emotion_type} ({limit}곡)")
-        
-        # 플레이리스트 생성
-        result = emotion_playlist_generator.generate_emotion_playlist(
-            emotion_type=emotion_type,
-            limit=limit,
-            include_reddit=include_reddit,
-            include_spotify=include_spotify,
-            include_youtube=include_youtube
-        )
-        
-        if result.get('success'):
-            console.log(f"[Route] 감정 플레이리스트 생성 완료: {result.get('total_tracks', 0)}곡")
-            return jsonify(result)
-        else:
-            console.log(f"[Route] 감정 플레이리스트 생성 실패: {result.get('error')}")
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Unknown error')
-            }), 500
-            
-    except Exception as e:
-        console.log(f"[Route] 감정 플레이리스트 생성 오류: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/emotion-playlist/all')
-def get_all_emotion_playlists():
-    """모든 감정별 플레이리스트 생성"""
-    console.log("[Route] /api/emotion-playlist/all - 전체 플레이리스트 생성")
-    
-    try:
-        if not emotion_playlist_generator:
-            return jsonify({
-                'success': False,
-                'error': '감정 플레이리스트 생성기가 초기화되지 않았습니다'
-            }), 500
-        
-        limit_per_emotion = request.args.get('limit', 20, type=int)
-        
-        console.log(f"[Route] 전체 감정 플레이리스트 생성: 감정당 {limit_per_emotion}곡")
-        
-        # 모든 감정 플레이리스트 생성
-        result = emotion_playlist_generator.get_all_emotion_playlists(limit_per_emotion)
-        
-        if result.get('success'):
-            console.log(f"[Route] 전체 감정 플레이리스트 생성 완료: {result.get('total_playlists', 0)}개")
-            return jsonify(result)
-        else:
-            console.log(f"[Route] 전체 감정 플레이리스트 생성 실패: {result.get('error')}")
-            return jsonify({
-                'success': False,
-                'error': result.get('error', 'Unknown error')
-            }), 500
-            
-    except Exception as e:
-        console.log(f"[Route] 전체 감정 플레이리스트 생성 오류: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
-
-
-@app.route('/api/emotion-playlist/categories')
-def get_emotion_categories():
-    """감정 카테고리 목록 및 설명"""
-    console.log("[Route] /api/emotion-playlist/categories - 카테고리 목록")
-    
-    try:
-        if not emotion_playlist_generator:
-            return jsonify({
-                'success': False,
-                'error': '감정 플레이리스트 생성기가 초기화되지 않았습니다'
-            }), 500
-        
-        categories = {}
-        for emotion_type, config in emotion_playlist_generator.emotion_categories.items():
-            categories[emotion_type] = {
-                'name': config['name'],
-                'description': config['description'],
-                'keywords': config['keywords'][:5],  # 상위 5개 키워드만
-                'comment_prompt': config['comment_prompt']
-            }
-        
-        return jsonify({
-            'success': True,
-            'categories': categories,
-            'total_categories': len(categories)
-        })
-        
-    except Exception as e:
-        console.log(f"[Route] 감정 카테고리 목록 오류: {str(e)}")
-        return jsonify({
-            'success': False,
-            'error': str(e)
-        }), 500
 
 
 
@@ -1926,6 +1695,245 @@ def trim_audio_download():
         return jsonify({'error': f'30초 자르기 처리 중 오류: {str(e)}'}), 500
 
 
+@app.route('/api/music-video/upload-audio', methods=['POST'])
+def upload_audio_for_video():
+    """음원 영상 만들기용 음원 업로드"""
+    console.log("[Route] /api/music-video/upload-audio - 음원 업로드 요청")
+    
+    if 'audio' not in request.files:
+        console.log("[Upload Audio] 음원 파일이 없음")
+        return jsonify({'error': '음원 파일이 없습니다'}), 400
+    
+    file = request.files['audio']
+    
+    if file and allowed_file(file.filename):
+        # 안전한 파일명 생성
+        filename = generate_safe_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        console.log(f"[Upload Audio] 음원 저장 경로: {filepath}")
+        
+        # 파일 저장
+        file.save(filepath)
+        console.log(f"[Upload Audio] 음원 저장 완료: {filename}")
+        
+        # 음원 파일 검증
+        validation = validate_audio_file(filepath)
+        
+        if validation['valid']:
+            # 파일 정보 수집
+            file_info = {
+                'filename': filename,
+                'original_name': file.filename,
+                'size': os.path.getsize(filepath),
+                'size_mb': get_file_size_mb(filepath),
+                'duration': validation['info']['duration'],
+                'duration_str': validation['info']['duration_str'],
+                'format': validation['info']['format'],
+                'path': filepath
+            }
+            
+            console.log(f"[Upload Audio] 검증 통과: {filename}")
+            return jsonify({
+                'success': True,
+                'file_info': file_info
+            })
+        else:
+            # 검증 실패 시 파일 삭제
+            os.remove(filepath)
+            console.log(f"[Upload Audio] 검증 실패: {validation['error']}")
+            return jsonify({
+                'success': False,
+                'error': f"{file.filename}: {validation['error']}"
+            }), 400
+    else:
+        console.log(f"[Upload Audio] 허용되지 않은 파일: {file.filename}")
+        return jsonify({
+            'success': False,
+            'error': f"{file.filename}: 지원하지 않는 파일 형식입니다"
+        }), 400
+
+
+@app.route('/api/music-video/upload-image', methods=['POST'])
+def upload_image_for_video():
+    """음원 영상 만들기용 이미지 업로드"""
+    console.log("[Route] /api/music-video/upload-image - 이미지 업로드 요청")
+    
+    if 'image' not in request.files:
+        console.log("[Upload Image] 이미지 파일이 없음")
+        return jsonify({'error': '이미지 파일이 없습니다'}), 400
+    
+    file = request.files['image']
+    
+    if file and allowed_image_file(file.filename):
+        # 안전한 파일명 생성
+        filename = generate_safe_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        console.log(f"[Upload Image] 이미지 저장 경로: {filepath}")
+        
+        # 파일 저장
+        file.save(filepath)
+        console.log(f"[Upload Image] 이미지 저장 완료: {filename}")
+        
+        # 로고 합성 여부 확인
+        apply_logo = request.form.get('apply_logo') == 'on'
+
+        # Frame 1.png 합성 처리
+        if apply_logo:
+            try:
+                from PIL import Image
+                
+                # Frame 1.png 경로
+                frame_path = os.path.join(os.path.dirname(__file__), 'app', 'Frame 1.png')
+                
+                if os.path.exists(frame_path):
+                    # 업로드된 이미지 열기
+                    uploaded_image = Image.open(filepath)
+                    
+                    # Frame 이미지 열기 (RGBA 모드로 변환하여 투명도 유지)
+                    frame_image = Image.open(frame_path).convert('RGBA')
+                    
+                    # Frame 이미지 크기를 업로드된 이미지의 30%로 조절
+                    img_width, img_height = uploaded_image.size
+                    frame_size = min(img_width, img_height) // 4  # 25%
+                    frame_image = frame_image.resize((frame_size, frame_size), Image.Resampling.LANCZOS)
+                    
+                    # 업로드된 이미지를 RGBA 모드로 변환
+                    if uploaded_image.mode != 'RGBA':
+                        uploaded_image = uploaded_image.convert('RGBA')
+                    
+                    # Frame 이미지를 업로드된 이미지 중앙에 합성
+                    frame_x = (img_width - frame_size) // 2
+                    frame_y = (img_height - frame_size) // 2
+                    
+                    # 합성 (투명도 유지)
+                    uploaded_image.paste(frame_image, (frame_x, frame_y), frame_image)
+                    
+                    # 합성된 이미지를 PNG로 저장
+                    uploaded_image.save(filepath, 'PNG')
+                    
+                    console.log(f"[Upload Image Video] Frame 1.png 합성 완료: {frame_size}x{frame_size} at ({frame_x}, {frame_y})")
+                else:
+                    console.log(f"[Upload Image Video] Frame 1.png 파일을 찾을 수 없음: {frame_path}")
+                    
+            except Exception as frame_error:
+                console.log(f"[Upload Image Video] Frame 합성 오류: {str(frame_error)}")
+                # Frame 합성 실패해도 업로드된 이미지는 유지
+        
+        # 파일 정보 반환
+        file_info = {
+            'filename': filename,
+            'original_name': file.filename,
+            'size': os.path.getsize(filepath),
+            'size_mb': get_file_size_mb(filepath),
+            'path': filepath
+        }
+        
+        return jsonify({
+            'success': True,
+            'file_info': file_info
+        })
+    else:
+        console.log(f"[Upload Image] 허용되지 않은 이미지 파일: {file.filename}")
+        return jsonify({
+            'success': False,
+            'error': f"{file.filename}: 지원하지 않는 이미지 형식입니다"
+        }), 400
+
+
+@app.route('/api/music-video/generate-image', methods=['POST'])
+def generate_ai_image():
+    """OpenAI API를 사용한 AI 이미지 생성"""
+    console.log("[Route] /api/music-video/generate-image - AI 이미지 생성 요청")
+    
+    try:
+        data = request.get_json()
+        prompt = data.get('prompt', '').strip()
+        style = data.get('style', 'realistic')
+        quality = data.get('quality', 'standard')
+        size = data.get('size', '1024x1024')
+        
+        if not prompt:
+            return jsonify({
+                'success': False,
+                'error': '이미지 설명을 입력해주세요'
+            }), 400
+        
+        # OpenAI API 키 확인
+        openai_api_key = os.getenv('OPENAI_API_KEY')
+        if not openai_api_key:
+            return jsonify({
+                'success': False,
+                'error': 'OpenAI API 키가 설정되지 않았습니다'
+            }), 500
+        
+        # 작업 ID 생성
+        job_id = str(uuid.uuid4())
+        
+        # AI 이미지 생성 작업 시작
+        thread = threading.Thread(
+            target=generate_ai_image_job,
+            args=(job_id, prompt, style, quality, size)
+        )
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': 'AI 이미지 생성을 시작했습니다'
+        })
+        
+    except Exception as e:
+        console.log(f"[Generate AI Image] 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
+@app.route('/api/music-video/create', methods=['POST'])
+def create_music_video():
+    """음원과 이미지로 영상 생성"""
+    console.log("[Route] /api/music-video/create - 음원 영상 생성 요청")
+    
+    try:
+        data = request.get_json()
+        audio_filename = data.get('audio_filename')
+        image_filename = data.get('image_filename')
+        video_quality = data.get('video_quality', 'youtube_hd')
+        options = data.get('options', {})
+        
+        if not audio_filename or not image_filename:
+            return jsonify({
+                'success': False,
+                'error': '음원과 이미지 파일이 모두 필요합니다'
+            }), 400
+        
+        # 작업 ID 생성
+        job_id = str(uuid.uuid4())
+        
+        # 영상 생성 작업 시작
+        thread = threading.Thread(
+            target=create_music_video_job,
+            args=(job_id, audio_filename, image_filename, video_quality, options)
+        )
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': '음원 영상 생성을 시작했습니다'
+        })
+        
+    except Exception as e:
+        console.log(f"[Create Music Video] 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/adjust-pitch', methods=['POST'])
 def adjust_pitch():
     """추출된 음원 키 조절"""
@@ -2015,6 +2023,227 @@ def trim_audio_job(job_id, filename):
         
     except Exception as e:
         console.log(f"[Trim Job] {job_id} - 오류: {str(e)}")
+        processing_jobs[job_id]['status'] = 'error'
+        processing_jobs[job_id]['message'] = f'오류: {str(e)}'
+
+
+def generate_ai_image_job(job_id, prompt, style, quality, size):
+    """백그라운드 AI 이미지 생성 작업"""
+    console.log(f"[AI Image Job] {job_id} - AI 이미지 생성 시작: {prompt}")
+    console.log(f"[AI Image Job] {job_id} - 스타일: {style}, 품질: {quality}, 크기: {size}")
+    
+    # 처리 상태 초기화
+    processing_jobs[job_id] = {
+        'status': 'processing',
+        'progress': 0,
+        'message': 'AI 이미지 생성 중...',
+        'result': None
+    }
+    
+    try:
+        try:
+            from openai import OpenAI
+        except ImportError:
+            raise Exception("OpenAI 라이브러리가 설치되지 않았습니다. pip install openai를 실행해주세요.")
+        
+        import requests
+        from datetime import datetime
+        
+        # OpenAI 클라이언트 초기화
+        client = OpenAI(api_key=os.getenv('OPENAI_API_KEY'))
+        
+        # 프롬프트 길이 검증 및 보완
+        if len(prompt.strip()) < 3:
+            prompt = "beautiful landscape with vibrant colors"
+        
+        # 스타일에 따른 프롬프트 조정
+        style_prompts = {
+            'realistic': f"{prompt}, photorealistic, high quality, detailed, 4k resolution",
+            'artistic': f"{prompt}, artistic style, painterly, creative, beautiful art",
+            'cartoon': f"{prompt}, cartoon style, animated, colorful, cute illustration"
+        }
+        
+        final_prompt = style_prompts.get(style, style_prompts['realistic'])
+        console.log(f"[AI Image Job] 최종 프롬프트: {final_prompt}")
+        
+        # 진행률 업데이트
+        processing_jobs[job_id]['progress'] = 30
+        processing_jobs[job_id]['message'] = 'OpenAI API 호출 중...'
+        
+        # OpenAI DALL-E API 호출 (새로운 방식)
+        response = client.images.generate(
+            model="dall-e-3",
+            prompt=final_prompt,
+            size=size,
+            quality=quality,
+            n=1
+        )
+        
+        processing_jobs[job_id]['progress'] = 70
+        processing_jobs[job_id]['message'] = '이미지 다운로드 중...'
+        
+        # 생성된 이미지 URL 가져오기 (새로운 방식)
+        image_url = response.data[0].url
+        
+        # 이미지 다운로드
+        image_response = requests.get(image_url)
+        if image_response.status_code == 200:
+            # 파일명 생성
+            timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+            filename = f"ai_generated_{timestamp}.png"
+            filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+            
+            # 이미지 저장
+            with open(filepath, 'wb') as f:
+                f.write(image_response.content)
+            
+            # Frame 1.png 합성 처리
+            try:
+                from PIL import Image
+                
+                processing_jobs[job_id]['progress'] = 80
+                processing_jobs[job_id]['message'] = 'Frame 이미지 합성 중...'
+                
+                # Frame 1.png 경로
+                frame_path = os.path.join(os.path.dirname(__file__), 'app', 'Frame 1.png')
+                
+                if os.path.exists(frame_path):
+                    # AI 이미지 열기
+                    ai_image = Image.open(filepath)
+                    
+                    # Frame 이미지 열기 (RGBA 모드로 변환하여 투명도 유지)
+                    frame_image = Image.open(frame_path).convert('RGBA')
+                    
+                    # Frame 이미지 크기를 AI 이미지의 20%로 조절
+                    ai_width, ai_height = ai_image.size
+                    frame_size = min(ai_width, ai_height) // 5  # 20%
+                    frame_image = frame_image.resize((frame_size, frame_size), Image.Resampling.LANCZOS)
+                    
+                    # AI 이미지를 RGBA 모드로 변환
+                    if ai_image.mode != 'RGBA':
+                        ai_image = ai_image.convert('RGBA')
+                    
+                    # Frame 이미지를 AI 이미지 중앙에 합성
+                    frame_x = (ai_width - frame_size) // 2
+                    frame_y = (ai_height - frame_size) // 2
+                    
+                    # 합성 (투명도 유지)
+                    ai_image.paste(frame_image, (frame_x, frame_y), frame_image)
+                    
+                    # 합성된 이미지를 PNG로 저장
+                    ai_image.save(filepath, 'PNG')
+                    
+                    console.log(f"[AI Image Job] Frame 1.png 합성 완료: {frame_size}x{frame_size} at ({frame_x}, {frame_y})")
+                else:
+                    console.log(f"[AI Image Job] Frame 1.png 파일을 찾을 수 없음: {frame_path}")
+                    
+            except Exception as frame_error:
+                console.log(f"[AI Image Job] Frame 합성 오류: {str(frame_error)}")
+                # Frame 합성 실패해도 AI 이미지는 유지
+            
+            # 파일 정보 생성
+            file_info = {
+                'filename': filename,
+                'original_name': f"AI_Generated_{style}.png",
+                'size': os.path.getsize(filepath),
+                'size_mb': get_file_size_mb(filepath),
+                'path': filepath,
+                'prompt': prompt,
+                'style': style
+            }
+            
+            # 성공
+            processing_jobs[job_id]['status'] = 'completed'
+            processing_jobs[job_id]['progress'] = 100
+            processing_jobs[job_id]['message'] = 'AI 이미지 생성 완료!'
+            processing_jobs[job_id]['result'] = {
+                'type': 'ai_image',
+                'file_info': file_info
+            }
+            
+            console.log(f"[AI Image Job] {job_id} - 완료: {filename}")
+        else:
+            raise Exception("이미지 다운로드 실패")
+        
+    except Exception as e:
+        console.log(f"[AI Image Job] {job_id} - 오류: {str(e)}")
+        processing_jobs[job_id]['status'] = 'error'
+        processing_jobs[job_id]['message'] = f'오류: {str(e)}'
+
+
+def create_music_video_job(job_id, audio_filename, image_filename, video_quality, options):
+    """백그라운드 음원 영상 생성 작업"""
+    console.log(f"[Music Video Job] {job_id} - 음원 영상 생성 시작")
+    
+    # 처리 상태 초기화
+    processing_jobs[job_id] = {
+        'status': 'processing',
+        'progress': 0,
+        'message': '영상 생성 준비 중...',
+        'result': None
+    }
+    
+    try:
+        # 동영상 프로세서 생성
+        video_processor = VideoProcessor(console_log=console.log)
+        
+        # 파일 경로 설정
+        audio_path = os.path.join(app.config['UPLOAD_FOLDER'], audio_filename)
+        image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+        
+        console.log(f"[Music Video Job] 오디오 파일: {audio_path}")
+        console.log(f"[Music Video Job] 이미지 파일: {image_path}")
+        
+        # 파일 존재 확인
+        if not os.path.exists(audio_path):
+            raise Exception(f"음원 파일을 찾을 수 없습니다: {audio_filename}")
+        if not os.path.exists(image_path):
+            raise Exception(f"이미지 파일을 찾을 수 없습니다: {image_filename}")
+        
+        # 출력 파일명 생성
+        output_filename = f"music_video_{datetime.now().strftime('%Y%m%d_%H%M%S')}.mp4"
+        output_path = os.path.join(app.config['PROCESSED_FOLDER'], output_filename)
+        
+        # 영상 품질 설정
+        presets = video_processor.get_video_presets()
+        if video_quality in presets:
+            video_size = presets[video_quality]['size']
+            fps = presets[video_quality]['fps']
+        else:
+            video_size = (1920, 1080)
+            fps = 30
+        
+        # 진행률 콜백 함수
+        def progress_callback(progress, message):
+            processing_jobs[job_id]['progress'] = progress
+            processing_jobs[job_id]['message'] = message
+            console.log(f"[Music Video Job] {job_id} - {progress}% - {message}")
+        
+        # 영상 생성 실행
+        result = video_processor.create_video_from_audio_image(
+            audio_path=audio_path,
+            image_path=image_path,
+            output_path=output_path,
+            video_size=video_size,
+            fps=fps,
+            progress_callback=progress_callback
+        )
+        
+        # 처리 완료
+        processing_jobs[job_id]['status'] = 'completed'
+        processing_jobs[job_id]['progress'] = 100
+        processing_jobs[job_id]['message'] = '음원 영상 생성 완료!'
+        processing_jobs[job_id]['result'] = {
+            'type': 'music_video',
+            'video_info': result,
+            'options': options
+        }
+        
+        console.log(f"[Music Video Job] {job_id} - 영상 생성 완료: {result}")
+        
+    except Exception as e:
+        # 오류 처리
+        console.log(f"[Music Video Job] {job_id} - 오류 발생: {str(e)}")
         processing_jobs[job_id]['status'] = 'error'
         processing_jobs[job_id]['message'] = f'오류: {str(e)}'
 
