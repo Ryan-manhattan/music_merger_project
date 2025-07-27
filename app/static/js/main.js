@@ -35,6 +35,12 @@ function setupEventListeners() {
         imageUpload.addEventListener('change', handleImageSelect);
     }
     
+    // 로고 합성 옵션 변경 이벤트
+    const applyLogoOption = document.getElementById('applyLogoOption');
+    if (applyLogoOption) {
+        applyLogoOption.addEventListener('change', handleLogoOptionChange);
+    }
+    
     // 슬라이더 값 변경 이벤트 (이벤트 위임)
     document.addEventListener('input', (e) => {
         if (e.target.classList.contains('slider')) {
@@ -623,12 +629,32 @@ function handleImageSelect(e) {
     }
 }
 
+// 로고 옵션 변경 처리
+function handleLogoOptionChange() {
+    console.log("[LogoOption] 로고 합성 옵션 변경됨");
+    
+    // 이미지가 이미 업로드된 상태라면 다시 업로드
+    const imageUpload = document.getElementById('imageUpload');
+    if (imageUpload && imageUpload.files && imageUpload.files[0]) {
+        const file = imageUpload.files[0];
+        console.log("[LogoOption] 이미지 재처리:", file.name);
+        uploadImage(file);
+    }
+}
+
 // 이미지 업로드
 async function uploadImage(file) {
     console.log("[ImageUpload] 이미지 업로드 시작:", file.name);
     
     const formData = new FormData();
     formData.append('image', file);
+    
+    // 로고 합성 옵션 확인
+    const applyLogoOption = document.getElementById('applyLogoOption');
+    if (applyLogoOption && applyLogoOption.checked) {
+        formData.append('apply_logo', 'on');
+        console.log("[ImageUpload] 로고 합성 옵션 적용");
+    }
     
     try {
         const response = await fetch('/upload_image', {
@@ -711,7 +737,10 @@ async function generateVideo() {
     const videoData = {
         audio_filename: currentAudioResult.filename,
         image_filename: uploadedImage.filename,
-        preset: document.getElementById('videoPreset').value
+        preset: document.getElementById('videoPreset').value,
+        options: {
+            apply_logo: document.getElementById('applyLogoOption').checked
+        }
     };
     
     console.log("[Video] 동영상 생성 데이터:", videoData);
@@ -748,17 +777,60 @@ async function monitorVideoProgress(jobId) {
     
     const progressFill = document.getElementById('videoProgressFill');
     const progressText = document.getElementById('videoProgressText');
+    let lastProgress = 0;
+    let lastLogTime = 0;
     
     const checkStatus = async () => {
         try {
             const response = await fetch(`/process/status/${jobId}`);
             const status = await response.json();
             
-            console.log("[VideoMonitor] 상태:", status);
+            // 진행률이 변경되었거나 5초마다 한 번씩 로그 출력
+            const currentTime = Date.now();
+            const shouldLog = (currentTime - lastLogTime > 5000) ||
+                            (status.progress && status.progress !== lastProgress);
             
-            // 진행률 업데이트
-            progressFill.style.width = status.progress + '%';
-            progressText.textContent = status.message || `동영상 생성 중... ${status.progress}%`;
+            if (shouldLog) {
+                console.log(`[VideoMonitor] 진행 상황: ${status.progress || 0}% - ${status.message || '처리 중'}`);
+                lastLogTime = currentTime;
+                lastProgress = status.progress || 0;
+            }
+            
+            // 부드러운 진행률 업데이트
+            if (progressFill) {
+                progressFill.style.transition = 'width 0.3s ease';
+                progressFill.style.width = `${Math.min(status.progress || 0, 100)}%`;
+                
+                // 진행률에 따른 색상 변경
+                const progress = status.progress || 0;
+                if (progress < 30) {
+                    progressFill.style.background = '#ff7043';  // 주황색
+                } else if (progress < 70) {
+                    progressFill.style.background = '#ffa726';  // 노란색
+                } else if (progress < 95) {
+                    progressFill.style.background = '#66bb6a';  // 연두색
+                } else {
+                    progressFill.style.background = '#4CAF50';  // 녹색
+                }
+            }
+            
+            // 상세한 메시지 표시
+            if (progressText) {
+                const displayText = status.progress > 0 ? 
+                    `${status.progress}% - ${status.message || '처리 중'}` : 
+                    (status.message || '처리 중');
+                
+                // 메시지에 따른 아이콘 추가
+                let icon = '';
+                const message = status.message || '';
+                if (message.includes('준비')) icon = '⚙️';
+                else if (message.includes('로딩') || message.includes('처리')) icon = '🔄';
+                else if (message.includes('생성')) icon = '🎬';
+                else if (message.includes('완료')) icon = '✅';
+                else if (message.includes('결합')) icon = '🔗';
+                
+                progressText.textContent = icon ? `${icon} ${displayText}` : displayText;
+            }
             
             if (status.status === 'completed') {
                 // 동영상 생성 완료
@@ -768,8 +840,8 @@ async function monitorVideoProgress(jobId) {
                 // 오류 발생
                 throw new Error(status.message || '동영상 생성 중 오류 발생');
             } else {
-                // 계속 모니터링
-                setTimeout(checkStatus, 1000); // 1초마다 확인
+                // 계속 모니터링 - 더 빠른 간격
+                setTimeout(checkStatus, 500); // 500ms로 단축
             }
         } catch (error) {
             console.error("[VideoMonitor] 오류:", error);

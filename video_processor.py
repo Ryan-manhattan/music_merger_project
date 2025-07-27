@@ -74,22 +74,62 @@ class VideoProcessor:
             final_clip = image_clip.with_audio(audio_clip)
             
             if progress_callback:
-                progress_callback(80, "동영상 파일 생성 중...")
+                progress_callback(10, "동영상 파일 생성 중...")
+            
+            # MoviePy 진행률을 추정하는 간단한 방법
+            import threading
+            import time
+            
+            stop_monitoring = threading.Event()
+            
+            def monitor_file_progress():
+                """출력 파일 크기를 모니터링하여 진행률 추정"""
+                expected_size = None
+                last_size = 0
+                progress = 10
                 
-            # 동영상 파일로 출력 (유튜브 최적화 설정)
-            final_clip.write_videofile(
-                output_path,
-                fps=fps,
-                codec='libx264',
-                audio_codec='aac',
-                temp_audiofile='temp-audio.m4a',
-                remove_temp=True,
-                preset='medium',  # 품질과 속도 균형
-                ffmpeg_params=[
-                    '-crf', '23',  # 품질 설정 (낮을수록 고품질)
-                    '-movflags', '+faststart'  # 웹 스트리밍 최적화
-                ]
-            )
+                while not stop_monitoring.is_set() and progress < 95:
+                    try:
+                        if os.path.exists(output_path):
+                            current_size = os.path.getsize(output_path)
+                            
+                            # 파일 크기가 증가하고 있으면 진행 중
+                            if current_size > last_size:
+                                progress = min(progress + 2, 95)
+                                if progress_callback:
+                                    progress_callback(progress, f"동영상 생성 중... ({current_size // 1024}KB)")
+                                last_size = current_size
+                        
+                        time.sleep(1)  # 1초마다 확인
+                    except:
+                        break
+            
+            # 파일 크기 모니터링 시작
+            monitor_thread = threading.Thread(target=monitor_file_progress)
+            monitor_thread.daemon = True
+            monitor_thread.start()
+            
+            try:
+                # 동영상 파일로 출력 (간단한 설정)
+                final_clip.write_videofile(
+                    output_path,
+                    fps=fps,
+                    codec='libx264',
+                    audio_codec='aac',
+                    temp_audiofile='temp-audio.m4a',
+                    remove_temp=True,
+                    preset='medium',
+                    ffmpeg_params=[
+                        '-crf', '23',
+                        '-movflags', '+faststart'
+                    ]
+                )
+            finally:
+                # 모니터링 중지
+                stop_monitoring.set()
+                
+            if progress_callback:
+                progress_callback(95, "동영상 생성 완료 중...")
             
             # 메모리 정리
             audio_clip.close()

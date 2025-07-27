@@ -1754,9 +1754,115 @@ def upload_audio_for_video():
         }), 400
 
 
+@app.route('/api/music-video/process-image', methods=['POST'])
+def process_image_for_video():
+    """음원 영상 만들기용 이미지 처리 (로고 합성 포함)"""
+    console.log("[Route] /api/music-video/process-image - 이미지 처리 요청")
+    
+    if 'image' not in request.files:
+        console.log("[Process Image] 이미지 파일이 없음")
+        return jsonify({'error': '이미지 파일이 없습니다'}), 400
+    
+    # 로고 합성 여부 확인
+    apply_logo = request.form.get('apply_logo') == 'true'
+    console.log(f"[Process Image] 로고 합성: {apply_logo}")
+    
+    file = request.files['image']
+    if file.filename == '':
+        return jsonify({'error': '파일이 선택되지 않았습니다'}), 400
+    
+    # 파일 형식 검증
+    allowed_extensions = {'.jpg', '.jpeg', '.png', '.bmp', '.gif'}
+    file_ext = os.path.splitext(file.filename)[1].lower()
+    
+    if file_ext not in allowed_extensions:
+        return jsonify({'error': '지원하지 않는 이미지 형식입니다'}), 400
+    
+    try:
+        # 원본 이미지를 메모리에서 처리
+        from PIL import Image
+        import io
+        import base64
+        
+        # 업로드된 이미지 열기
+        image = Image.open(file.stream)
+        
+        # 파일 정보 생성
+        file_info = {
+            'original_name': file.filename,
+            'size_mb': round(len(file.read()) / (1024 * 1024), 2),
+            'format': file_ext.upper().replace('.', ''),
+            'width': image.width,
+            'height': image.height,
+            'apply_logo': apply_logo
+        }
+        
+        # 파일 스트림 리셋
+        file.stream.seek(0)
+        image = Image.open(file.stream)
+        
+        # 로고 합성 처리
+        if apply_logo:
+            try:
+                # Frame 1.png 경로
+                frame_path = os.path.join(os.path.dirname(__file__), 'app', 'Frame 1.png')
+                
+                if os.path.exists(frame_path):
+                    # Frame 이미지 열기
+                    frame_image = Image.open(frame_path).convert('RGBA')
+                    
+                    # Frame 이미지 크기 조절 (25%)
+                    img_width, img_height = image.size
+                    frame_size = min(img_width, img_height) // 4
+                    frame_image = frame_image.resize((frame_size, frame_size), Image.Resampling.LANCZOS)
+                    
+                    # 업로드된 이미지를 RGBA 모드로 변환
+                    if image.mode != 'RGBA':
+                        image = image.convert('RGBA')
+                    
+                    # Frame 이미지를 중앙에 합성
+                    frame_x = (img_width - frame_size) // 2
+                    frame_y = (img_height - frame_size) // 2
+                    
+                    # 합성
+                    image.paste(frame_image, (frame_x, frame_y), frame_image)
+                    
+                    console.log(f"[Process Image] 로고 합성 완료: {frame_size}x{frame_size}")
+                else:
+                    console.log(f"[Process Image] Frame 1.png 파일을 찾을 수 없음")
+                    
+            except Exception as e:
+                console.log(f"[Process Image] 로고 합성 오류: {str(e)}")
+        
+        # 이미지를 base64로 인코딩하여 반환
+        img_io = io.BytesIO()
+        image.save(img_io, 'PNG')
+        img_io.seek(0)
+        img_base64 = base64.b64encode(img_io.getvalue()).decode('utf-8')
+        
+        # 임시로 파일도 저장 (영상 생성용)
+        timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
+        filename = f"{timestamp}_{secure_filename(file.filename)}"
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        image.save(filepath, 'PNG')
+        
+        file_info['filename'] = filename
+        file_info['preview_url'] = f"data:image/png;base64,{img_base64}"
+        
+        return jsonify({
+            'success': True,
+            'file_info': file_info
+        })
+        
+    except Exception as e:
+        console.log(f"[Process Image] 오류: {str(e)}")
+        return jsonify({'error': f'이미지 처리 중 오류: {str(e)}'}), 500
+
+
 @app.route('/api/music-video/upload-image', methods=['POST'])
 def upload_image_for_video():
-    """음원 영상 만들기용 이미지 업로드"""
+    """음원 영상 만들기용 이미지 업로드 (기존 호환성)"""
     console.log("[Route] /api/music-video/upload-image - 이미지 업로드 요청")
     
     if 'image' not in request.files:
@@ -1892,9 +1998,151 @@ def generate_ai_image():
         }), 500
 
 
+@app.route('/api/music-video/create-unified', methods=['POST'])
+def create_music_video_unified():
+    """통합 음원 영상 생성 (파일 업로드 + 영상 생성)"""
+    console.log("[Route] /api/music-video/create-unified - 통합 음원 영상 생성 요청")
+    
+    try:
+        # 파일 확인
+        if 'audio' not in request.files:
+            return jsonify({'error': '음원 파일이 없습니다'}), 400
+        
+        audio_file = request.files['audio']
+        if audio_file.filename == '':
+            return jsonify({'error': '음원 파일이 선택되지 않았습니다'}), 400
+        
+        # 이미지 처리 - 이미 처리된 파일 또는 새 파일
+        image_file = request.files.get('image')
+        processed_image_filename = request.form.get('processed_image_filename')
+        
+        # 추가 설정 파라미터
+        video_quality = request.form.get('video_quality', 'youtube_hd')
+        apply_logo = request.form.get('apply_logo') == 'true'
+        add_watermark = request.form.get('add_watermark') == 'true'
+        fade_in_out = request.form.get('fade_in_out', 'true') == 'true'
+        
+        console.log(f"[Unified] 설정 파라미터: video_quality={video_quality}, apply_logo={apply_logo}, add_watermark={add_watermark}, fade_in_out={fade_in_out}")
+        console.log(f"[Unified] processed_image_filename: {processed_image_filename}")
+        
+        # AI 이미지 생성 관련
+        ai_prompt = request.form.get('ai_prompt', '').strip()
+        ai_style = request.form.get('ai_style', 'realistic')
+        ai_size = request.form.get('ai_size', '1024x1024')
+        
+        # 음원 파일 저장
+        audio_filename = secure_filename(audio_file.filename)
+        audio_path = os.path.join(app.config['UPLOAD_FOLDER'], audio_filename)
+        audio_file.save(audio_path)
+        console.log(f"[Unified] 음원 파일 저장: {audio_filename}")
+        
+        # 이미지 처리
+        image_filename = None
+        if processed_image_filename:
+            # 이미 처리된 이미지 사용
+            image_filename = processed_image_filename
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+            
+            if os.path.exists(image_path):
+                console.log(f"[Unified] 이미 처리된 이미지 사용: {image_filename}")
+            else:
+                console.log(f"[Unified] 처리된 이미지 파일을 찾을 수 없음: {image_filename}")
+                return jsonify({'error': '처리된 이미지 파일을 찾을 수 없습니다'}), 400
+                
+        elif image_file and image_file.filename:
+            # 새로 업로드된 이미지 (실시간 처리 실패 시 폴백)
+            image_filename = secure_filename(image_file.filename)
+            image_path = os.path.join(app.config['UPLOAD_FOLDER'], image_filename)
+            image_file.save(image_path)
+            console.log(f"[Unified] 새 이미지 파일 저장: {image_filename}")
+            
+            # 로고 합성 처리 (폴백용)
+            if apply_logo:
+                try:
+                    from PIL import Image
+                    
+                    # Frame 1.png 경로
+                    frame_path = os.path.join(os.path.dirname(__file__), 'app', 'Frame 1.png')
+                    
+                    if os.path.exists(frame_path):
+                        # 업로드된 이미지 열기
+                        uploaded_image = Image.open(image_path)
+                        
+                        # Frame 이미지 열기 (RGBA 모드로 변환하여 투명도 유지)
+                        frame_image = Image.open(frame_path).convert('RGBA')
+                        
+                        # Frame 이미지 크기를 업로드된 이미지의 25%로 조절
+                        img_width, img_height = uploaded_image.size
+                        frame_size = min(img_width, img_height) // 4  # 25%
+                        frame_image = frame_image.resize((frame_size, frame_size), Image.Resampling.LANCZOS)
+                        
+                        # 업로드된 이미지를 RGBA 모드로 변환
+                        if uploaded_image.mode != 'RGBA':
+                            uploaded_image = uploaded_image.convert('RGBA')
+                        
+                        # Frame 이미지를 업로드된 이미지 중앙에 합성
+                        frame_x = (img_width - frame_size) // 2
+                        frame_y = (img_height - frame_size) // 2
+                        
+                        # 합성 (투명도 유지)
+                        uploaded_image.paste(frame_image, (frame_x, frame_y), frame_image)
+                        
+                        # 합성된 이미지를 PNG로 저장
+                        uploaded_image.save(image_path, 'PNG')
+                        
+                        console.log(f"[Unified] 폴백 로고 합성 완료: {frame_size}x{frame_size}")
+                    else:
+                        console.log(f"[Unified] Frame 1.png 파일을 찾을 수 없음")
+                        
+                except Exception as e:
+                    console.log(f"[Unified] 폴백 로고 합성 오류: {str(e)}")
+                    
+        elif ai_prompt:
+            # AI 이미지 생성 요청
+            console.log(f"[Unified] AI 이미지 생성 요청: {ai_prompt}")
+            # 여기서 AI 이미지 생성 로직 추가 필요
+            # 현재는 기본 이미지 사용
+            pass
+        
+        if not image_filename:
+            return jsonify({'error': '이미지 파일 또는 AI 프롬프트가 필요합니다'}), 400
+        
+        # 작업 ID 생성
+        job_id = str(uuid.uuid4())
+        
+        # 옵션 설정
+        options = {
+            'apply_logo': apply_logo,
+            'add_watermark': add_watermark,
+            'fade_in_out': fade_in_out
+        }
+        
+        # 영상 생성 작업 시작
+        thread = threading.Thread(
+            target=create_music_video_job,
+            args=(job_id, audio_filename, image_filename, video_quality, options)
+        )
+        thread.start()
+        
+        return jsonify({
+            'success': True,
+            'job_id': job_id,
+            'message': '음원 영상 생성을 시작했습니다',
+            'audio_filename': audio_filename,
+            'image_filename': image_filename
+        })
+        
+    except Exception as e:
+        console.log(f"[Create Music Video Unified] 오류: {str(e)}")
+        return jsonify({
+            'success': False,
+            'error': str(e)
+        }), 500
+
+
 @app.route('/api/music-video/create', methods=['POST'])
 def create_music_video():
-    """음원과 이미지로 영상 생성"""
+    """음원과 이미지로 영상 생성 (기존 방식)"""
     console.log("[Route] /api/music-video/create - 음원 영상 생성 요청")
     
     try:
