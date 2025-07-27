@@ -32,8 +32,8 @@ python3 --version
 echo ""
 
 # 브라우저 자동 열기 (5초 후)
-echo "🌐 5초 후 브라우저가 자동으로 열립니다..."
-(sleep 5 && open http://localhost:5000) &
+echo "🌐 브라우저 자동 열기 기능 비활성화 (사용자 요청)"
+# (sleep 5 && open http://localhost:5000) &
 
 # Flask 앱 실행
 echo "🚀 Music Merger 서버 시작!"

@@ -41,3 +41,4 @@ numpy<2.0
 
 # WSGI HTTP Server
 gunicorn
+googleapiclient
