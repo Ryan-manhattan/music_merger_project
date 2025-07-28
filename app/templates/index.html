@@ -5,6 +5,7 @@
     <!-- 네비게이션 탭 -->
     <nav class="nav-tabs">
         <button class="nav-tab active" onclick="showTab('upload')">🎵 음악 합치기</button>
+        <button class="nav-tab" onclick="showTab('extract')">🎧 음원 추출</button>
         <button class="nav-tab" onclick="showTab('analysis')">📊 음악 분석</button>
         <button class="nav-tab" onclick="location.href='/charts'">🎧 실시간 차트</button>
     </nav>
@@ -16,8 +17,8 @@
         <div class="upload-area" id="uploadArea">
             <div class="upload-icon">📁</div>
             <h2>파일 선택 또는 드래그 앤 드롭</h2>
-            <p>MP3, WAV, M4A, FLAC 파일을 업로드하세요</p>
-            <input type="file" id="fileInput" multiple accept=".mp3,.wav,.m4a,.flac" hidden>
+            <p>MP3, WAV, M4A, FLAC, MP4, WEBM 파일을 업로드하세요</p>
+            <input type="file" id="fileInput" multiple accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" hidden>
             <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
                 파일 선택
             </button>
@@ -170,6 +171,150 @@
     </section>
     </div>
 
+    <!-- 음원 추출 탭 -->
+    <div id="extractTab" class="tab-content">
+        <!-- 링크 추출 섹션 -->
+        <section class="extract-section">
+            <div class="extract-area">
+                <div class="upload-icon">🔗</div>
+                <h2>음원 링크 추출</h2>
+                <p>YouTube, SoundCloud 등의 링크에서 음원을 추출하세요</p>
+                <div class="link-input-group">
+                    <input type="url" id="extractLinkInput" placeholder="https://youtube.com/watch?v=..." class="link-input">
+                    <button class="btn btn-primary" id="extractFromLinkBtn" onclick="extractMusicFromLink()">
+                        🎵 추출하기
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 파일 업로드 섹션 -->
+        <section class="upload-section">
+            <div class="section-divider">
+                <span>또는</span>
+            </div>
+            <div class="upload-area" id="extractUploadArea">
+                <div class="upload-icon">📁</div>
+                <h2>음원 파일 업로드</h2>
+                <p>MP3, WAV, M4A, FLAC, MP4, WEBM 파일을 업로드하세요</p>
+                <input type="file" id="extractFileInput" accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" hidden>
+                <button class="btn btn-secondary" onclick="document.getElementById('extractFileInput').click()">
+                    파일 선택
+                </button>
+            </div>
+        </section>
+
+        <!-- 추출/업로드 진행 상황 -->
+        <section class="extract-progress-section" id="extractProgressSection" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="extractProgressFill"></div>
+            </div>
+            <p class="progress-text" id="extractProgressText">처리 중...</p>
+        </section>
+
+        <!-- 음원 파일 목록 -->
+        <section class="extracted-files-section" id="extractedFilesSection" style="display: none;">
+            <div class="files-header">
+                <h3>추출된 음원 파일</h3>
+            </div>
+            <div class="files-list" id="extractedFilesList"></div>
+        </section>
+
+        <!-- 음원 편집 도구 -->
+        <section class="audio-tools-section" id="audioToolsSection" style="display: none;">
+            <div class="tools-header">
+                <h3>🛠️ 음원 편집 도구</h3>
+                <p>업로드된 음원을 편집하고 다운로드하세요</p>
+            </div>
+            
+            <div class="tools-container">
+                <!-- 편집 도구들 -->
+                <div class="tools-row">
+                    <div class="tool-group">
+                        <div class="tool-header">
+                            <span class="tool-icon">✂️</span>
+                            <div class="tool-info">
+                                <h4>30초 자르기</h4>
+                                <p>음원을 30초로 자릅니다</p>
+                            </div>
+                        </div>
+                        <div class="tool-action">
+                            <button class="btn btn-warning btn-tool" id="trimToThirtyBtn" onclick="trimAudioToThirty()">
+                                <span class="btn-icon">✂️</span>
+                                30초로 자르기
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="tool-group">
+                        <div class="tool-header">
+                            <span class="tool-icon">🎹</span>
+                            <div class="tool-info">
+                                <h4>키 변경 (속도 유지)</h4>
+                                <p>음원의 키(피치)를 조절합니다 (템포는 그대로 유지)</p>
+                            </div>
+                        </div>
+                        <div class="tool-action pitch-control">
+                            <div class="pitch-display">
+                                <label>현재 키: <span id="pitchDisplayValue" class="pitch-value">0</span> 반음</label>
+                            </div>
+                            <div class="pitch-slider-container">
+                                <button class="btn btn-small pitch-btn" onclick="adjustPitch(-1)">-1</button>
+                                <input type="range" id="pitchSlider" min="-12" max="12" value="0" step="1" class="pitch-slider">
+                                <button class="btn btn-small pitch-btn" onclick="adjustPitch(1)">+1</button>
+                            </div>
+                            <button class="btn btn-info btn-tool" onclick="applyPitchChange()">
+                                <span class="btn-icon">🎹</span>
+                                키 변경 적용
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 다운로드 섹션 -->
+                <div class="download-section">
+                    <div class="download-header">
+                        <span class="tool-icon">📥</span>
+                        <div class="tool-info">
+                            <h4>다운로드</h4>
+                            <p>편집된 음원을 원하는 형식으로 다운로드하세요</p>
+                        </div>
+                    </div>
+                    <div class="download-buttons">
+                        <button class="btn btn-success btn-download" id="downloadMp3Btn" onclick="downloadAsMp3()">
+                            <span class="btn-icon">🎵</span>
+                            <div class="btn-content">
+                                <span class="btn-title">MP3로 다운로드</span>
+                                <span class="btn-desc">압축 음질 (권장)</span>
+                            </div>
+                        </button>
+                        <button class="btn btn-secondary btn-download" id="downloadOriginalBtn" onclick="downloadOriginal()">
+                            <span class="btn-icon">💾</span>
+                            <div class="btn-content">
+                                <span class="btn-title">원본 형식</span>
+                                <span class="btn-desc">원본 음질 유지</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 편집 결과 -->
+        <section class="edit-result-section" id="editResultSection" style="display: none;">
+            <h3>✅ 편집 완료!</h3>
+            <p class="result-info" id="editResultInfo"></p>
+            <div class="result-actions">
+                <button class="btn btn-primary" id="finalDownloadBtn">
+                    📥 최종 파일 다운로드
+                </button>
+                <button class="btn btn-secondary" onclick="resetExtractApp()">
+                    새로 시작
+                </button>
+            </div>
+        </section>
+    </div>
+
     <!-- 음악 분석 탭 -->
     <div id="analysisTab" class="tab-content">
         <section class="analysis-section">
@@ -256,8 +401,8 @@
                 <!-- 링크 추출 음원 전용 액션 -->
                 <button class="btn-icon extracted-only" onclick="downloadExtractedFileMp3(this)" style="display: none;" title="MP3로 다운로드">🎵</button>
                 <button class="btn-icon extracted-only" onclick="downloadExtractedFileOriginal(this)" style="display: none;" title="원본 형식으로 다운로드">💾</button>
-                <button class="btn-icon extracted-only" onclick="trimExtractedFile(this)" style="display: none;" title="30초 자르기">✂️</button>
-                <button class="btn-icon extracted-only" onclick="showPitchAdjust(this)" style="display: none;" title="키 조절">🎹</button>
+                <button class="btn-icon" onclick="trimFile(this)" title="30초 자르기">✂️</button>
+                <button class="btn-icon" onclick="showPitchAdjust(this)" title="키 조절">🎹</button>
                 <!-- 기본 액션 -->
                 <button class="btn-icon" onclick="toggleFileSettings(this)">⚙️</button>
                 <button class="btn-icon" onclick="moveFileUp(this)">⬆️</button>

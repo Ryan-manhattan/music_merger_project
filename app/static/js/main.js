@@ -7,6 +7,8 @@ let fileSettings = {};
 let currentExtractJob = null;
 let uploadedImage = null;
 let currentAudioResult = null;
+let currentExtractedFile = null;
+let currentPitchValue = 0;
 
 // DOM 로드 완료 시 초기화
 document.addEventListener('DOMContentLoaded', () => {
@@ -14,6 +16,7 @@ document.addEventListener('DOMContentLoaded', () => {
     setupEventListeners();
     updateNavigation();
     setupPitchSlider();
+    setupExtractTab();
 });
 
 // 이벤트 리스너 설정
@@ -910,6 +913,610 @@ function updateNavigation() {
             link.classList.remove('active');
         }
     });
+}
+
+// ===========================================
+// 키 조절 (피치) 기능
+// ===========================================
+
+// 피치 슬라이더 초기화
+function setupPitchSlider() {
+    console.log("[Pitch] 피치 슬라이더 초기화");
+    
+    // 피치 슬라이더 이벤트 핸들러 추가 (이벤트 위임)
+    document.addEventListener('input', (e) => {
+        if (e.target.classList.contains('pitch-slider')) {
+            updatePitchValue(e.target);
+        }
+    });
+}
+
+// 피치 값 업데이트
+function updatePitchValue(slider) {
+    const value = slider.value;
+    const pitchValue = slider.closest('.pitch-adjust-section').querySelector('.pitch-value');
+    if (pitchValue) {
+        pitchValue.textContent = value;
+    }
+}
+
+// 키 조절 UI 표시
+function showPitchAdjust(button) {
+    console.log("[Pitch] 키 조절 UI 표시");
+    
+    const fileItem = button.closest('.file-item');
+    const pitchSection = fileItem.querySelector('.pitch-adjust-section');
+    
+    if (pitchSection) {
+        // 현재 표시 상태 토글
+        const isVisible = pitchSection.style.display !== 'none';
+        pitchSection.style.display = isVisible ? 'none' : 'block';
+        
+        // 버튼 상태 변경
+        button.style.backgroundColor = isVisible ? '' : '#007bff';
+        button.style.color = isVisible ? '' : 'white';
+    }
+}
+
+// 키 조절 적용
+function applyPitchAdjust(button) {
+    console.log("[Pitch] 키 조절 적용");
+    
+    const fileItem = button.closest('.file-item');
+    const pitchSlider = fileItem.querySelector('.pitch-slider');
+    const pitchValue = parseFloat(pitchSlider.value);
+    
+    if (pitchValue === 0) {
+        showToast('키 조절 값이 0입니다.', 'warning');
+        return;
+    }
+    
+    // 파일 정보 가져오기
+    const fileName = fileItem.dataset.filename;
+    if (!fileName) {
+        showToast('파일 정보를 찾을 수 없습니다.', 'error');
+        return;
+    }
+    
+    // 로딩 상태 표시
+    button.disabled = true;
+    button.textContent = '처리 중...';
+    
+    // 서버에 키 조절 요청
+    fetch('/adjust_pitch', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            filename: fileName,
+            pitch_shift: pitchValue
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast(`키가 ${pitchValue > 0 ? '+' : ''}${pitchValue} 반음 조절되었습니다.`, 'success');
+            
+            // 파일 정보 업데이트
+            updateFileInfo(fileItem, data.file_info);
+        } else {
+            showToast(data.error || '키 조절에 실패했습니다.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('[Pitch] 키 조절 오류:', error);
+        showToast('키 조절 중 오류가 발생했습니다.', 'error');
+    })
+    .finally(() => {
+        // 버튼 상태 복원
+        button.disabled = false;
+        button.textContent = '적용';
+    });
+}
+
+// 파일 30초 자르기 (일반 업로드 파일용)
+function trimFile(button) {
+    console.log("[Trim] 파일 30초 자르기");
+    
+    const fileItem = button.closest('.file-item');
+    const fileName = fileItem.dataset.filename;
+    
+    if (!fileName) {
+        showToast('파일 정보를 찾을 수 없습니다.', 'error');
+        return;
+    }
+    
+    // 로딩 상태 표시
+    button.disabled = true;
+    button.textContent = '⏳';
+    
+    // 서버에 30초 자르기 요청
+    fetch('/trim_file', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            filename: fileName,
+            duration: 30
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            showToast('파일이 30초로 잘렸습니다.', 'success');
+            
+            // 파일 정보 업데이트
+            updateFileInfo(fileItem, data.file_info);
+        } else {
+            showToast(data.error || '파일 자르기에 실패했습니다.', 'error');
+        }
+    })
+    .catch(error => {
+        console.error('[Trim] 파일 자르기 오류:', error);
+        showToast('파일 자르기 중 오류가 발생했습니다.', 'error');
+    })
+    .finally(() => {
+        // 버튼 상태 복원
+        button.disabled = false;
+        button.textContent = '✂️';
+    });
+}
+
+// ===========================================
+// 음원 추출 기능
+// ===========================================
+
+// 링크에서 음원 추출
+async function extractMusicFromLink() {
+    console.log("[Extract] 링크에서 음원 추출 시작");
+    
+    const linkInput = document.getElementById('extractLinkInput');
+    const extractBtn = document.getElementById('extractFromLinkBtn');
+    
+    const url = linkInput.value.trim();
+    
+    if (!url) {
+        alert('링크를 입력해주세요');
+        return;
+    }
+    
+    // URL 형식 검증
+    try {
+        new URL(url);
+    } catch {
+        alert('올바른 URL 형식이 아닙니다');
+        return;
+    }
+    
+    // 버튼 비활성화
+    extractBtn.disabled = true;
+    extractBtn.textContent = '추출 중...';
+    
+    // 진행 상황 표시
+    document.getElementById('extractProgressSection').style.display = 'block';
+    updateExtractProgress(0, '링크 분석 중...');
+    
+    try {
+        // 추출 요청
+        const response = await fetch('/extract_music', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ url: url })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            // 진행 상황 모니터링 시작
+            monitorExtractProgress(result.job_id);
+            
+            // 입력 필드 초기화
+            linkInput.value = '';
+        } else {
+            throw new Error(result.error || '추출 요청 실패');
+        }
+        
+    } catch (error) {
+        console.error("[Extract] 오류:", error);
+        alert(`추출 중 오류가 발생했습니다: ${error.message}`);
+        document.getElementById('extractProgressSection').style.display = 'none';
+    } finally {
+        // 버튼 복원
+        extractBtn.disabled = false;
+        extractBtn.textContent = '🎵 추출하기';
+    }
+}
+
+// 추출 진행 상황 모니터링
+async function monitorExtractProgress(jobId) {
+    console.log("[Extract] 진행 상황 모니터링 시작:", jobId);
+    
+    const checkProgress = async () => {
+        try {
+            const response = await fetch(`/extract_status/${jobId}`);
+            
+            if (response.status === 404) {
+                throw new Error('작업을 찾을 수 없습니다');
+            }
+            
+            const status = await response.json();
+            console.log("[Extract] 현재 상태:", status);
+            
+            // 진행률 업데이트
+            updateExtractProgress(status.progress || 0, status.message || '처리 중...');
+            
+            if (status.status === 'completed') {
+                // 추출 완료
+                if (status.result && status.result.file_info) {
+                    currentExtractedFile = status.result.file_info;
+                    showExtractedFile(currentExtractedFile);
+                    
+                    updateExtractProgress(100, '추출 완료!');
+                    
+                    setTimeout(() => {
+                        document.getElementById('extractProgressSection').style.display = 'none';
+                    }, 2000);
+                }
+                
+            } else if (status.status === 'error') {
+                throw new Error(status.message || '추출 중 오류 발생');
+                
+            } else {
+                // 계속 진행 중
+                setTimeout(checkProgress, 1000);
+            }
+            
+        } catch (error) {
+            console.error("[Extract] 진행 상황 확인 오류:", error);
+            updateExtractProgress(0, `오류: ${error.message}`);
+            
+            setTimeout(() => {
+                document.getElementById('extractProgressSection').style.display = 'none';
+            }, 3000);
+        }
+    };
+    
+    checkProgress();
+}
+
+// 추출된 파일 표시
+function showExtractedFile(fileInfo) {
+    console.log("[Extract] 추출된 파일 표시:", fileInfo);
+    
+    const filesList = document.getElementById('extractedFilesList');
+    const filesSection = document.getElementById('extractedFilesSection');
+    const toolsSection = document.getElementById('audioToolsSection');
+    
+    // 파일 정보 HTML 생성
+    const fileHtml = `
+        <div class="extracted-file-item">
+            <div class="file-header">
+                <span class="file-icon">🎵</span>
+                <div class="file-info">
+                    <div class="file-title">${fileInfo.original_name || fileInfo.filename}</div>
+                    <div class="file-meta">
+                        <span>${fileInfo.format || 'MP3'}</span>
+                        <span>•</span>
+                        <span>${fileInfo.duration_str || '알 수 없음'}</span>
+                        <span>•</span>
+                        <span>${fileInfo.size_mb || '0'} MB</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    `;
+    
+    filesList.innerHTML = fileHtml;
+    filesSection.style.display = 'block';
+    toolsSection.style.display = 'block';
+}
+
+// 30초 자르기
+async function trimAudioToThirty() {
+    if (!currentExtractedFile) {
+        alert('먼저 음원을 추출하거나 업로드해주세요');
+        return;
+    }
+    
+    console.log("[Extract] 30초 자르기 시작");
+    
+    const trimBtn = document.getElementById('trimToThirtyBtn');
+    trimBtn.disabled = true;
+    trimBtn.textContent = '처리 중...';
+    
+    try {
+        const response = await fetch('/trim_audio', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                filename: currentExtractedFile.filename,
+                duration: 30
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            currentExtractedFile = result.file_info;
+            showExtractedFile(currentExtractedFile);
+            showToast('음원이 30초로 잘렸습니다', 'success');
+        } else {
+            throw new Error(result.error || '자르기 실패');
+        }
+        
+    } catch (error) {
+        console.error("[Extract] 30초 자르기 오류:", error);
+        showToast(`자르기 중 오류가 발생했습니다: ${error.message}`, 'error');
+    } finally {
+        trimBtn.disabled = false;
+        trimBtn.textContent = '30초로 자르기';
+    }
+}
+
+// 키 조절 슬라이더 업데이트
+function adjustPitch(delta) {
+    const slider = document.getElementById('pitchSlider');
+    const newValue = parseInt(slider.value) + delta;
+    
+    if (newValue >= -12 && newValue <= 12) {
+        slider.value = newValue;
+        updatePitchDisplay();
+    }
+}
+
+// 피치 표시 업데이트
+function updatePitchDisplay() {
+    const slider = document.getElementById('pitchSlider');
+    const display = document.getElementById('pitchDisplayValue');
+    
+    if (slider && display) {
+        currentPitchValue = parseInt(slider.value);
+        display.textContent = currentPitchValue;
+    }
+}
+
+// 키 변경 적용
+async function applyPitchChange() {
+    if (!currentExtractedFile) {
+        alert('먼저 음원을 추출하거나 업로드해주세요');
+        return;
+    }
+    
+    if (currentPitchValue === 0) {
+        showToast('키 조절 값이 0입니다', 'warning');
+        return;
+    }
+    
+    console.log("[Extract] 키 변경 적용:", currentPitchValue);
+    
+    const applyBtn = document.querySelector('button[onclick="applyPitchChange()"]');
+    applyBtn.disabled = true;
+    applyBtn.textContent = '처리 중...';
+    
+    try {
+        const response = await fetch('/adjust_audio_pitch', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({
+                filename: currentExtractedFile.filename,
+                pitch_shift: currentPitchValue
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            currentExtractedFile = result.file_info;
+            showExtractedFile(currentExtractedFile);
+            showToast(`키가 ${currentPitchValue > 0 ? '+' : ''}${currentPitchValue} 반음 조절되었습니다`, 'success');
+        } else {
+            throw new Error(result.error || '키 변경 실패');
+        }
+        
+    } catch (error) {
+        console.error("[Extract] 키 변경 오류:", error);
+        showToast(`키 변경 중 오류가 발생했습니다: ${error.message}`, 'error');
+    } finally {
+        applyBtn.disabled = false;
+        applyBtn.textContent = '키 변경 적용';
+    }
+}
+
+// MP3로 다운로드
+function downloadAsMp3() {
+    if (!currentExtractedFile) {
+        alert('먼저 음원을 추출하거나 업로드해주세요');
+        return;
+    }
+    
+    console.log("[Extract] MP3 다운로드:", currentExtractedFile.filename);
+    
+    // MP3 변환 및 다운로드 요청
+    const downloadUrl = `/download_mp3/${currentExtractedFile.filename}`;
+    window.location.href = downloadUrl;
+}
+
+// 원본 형식으로 다운로드
+function downloadOriginal() {
+    if (!currentExtractedFile) {
+        alert('먼저 음원을 추출하거나 업로드해주세요');
+        return;
+    }
+    
+    console.log("[Extract] 원본 다운로드:", currentExtractedFile.filename);
+    
+    const downloadUrl = `/download/${currentExtractedFile.filename}`;
+    window.location.href = downloadUrl;
+}
+
+// 음원 추출 앱 초기화
+function resetExtractApp() {
+    console.log("[Extract] 음원 추출 앱 초기화");
+    
+    // 변수 초기화
+    currentExtractedFile = null;
+    currentPitchValue = 0;
+    
+    // UI 초기화
+    document.getElementById('extractLinkInput').value = '';
+    document.getElementById('extractFileInput').value = '';
+    document.getElementById('extractedFilesList').innerHTML = '';
+    document.getElementById('extractedFilesSection').style.display = 'none';
+    document.getElementById('audioToolsSection').style.display = 'none';
+    document.getElementById('extractProgressSection').style.display = 'none';
+    document.getElementById('editResultSection').style.display = 'none';
+    
+    // 피치 슬라이더 초기화
+    const pitchSlider = document.getElementById('pitchSlider');
+    const pitchDisplay = document.getElementById('pitchDisplayValue');
+    if (pitchSlider) pitchSlider.value = 0;
+    if (pitchDisplay) pitchDisplay.textContent = '0';
+}
+
+// 추출 진행률 업데이트
+function updateExtractProgress(progress, message) {
+    const progressFill = document.getElementById('extractProgressFill');
+    const progressText = document.getElementById('extractProgressText');
+    
+    if (progressFill) {
+        progressFill.style.width = progress + '%';
+    }
+    if (progressText) {
+        progressText.textContent = message || `처리 중... ${progress}%`;
+    }
+}
+
+// 토스트 메시지 표시 (간단한 알림)
+function showToast(message, type = 'info') {
+    // 간단한 토스트 구현 (기존 alert 대체)
+    const toastClass = type === 'success' ? '✅' : type === 'error' ? '❌' : type === 'warning' ? '⚠️' : 'ℹ️';
+    console.log(`[Toast] ${toastClass} ${message}`);
+    
+    // 실제로는 더 나은 토스트 UI를 구현할 수 있음
+    alert(`${toastClass} ${message}`);
+}
+
+// 파일 정보 업데이트 (기존 음악 합치기 탭용)
+function updateFileInfo(fileItem, fileInfo) {
+    console.log("[UpdateFileInfo] 파일 정보 업데이트:", fileInfo);
+    
+    // 파일명 업데이트
+    fileItem.dataset.filename = fileInfo.filename;
+    
+    // 파일 메타 정보 업데이트
+    const fileMetaElement = fileItem.querySelector('.file-meta');
+    if (fileMetaElement && fileInfo) {
+        const isExtracted = fileInfo.source === 'link_extract';
+        fileMetaElement.innerHTML = `
+            <span>${fileInfo.format || 'MP3'}</span>
+            <span>•</span>
+            <span>${fileInfo.duration_str || '알 수 없음'}</span>
+            <span>•</span>
+            <span>${fileInfo.size_mb || '0'} MB</span>
+            ${isExtracted ? '<span>• 🔗 링크 추출</span>' : ''}
+        `;
+    }
+    
+    // uploadedFiles 배열에서도 파일 정보 업데이트
+    const index = uploadedFiles.findIndex(f => f.original_name === fileInfo.original_name);
+    if (index !== -1) {
+        uploadedFiles[index] = { ...uploadedFiles[index], ...fileInfo };
+    }
+    
+    // 총 정보 업데이트
+    updateTotalInfo();
+}
+
+// 음원 추출 탭 초기화
+function setupExtractTab() {
+    console.log("[Extract] 음원 추출 탭 초기화");
+    
+    // 파일 업로드 이벤트 설정
+    const extractFileInput = document.getElementById('extractFileInput');
+    const extractUploadArea = document.getElementById('extractUploadArea');
+    
+    if (extractFileInput) {
+        extractFileInput.addEventListener('change', handleExtractFileSelect);
+    }
+    
+    if (extractUploadArea) {
+        extractUploadArea.addEventListener('dragover', handleDragOver);
+        extractUploadArea.addEventListener('dragleave', handleDragLeave);
+        extractUploadArea.addEventListener('drop', handleExtractFileDrop);
+    }
+    
+    // 피치 슬라이더 이벤트 설정
+    const pitchSlider = document.getElementById('pitchSlider');
+    if (pitchSlider) {
+        pitchSlider.addEventListener('input', updatePitchDisplay);
+    }
+}
+
+// 파일 업로드 처리 (음원 추출 탭용)
+function handleExtractFileSelect(e) {
+    const file = e.target.files[0];
+    if (file) {
+        uploadExtractFile(file);
+    }
+}
+
+// 음원 추출 탭 드롭 처리
+function handleExtractFileDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+        uploadExtractFile(file);
+    }
+}
+
+// 음원 파일 업로드
+async function uploadExtractFile(file) {
+    console.log("[Extract] 파일 업로드 시작:", file.name);
+    
+    const formData = new FormData();
+    formData.append('file', file);
+    
+    // 진행 상황 표시
+    document.getElementById('extractProgressSection').style.display = 'block';
+    updateExtractProgress(0, '파일 업로드 중...');
+    
+    try {
+        const response = await fetch('/upload_extract_file', {
+            method: 'POST',
+            body: formData
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            currentExtractedFile = result.file_info;
+            showExtractedFile(currentExtractedFile);
+            
+            updateExtractProgress(100, '업로드 완료!');
+            
+            setTimeout(() => {
+                document.getElementById('extractProgressSection').style.display = 'none';
+            }, 2000);
+            
+        } else {
+            throw new Error(result.error || '파일 업로드 실패');
+        }
+        
+    } catch (error) {
+        console.error("[Extract] 파일 업로드 오류:", error);
+        alert(`파일 업로드 중 오류가 발생했습니다: ${error.message}`);
+        document.getElementById('extractProgressSection').style.display = 'none';
+    }
 }
 
 // ===========================================

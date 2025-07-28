@@ -511,6 +511,383 @@ def extract_link_job(job_id, url):
         processing_jobs[job_id]['message'] = f'오류: {str(e)}'
 
 
+@app.route('/extract_music', methods=['POST'])
+def extract_music():
+    """링크에서 음원 추출 (음원 추출 탭용)"""
+    console.log("[Route] /extract_music - 음원 추출 요청")
+    
+    data = request.get_json()
+    
+    if not data or 'url' not in data:
+        console.log("[Extract Music] URL이 없음")
+        return jsonify({'error': 'URL이 필요합니다'}), 400
+    
+    url = data['url']
+    
+    # 링크 추출기가 없으면 오류 반환
+    if not hasattr(app, 'link_extractor'):
+        console.log("[Extract Music] LinkExtractor 없음")
+        return jsonify({'error': '링크 추출 기능을 사용할 수 없습니다'}), 500
+    
+    # 작업 ID 생성
+    job_id = str(uuid.uuid4())
+    console.log(f"[Extract Music] 작업 ID: {job_id}, URL: {url}")
+    
+    # 백그라운드 작업 시작
+    thread = threading.Thread(
+        target=extract_music_job,
+        args=(job_id, url)
+    )
+    thread.start()
+    
+    return jsonify({
+        'success': True,
+        'job_id': job_id,
+        'message': '음원 추출을 시작했습니다'
+    })
+
+
+def extract_music_job(job_id, url):
+    """백그라운드 음원 추출 작업"""
+    console.log(f"[Extract Music Job] {job_id} - 추출 시작: {url}")
+    
+    # 처리 상태 초기화
+    processing_jobs[job_id] = {
+        'status': 'processing',
+        'progress': 0,
+        'message': '링크 분석 중...',
+        'result': None
+    }
+    
+    try:
+        # 링크 추출기 생성
+        extractor = LinkExtractor(console_log=console.log)
+        
+        # 진행률 콜백 함수
+        def progress_callback(progress, message):
+            processing_jobs[job_id]['progress'] = progress
+            processing_jobs[job_id]['message'] = message
+            console.log(f"[Extract Music Job] {job_id} - {progress}% - {message}")
+        
+        # 음악 추출 실행
+        result = extractor.extract_audio(
+            url=url,
+            output_folder=app.config['UPLOAD_FOLDER'],
+            progress_callback=progress_callback
+        )
+        
+        if result['success']:
+            # 추출 완료
+            processing_jobs[job_id]['status'] = 'completed'
+            processing_jobs[job_id]['progress'] = 100
+            processing_jobs[job_id]['message'] = '추출 완료!'
+            processing_jobs[job_id]['result'] = {
+                'type': 'extract',
+                'file_info': result['file_info']
+            }
+            
+            console.log(f"[Extract Music Job] {job_id} - 추출 완료: {result['file_info']['filename']}")
+        else:
+            # 추출 실패
+            processing_jobs[job_id]['status'] = 'error'
+            processing_jobs[job_id]['message'] = result['error']
+            console.log(f"[Extract Music Job] {job_id} - 추출 실패: {result['error']}")
+        
+    except Exception as e:
+        # 오류 처리
+        console.log(f"[Extract Music Job] {job_id} - 오류 발생: {str(e)}")
+        processing_jobs[job_id]['status'] = 'error'
+        processing_jobs[job_id]['message'] = f'오류: {str(e)}'
+
+
+@app.route('/extract_status/<job_id>')
+def extract_status(job_id):
+    """음원 추출 상태 확인"""
+    if job_id not in processing_jobs:
+        return jsonify({'error': '작업을 찾을 수 없습니다'}), 404
+    
+    return jsonify(processing_jobs[job_id])
+
+
+@app.route('/upload_extract_file', methods=['POST'])
+def upload_extract_file():
+    """음원 추출 탭용 파일 업로드"""
+    console.log("[Route] /upload_extract_file - 파일 업로드 요청")
+    
+    if 'file' not in request.files:
+        console.log("[Upload Extract File] 파일이 없음")
+        return jsonify({'error': '파일이 없습니다'}), 400
+    
+    file = request.files['file']
+    
+    if file and validate_audio_file(file.filename):
+        # 안전한 파일명 생성
+        filename = generate_safe_filename(file.filename)
+        filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+        
+        console.log(f"[Upload Extract File] 파일 저장 경로: {filepath}")
+        
+        # 파일 저장
+        file.save(filepath)
+        console.log(f"[Upload Extract File] 파일 저장 완료: {filename}")
+        
+        # 오디오 프로세서로 파일 정보 가져오기
+        try:
+            processor = AudioProcessor(console_log=console.log)
+            audio_info = processor.get_audio_info(filepath)
+            
+            file_info = {
+                'filename': filename,
+                'original_name': file.filename,
+                'filepath': filepath,
+                'format': audio_info.get('format', 'unknown'),
+                'duration': audio_info.get('duration', 0),
+                'duration_str': audio_info.get('duration_str', '0:00'),
+                'size_mb': get_file_size_mb(filepath)
+            }
+            
+            return jsonify({
+                'success': True,
+                'file_info': file_info
+            })
+            
+        except Exception as e:
+            console.log(f"[Upload Extract File] 파일 정보 분석 오류: {str(e)}")
+            return jsonify({'error': f'파일 분석 중 오류가 발생했습니다: {str(e)}'}), 500
+    
+    return jsonify({'error': '지원하지 않는 파일 형식입니다'}), 400
+
+
+@app.route('/trim_audio', methods=['POST'])
+def trim_audio():
+    """음원 자르기 (30초)"""
+    console.log("[Route] /trim_audio - 음원 자르기 요청")
+    
+    data = request.get_json()
+    
+    if not data or 'filename' not in data:
+        return jsonify({'error': '파일명이 필요합니다'}), 400
+    
+    filename = data['filename']
+    duration = data.get('duration', 30)  # 기본 30초
+    
+    # 파일 경로 확인
+    input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(input_path):
+        return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
+    
+    try:
+        # 오디오 프로세서로 자르기
+        processor = AudioProcessor(console_log=console.log)
+        result = processor.trim_audio(input_path, duration)
+        
+        if result['success']:
+            # 파일 정보 업데이트
+            audio_info = processor.get_audio_info(result['output_path'])
+            
+            file_info = {
+                'filename': result['filename'],
+                'original_name': filename,
+                'filepath': result['output_path'],
+                'format': audio_info.get('format', 'unknown'),
+                'duration': audio_info.get('duration', 0),
+                'duration_str': audio_info.get('duration_str', '0:00'),
+                'size_mb': get_file_size_mb(result['output_path'])
+            }
+            
+            return jsonify({
+                'success': True,
+                'file_info': file_info,
+                'message': f'음원이 {duration}초로 잘렸습니다'
+            })
+        else:
+            return jsonify({'error': result['error']}), 500
+            
+    except Exception as e:
+        console.log(f"[Trim Audio] 오류: {str(e)}")
+        return jsonify({'error': f'자르기 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
+@app.route('/adjust_audio_pitch', methods=['POST'])
+def adjust_audio_pitch():
+    """음원 키(피치) 조절"""
+    console.log("[Route] /adjust_audio_pitch - 키 조절 요청")
+    
+    data = request.get_json()
+    
+    if not data or 'filename' not in data:
+        return jsonify({'error': '파일명이 필요합니다'}), 400
+    
+    filename = data['filename']
+    pitch_shift = data.get('pitch_shift', 0)  # 반음 단위
+    
+    # 파일 경로 확인
+    input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(input_path):
+        return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
+    
+    try:
+        # 오디오 프로세서로 키 조절
+        processor = AudioProcessor(console_log=console.log)
+        result = processor.adjust_pitch(input_path, pitch_shift)
+        
+        if result['success']:
+            # 파일 정보 업데이트
+            audio_info = processor.get_audio_info(result['output_path'])
+            
+            file_info = {
+                'filename': result['filename'],
+                'original_name': filename,
+                'filepath': result['output_path'],
+                'format': audio_info.get('format', 'unknown'),
+                'duration': audio_info.get('duration', 0),
+                'duration_str': audio_info.get('duration_str', '0:00'),
+                'size_mb': get_file_size_mb(result['output_path'])
+            }
+            
+            return jsonify({
+                'success': True,
+                'file_info': file_info,
+                'message': f'키가 {pitch_shift} 반음 조절되었습니다'
+            })
+        else:
+            return jsonify({'error': result['error']}), 500
+            
+    except Exception as e:
+        console.log(f"[Adjust Pitch] 오류: {str(e)}")
+        return jsonify({'error': f'키 조절 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
+@app.route('/download_mp3/<filename>')
+def download_mp3(filename):
+    """MP3 형식으로 다운로드"""
+    console.log(f"[Route] /download_mp3/{filename} - MP3 다운로드 요청")
+    
+    # 파일 경로 확인
+    input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(input_path):
+        return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
+    
+    try:
+        # 이미 MP3 파일인 경우 바로 다운로드
+        if filename.lower().endswith('.mp3'):
+            return send_file(input_path, as_attachment=True, download_name=filename)
+        
+        # MP3로 변환 후 다운로드
+        processor = AudioProcessor(console_log=console.log)
+        result = processor.convert_to_mp3(input_path)
+        
+        if result['success']:
+            return send_file(result['output_path'], as_attachment=True, 
+                           download_name=result['filename'])
+        else:
+            return jsonify({'error': result['error']}), 500
+            
+    except Exception as e:
+        console.log(f"[Download MP3] 오류: {str(e)}")
+        return jsonify({'error': f'MP3 변환 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
+@app.route('/trim_file', methods=['POST'])
+def trim_file():
+    """파일 자르기 (기존 음악 합치기 탭 호환용)"""
+    console.log("[Route] /trim_file - 파일 자르기 요청 (호환용)")
+    
+    data = request.get_json()
+    
+    if not data or 'filename' not in data:
+        return jsonify({'error': '파일명이 필요합니다'}), 400
+    
+    filename = data['filename']
+    duration = data.get('duration', 30)  # 기본 30초
+    
+    # 파일 경로 확인
+    input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(input_path):
+        return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
+    
+    try:
+        # 오디오 프로세서로 자르기
+        processor = AudioProcessor(console_log=console.log)
+        result = processor.trim_audio(input_path, duration)
+        
+        if result['success']:
+            # 파일 정보 업데이트
+            audio_info = processor.get_audio_info(result['output_path'])
+            
+            file_info = {
+                'filename': result['filename'],
+                'original_name': filename,
+                'filepath': result['output_path'],
+                'format': audio_info.get('format', 'unknown'),
+                'duration': audio_info.get('duration', 0),
+                'duration_str': audio_info.get('duration_str', '0:00'),
+                'size_mb': get_file_size_mb(result['output_path'])
+            }
+            
+            return jsonify({
+                'success': True,
+                'file_info': file_info,
+                'message': f'파일이 {duration}초로 잘렸습니다'
+            })
+        else:
+            return jsonify({'error': result['error']}), 500
+            
+    except Exception as e:
+        console.log(f"[Trim File] 오류: {str(e)}")
+        return jsonify({'error': f'자르기 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
+@app.route('/adjust_pitch', methods=['POST'])
+def adjust_pitch():
+    """키(피치) 조절 (기존 음악 합치기 탭 호환용)"""
+    console.log("[Route] /adjust_pitch - 키 조절 요청 (호환용)")
+    
+    data = request.get_json()
+    
+    if not data or 'filename' not in data:
+        return jsonify({'error': '파일명이 필요합니다'}), 400
+    
+    filename = data['filename']
+    pitch_shift = data.get('pitch_shift', 0)  # 반음 단위
+    
+    # 파일 경로 확인
+    input_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
+    if not os.path.exists(input_path):
+        return jsonify({'error': '파일을 찾을 수 없습니다'}), 404
+    
+    try:
+        # 오디오 프로세서로 키 조절
+        processor = AudioProcessor(console_log=console.log)
+        result = processor.adjust_pitch(input_path, pitch_shift)
+        
+        if result['success']:
+            # 파일 정보 업데이트
+            audio_info = processor.get_audio_info(result['output_path'])
+            
+            file_info = {
+                'filename': result['filename'],
+                'original_name': filename,
+                'filepath': result['output_path'],
+                'format': audio_info.get('format', 'unknown'),
+                'duration': audio_info.get('duration', 0),
+                'duration_str': audio_info.get('duration_str', '0:00'),
+                'size_mb': get_file_size_mb(result['output_path'])
+            }
+            
+            return jsonify({
+                'success': True,
+                'file_info': file_info,
+                'message': f'키가 {pitch_shift} 반음 조절되었습니다'
+            })
+        else:
+            return jsonify({'error': result['error']}), 500
+            
+    except Exception as e:
+        console.log(f"[Adjust Pitch] 오류: {str(e)}")
+        return jsonify({'error': f'키 조절 중 오류가 발생했습니다: {str(e)}'}), 500
+
+
 @app.route('/upload_image', methods=['POST'])
 def upload_image():
     """이미지 파일 업로드 처리"""
@@ -1606,7 +1983,7 @@ def trend_analyzer_v2_keywords():
 
 
 @app.route('/trim-audio', methods=['POST'])
-def trim_audio():
+def trim_audio_legacy():
     """추출된 음원 30초 자르기"""
     console.log("[Route] /trim-audio - 30초 자르기 요청")
     
@@ -2183,7 +2560,7 @@ def create_music_video():
 
 
 @app.route('/adjust-pitch', methods=['POST'])
-def adjust_pitch():
+def adjust_pitch_legacy():
     """추출된 음원 키 조절"""
     console.log("[Route] /adjust-pitch - 키 조절 요청")
     
