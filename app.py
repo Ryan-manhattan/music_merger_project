@@ -47,6 +47,13 @@ except ImportError as e:
     print(f"MusicTrendAnalyzerV2 로드 실패: {e}")
     trend_analyzer_available = False
 
+try:
+    from melon_connector import MelonConnector
+    melon_connector_available = True
+except ImportError as e:
+    print(f"MelonConnector 로드 실패: {e}")
+    melon_connector_available = False
+
 # Flask 앱 초기화 (Windows 경로 대응)
 app = Flask(__name__, 
            template_folder='app/templates', 
@@ -97,6 +104,16 @@ try:
 except Exception as e:
     music_analyzer = None
     console.log(f"YouTube 분석기 초기화 실패: {str(e)}")
+
+# 멜론 커넥터 초기화
+melon_connector = None
+if melon_connector_available:
+    try:
+        melon_connector = MelonConnector(console_log=lambda msg: console.log(msg))
+        console.log("멜론 커넥터 초기화 완료")
+    except Exception as e:
+        console.log(f"멜론 커넥터 초기화 실패: {str(e)}")
+        melon_connector = None
 
 if database_available:
     try:
@@ -1929,6 +1946,68 @@ def get_spotify_charts():
 def charts_page():
     """Spotify 차트 전용 페이지"""
     return render_template('charts.html')
+
+@app.route('/api/melon/charts')
+def get_melon_charts():
+    """멜론 차트 데이터 가져오기"""
+    try:
+        if not melon_connector:
+            return jsonify({'success': False, 'error': '멜론 커넥터가 초기화되지 않았습니다'}), 500
+        
+        # 요청 파라미터
+        chart_type = request.args.get('type', 'realtime')  # realtime, hot100, week, month
+        limit = min(int(request.args.get('limit', 100)), 100)  # 최대 100곡
+        
+        console.log(f"[API] 멜론 {chart_type} 차트 요청 (limit: {limit})")
+        
+        # 멜론 차트 데이터 수집
+        chart_data = melon_connector.get_chart_data(chart_type, limit)
+        
+        if chart_data['success']:
+            return jsonify({
+                'success': True,
+                'timestamp': datetime.now().isoformat(),
+                'chart_type': chart_type,
+                'chart_data': chart_data,
+                'total_tracks': chart_data.get('total_tracks', 0),
+                'source': 'melon'
+            })
+        else:
+            return jsonify({'success': False, 'error': chart_data.get('error', '멜론 차트 데이터 수집 실패')}), 500
+            
+    except Exception as e:
+        console.log(f"[API] 멜론 차트 오류: {str(e)}")
+        return jsonify({'success': False, 'error': f'멜론 차트 데이터 수집 중 오류: {str(e)}'}), 500
+
+@app.route('/api/melon/charts/all')
+def get_all_melon_charts():
+    """모든 멜론 차트 데이터 가져오기"""
+    try:
+        if not melon_connector:
+            return jsonify({'success': False, 'error': '멜론 커넥터가 초기화되지 않았습니다'}), 500
+        
+        # 요청 파라미터
+        limit_per_chart = min(int(request.args.get('limit', 50)), 50)  # 차트별 최대 50곡
+        
+        console.log(f"[API] 멜론 전체 차트 요청 (차트별 limit: {limit_per_chart})")
+        
+        # 모든 멜론 차트 데이터 수집
+        all_charts = melon_connector.get_all_charts(limit_per_chart)
+        
+        if all_charts['success']:
+            return jsonify({
+                'success': True,
+                'timestamp': datetime.now().isoformat(),
+                'charts': all_charts['charts'],
+                'total_tracks': all_charts.get('total_tracks', 0),
+                'source': 'melon'
+            })
+        else:
+            return jsonify({'success': False, 'error': '멜론 전체 차트 데이터 수집 실패'}), 500
+            
+    except Exception as e:
+        console.log(f"[API] 멜론 전체 차트 오류: {str(e)}")
+        return jsonify({'success': False, 'error': f'멜론 전체 차트 수집 중 오류: {str(e)}'}), 500
 
 @app.route('/api/trends/v2/keywords', methods=['POST'])
 def trend_analyzer_v2_keywords():

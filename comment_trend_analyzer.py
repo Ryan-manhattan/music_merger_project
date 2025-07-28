@@ -14,14 +14,7 @@ from typing import Dict, List, Optional, Tuple, Set
 from collections import Counter, defaultdict
 import statistics
 
-try:
-    import numpy as np
-    from sklearn.feature_extraction.text import TfidfVectorizer
-    from sklearn.cluster import KMeans
-    from sklearn.decomposition import LatentDirichletAllocation
-    SKLEARN_AVAILABLE = True
-except ImportError:
-    SKLEARN_AVAILABLE = False
+SKLEARN_AVAILABLE = False
 
 try:
     from textblob import TextBlob
@@ -34,6 +27,12 @@ try:
     VADER_AVAILABLE = True
 except ImportError:
     VADER_AVAILABLE = False
+
+try:
+    from openai import OpenAI
+    OPENAI_AVAILABLE = True
+except ImportError:
+    OPENAI_AVAILABLE = False
 
 class CommentTrendAnalyzer:
     def __init__(self, console_log=None):
@@ -54,18 +53,22 @@ class CommentTrendAnalyzer:
             except Exception as e:
                 self.console_log(f"[Comment] VADER 초기화 오류: {str(e)}")
         
-        # 토픽 모델링 설정
+        # OpenAI 클라이언트 초기화
+        self.openai_client = None
+        if OPENAI_AVAILABLE:
+            try:
+                api_key = os.getenv('OPENAI_API_KEY')
+                if api_key:
+                    self.openai_client = OpenAI(api_key=api_key)
+                    self.console_log("[Comment] OpenAI 클라이언트 초기화 완료")
+                else:
+                    self.console_log("[Comment] OPENAI_API_KEY 환경변수가 설정되지 않았습니다")
+            except Exception as e:
+                self.console_log(f"[Comment] OpenAI 초기화 오류: {str(e)}")
+        
+        # 토픽 모델링 비활성화
         self.topic_model = None
         self.vectorizer = None
-        
-        if SKLEARN_AVAILABLE:
-            self.vectorizer = TfidfVectorizer(
-                max_features=1000,
-                stop_words='english',
-                ngram_range=(1, 2),
-                min_df=2,
-                max_df=0.8
-            )
         
         # 음악 관련 감정 키워드 확장
         self.music_sentiment_keywords = {
@@ -336,132 +339,87 @@ class CommentTrendAnalyzer:
     
     def extract_comment_topics(self, comments: List[str], num_topics: int = 5) -> Dict:
         """
-        댓글에서 토픽 추출 (LDA 모델링)
+        댓글에서 간단한 키워드 기반 토픽 분석
         
         Args:
             comments: 댓글 텍스트 리스트
-            num_topics: 추출할 토픽 수
+            num_topics: 추출할 토픽 수 (무시됨)
             
         Returns:
-            토픽 모델링 결과
+            키워드 기반 토픽 분석 결과
         """
         try:
-            if not SKLEARN_AVAILABLE:
-                return {'error': 'scikit-learn이 설치되지 않았습니다'}
+            if len(comments) < 5:
+                return {'error': '토픽 분석을 위해 최소 5개 이상의 댓글이 필요합니다'}
             
-            if len(comments) < 10:
-                return {'error': '토픽 분석을 위해 최소 10개 이상의 댓글이 필요합니다'}
-            
-            # 텍스트 전처리
-            processed_comments = []
+            # 키워드 빈도 분석
+            all_keywords = []
             for comment in comments:
                 # 기본 전처리
-                clean_text = re.sub(r'[^\w\s]', ' ', comment.lower())
-                clean_text = re.sub(r'\s+', ' ', clean_text).strip()
+                clean_text = re.sub(r'[^\w\s가-힣]', ' ', comment.lower())
+                words = clean_text.split()
                 
-                if len(clean_text) > 10:  # 너무 짧은 댓글 제외
-                    processed_comments.append(clean_text)
+                # 2글자 이상 단어만 포함
+                filtered_words = [word for word in words if len(word) >= 2]
+                all_keywords.extend(filtered_words)
             
-            if len(processed_comments) < 5:
-                return {'error': '분석 가능한 댓글이 부족합니다'}
+            # 빈도 계산
+            keyword_counts = Counter(all_keywords)
+            top_keywords = keyword_counts.most_common(20)
             
-            # TF-IDF 벡터화
-            try:
-                tfidf_matrix = self.vectorizer.fit_transform(processed_comments)
-                feature_names = self.vectorizer.get_feature_names_out()
-            except Exception as e:
-                return {'error': f'벡터화 오류: {str(e)}'}
-            
-            # LDA 토픽 모델링
-            lda_model = LatentDirichletAllocation(
-                n_components=min(num_topics, len(processed_comments)//2),
-                random_state=42,
-                max_iter=10
-            )
-            
-            try:
-                lda_model.fit(tfidf_matrix)
-            except Exception as e:
-                return {'error': f'LDA 모델링 오류: {str(e)}'}
-            
-            # 토픽별 키워드 추출
-            topics = []
-            for topic_idx, topic in enumerate(lda_model.components_):
-                # 상위 키워드 추출
-                top_keywords_idx = topic.argsort()[-10:][::-1]
-                top_keywords = [feature_names[i] for i in top_keywords_idx]
-                topic_weights = [topic[i] for i in top_keywords_idx]
-                
-                # 토픽 라벨 생성
-                topic_label = self._generate_topic_label(top_keywords)
-                
-                topics.append({
-                    'topic_id': topic_idx,
-                    'label': topic_label,
-                    'keywords': top_keywords,
-                    'weights': topic_weights,
-                    'music_relevance': self._calculate_music_relevance(top_keywords)
-                })
-            
-            # 댓글별 토픽 분포
-            doc_topic_dist = lda_model.transform(tfidf_matrix)
-            
-            # 토픽별 댓글 수 계산
-            topic_comment_counts = defaultdict(int)
-            for doc_topics in doc_topic_dist:
-                dominant_topic = doc_topics.argmax()
-                topic_comment_counts[dominant_topic] += 1
+            # 음악 관련 키워드 분류
+            music_topics = self._categorize_keywords_by_music_type([kw[0] for kw in top_keywords])
             
             result = {
-                'num_topics_found': len(topics),
-                'topics': topics,
-                'topic_distribution': dict(topic_comment_counts),
-                'total_comments_analyzed': len(processed_comments),
-                'model_perplexity': lda_model.perplexity(tfidf_matrix),
+                'analysis_type': 'keyword_based',
+                'top_keywords': dict(top_keywords),
+                'music_topics': music_topics,
+                'total_comments_analyzed': len(comments),
+                'total_keywords_found': len(keyword_counts),
                 'analyzed_at': datetime.now().isoformat()
             }
             
             return result
             
         except Exception as e:
-            self.console_log(f"[Comment] 토픽 추출 오류: {str(e)}")
+            self.console_log(f"[Comment] 키워드 토픽 분석 오류: {str(e)}")
             return {'error': str(e)}
     
-    def _generate_topic_label(self, keywords: List[str]) -> str:
-        """키워드 기반 토픽 라벨 생성"""
-        # 음악 관련 키워드 우선 검사
-        for genre, indicators in self.genre_indicators.items():
-            for indicator in indicators:
-                if any(indicator.lower() in keyword.lower() for keyword in keywords[:3]):
-                    return f"음악_{genre}"
+    def _categorize_keywords_by_music_type(self, keywords: List[str]) -> Dict:
+        """키워드를 음악 유형별로 분류"""
+        categorized = {'genre': [], 'trend': [], 'sentiment': [], 'other': []}
         
-        # 트렌드 관련 키워드 검사
-        for trend_type, indicators in self.trend_indicators.items():
-            for indicator in indicators:
-                if any(indicator.lower() in keyword.lower() for keyword in keywords[:3]):
-                    return f"트렌드_{trend_type}"
-        
-        # 일반 라벨 (상위 2개 키워드 조합)
-        return f"{keywords[0]}_{keywords[1]}" if len(keywords) >= 2 else keywords[0]
-    
-    def _calculate_music_relevance(self, keywords: List[str]) -> float:
-        """키워드의 음악 관련성 점수 계산"""
-        music_related_count = 0
-        
-        # 모든 음악 관련 키워드와 비교
-        all_music_keywords = []
-        for genre_keywords in self.genre_indicators.values():
-            all_music_keywords.extend(genre_keywords)
-        for trend_keywords in self.trend_indicators.values():
-            all_music_keywords.extend(trend_keywords)
-        
-        for keyword in keywords[:5]:  # 상위 5개 키워드만 검사
-            for music_keyword in all_music_keywords:
-                if music_keyword.lower() in keyword.lower():
-                    music_related_count += 1
+        for keyword in keywords:
+            categorized_flag = False
+            
+            # 장르 키워드 검사
+            for genre, indicators in self.genre_indicators.items():
+                if any(indicator.lower() in keyword.lower() for indicator in indicators):
+                    categorized['genre'].append({'keyword': keyword, 'category': genre})
+                    categorized_flag = True
                     break
+            
+            if not categorized_flag:
+                # 트렌드 키워드 검사
+                for trend_type, indicators in self.trend_indicators.items():
+                    if any(indicator.lower() in keyword.lower() for indicator in indicators):
+                        categorized['trend'].append({'keyword': keyword, 'category': trend_type})
+                        categorized_flag = True
+                        break
+            
+            if not categorized_flag:
+                # 감정 키워드 검사
+                for sentiment_type, data in self.music_sentiment_keywords.items():
+                    if any(word.lower() in keyword.lower() for word in data['words']):
+                        categorized['sentiment'].append({'keyword': keyword, 'category': sentiment_type})
+                        categorized_flag = True
+                        break
+            
+            if not categorized_flag:
+                categorized['other'].append(keyword)
         
-        return music_related_count / min(len(keywords), 5)
+        return categorized
+    
     
     def analyze_comment_patterns(self, comments: List[Dict]) -> Dict:
         """
@@ -652,7 +610,7 @@ class CommentTrendAnalyzer:
     def get_analysis_status(self) -> Dict:
         """분석기 상태 확인"""
         return {
-            'sklearn_available': SKLEARN_AVAILABLE,
+            'sklearn_available': False,
             'textblob_available': TEXTBLOB_AVAILABLE,
             'vader_available': VADER_AVAILABLE,
             'vader_initialized': self.vader_analyzer is not None,

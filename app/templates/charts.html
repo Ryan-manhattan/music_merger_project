@@ -79,10 +79,59 @@
             transition: all 0.2s ease;
         }
         
-        .filter-btn.active {
+        .filter-btn.active, .source-btn.active, .melon-type-btn.active {
             background: var(--primary-color);
             color: white;
             border-color: var(--primary-color);
+        }
+        
+        .source-btn, .melon-type-btn {
+            padding: var(--spacing-sm) var(--spacing-md);
+            border: 1px solid var(--border);
+            border-radius: 6px;
+            background: var(--background);
+            color: var(--text-secondary);
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+        
+        .header-buttons {
+            display: flex;
+            gap: var(--spacing-md);
+            justify-content: center;
+            margin-top: var(--spacing-md);
+        }
+        
+        .melon-chart {
+            grid-column: 1 / -1;
+        }
+        
+        .melon-track-item {
+            position: relative;
+        }
+        
+        .melon-thumbnail {
+            width: 50px;
+            height: 50px;
+            border-radius: 6px;
+            object-fit: cover;
+            margin-right: var(--spacing-md);
+        }
+        
+        .source-badge {
+            position: absolute;
+            top: -5px;
+            right: -5px;
+            background: #ff6b6b;
+            color: white;
+            font-size: 0.6em;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-weight: bold;
+        }
+        
+        .melon-badge {
+            background: #00c73c;
         }
         
         .chart-grid {
@@ -255,9 +304,12 @@
             <div class="charts-container">
                 <!-- 차트 헤더 -->
                 <div class="charts-header">
-                    <h1>🎧 Spotify 실시간 차트</h1>
-                    <p>한국과 글로벌 Top 50 차트를 실시간으로 확인하세요</p>
-                    <button id="refreshBtn" class="btn btn-primary">🔄 새로고침</button>
+                    <h1>🎧 실시간 음악 차트</h1>
+                    <p>Spotify와 멜론 차트를 실시간으로 확인하세요</p>
+                    <div class="header-buttons">
+                        <button id="refreshBtn" class="btn btn-primary">🔄 새로고침</button>
+                        <button id="toggleSourceBtn" class="btn btn-secondary">📊 차트 전환</button>
+                    </div>
                 </div>
 
                 <!-- 통계 정보 -->
@@ -283,10 +335,20 @@
                 <!-- 필터 -->
                 <div class="chart-filters">
                     <div class="filter-group">
+                        <span><strong>차트 소스:</strong></span>
+                        <button class="source-btn active" data-source="spotify">🎵 Spotify</button>
+                        <button class="source-btn" data-source="melon">🍈 멜론</button>
+                    </div>
+                    <div class="filter-group" id="spotifyFilters">
                         <span><strong>필터:</strong></span>
                         <button class="filter-btn active" data-filter="all">전체</button>
                         <button class="filter-btn" data-filter="korea">🇰🇷 한국</button>
                         <button class="filter-btn" data-filter="global">🌍 글로벌</button>
+                    </div>
+                    <div class="filter-group" id="melonFilters" style="display: none;">
+                        <span><strong>차트 타입:</strong></span>
+                        <button class="melon-type-btn active" data-type="realtime">⚡ 실시간</button>
+                        <button class="melon-type-btn" data-type="hot100">🔥 HOT100</button>
                     </div>
                 </div>
 
@@ -300,16 +362,27 @@
 
                 <!-- 차트 그리드 -->
                 <div class="chart-grid" id="chartGrid">
-                    <!-- 한국 차트 섹션 -->
-                    <div class="chart-section">
-                        <h3>🇰🇷 한국 Top 25</h3>
-                        <div class="track-list" id="koreaChart"></div>
+                    <!-- Spotify 차트 -->
+                    <div id="spotifyCharts">
+                        <!-- 한국 차트 섹션 -->
+                        <div class="chart-section">
+                            <h3>🇰🇷 한국 Top 25</h3>
+                            <div class="track-list" id="koreaChart"></div>
+                        </div>
+
+                        <!-- 글로벌 차트 섹션 -->
+                        <div class="chart-section">
+                            <h3>🌍 글로벌 Top 25</h3>
+                            <div class="track-list" id="globalChart"></div>
+                        </div>
                     </div>
 
-                    <!-- 글로벌 차트 섹션 -->
-                    <div class="chart-section">
-                        <h3>🌍 글로벌 Top 25</h3>
-                        <div class="track-list" id="globalChart"></div>
+                    <!-- 멜론 차트 -->
+                    <div id="melonCharts" style="display: none;">
+                        <div class="chart-section melon-chart">
+                            <h3 id="melonChartTitle">🍈 멜론 실시간 TOP 50</h3>
+                            <div class="track-list" id="melonChart"></div>
+                        </div>
                     </div>
                 </div>
             </div>
