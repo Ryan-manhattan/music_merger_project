@@ -34,8 +34,18 @@ function setupEventListeners() {
     
     // 이미지 업로드 이벤트
     const imageUpload = document.getElementById('imageUpload');
+    const imageUploadArea = document.getElementById('imageUploadArea');
+    
     if (imageUpload) {
         imageUpload.addEventListener('change', handleImageSelect);
+    }
+    
+    // 이미지 업로드 영역 드래그&드롭 이벤트
+    if (imageUploadArea) {
+        imageUploadArea.addEventListener('dragover', handleImageDragOver);
+        imageUploadArea.addEventListener('dragleave', handleImageDragLeave);
+        imageUploadArea.addEventListener('drop', handleImageDrop);
+        imageUploadArea.addEventListener('click', handleImageAreaClick);
     }
     
     // 로고 합성 옵션 변경 이벤트
@@ -632,6 +642,51 @@ function handleImageSelect(e) {
     }
 }
 
+// 이미지 영역 클릭 처리
+function handleImageAreaClick(e) {
+    // 버튼 클릭이 아닌 영역 클릭 시에만 처리
+    if (!e.target.classList.contains('btn')) {
+        console.log("[ImageAreaClick] 이미지 영역 클릭됨");
+        const imageUpload = document.getElementById('imageUpload');
+        if (imageUpload) {
+            imageUpload.click();
+        }
+    }
+}
+
+// 이미지 드래그 오버 처리
+function handleImageDragOver(e) {
+    e.preventDefault();
+    e.currentTarget.classList.add('drag-over');
+    console.log("[ImageDrag] 드래그 오버");
+}
+
+// 이미지 드래그 리브 처리
+function handleImageDragLeave(e) {
+    e.currentTarget.classList.remove('drag-over');
+    console.log("[ImageDrag] 드래그 리브");
+}
+
+// 이미지 드롭 처리
+function handleImageDrop(e) {
+    e.preventDefault();
+    e.currentTarget.classList.remove('drag-over');
+    
+    console.log("[ImageDrop] 이미지 드롭됨");
+    const files = e.dataTransfer.files;
+    
+    if (files.length > 0) {
+        const file = files[0];
+        
+        // 이미지 파일인지 확인
+        if (file.type.startsWith('image/')) {
+            uploadImage(file);
+        } else {
+            alert('이미지 파일만 업로드 가능합니다.');
+        }
+    }
+}
+
 // 로고 옵션 변경 처리
 function handleLogoOptionChange() {
     console.log("[LogoOption] 로고 합성 옵션 변경됨");
@@ -645,9 +700,28 @@ function handleLogoOptionChange() {
     }
 }
 
+// 이미지 업로드 중 플래그
+let isImageUploading = false;
+
 // 이미지 업로드
 async function uploadImage(file) {
+    // 중복 업로드 방지
+    if (isImageUploading) {
+        console.log("[ImageUpload] 이미 업로드 중입니다");
+        return;
+    }
+    
     console.log("[ImageUpload] 이미지 업로드 시작:", file.name);
+    isImageUploading = true;
+    
+    // 업로드 UI 상태 변경
+    const uploadArea = document.getElementById('imageUploadArea');
+    const generateVideoBtn = document.getElementById('generateVideoBtn');
+    
+    if (uploadArea) {
+        uploadArea.style.opacity = '0.7';
+        uploadArea.style.pointerEvents = 'none';
+    }
     
     const formData = new FormData();
     formData.append('image', file);
@@ -673,13 +747,25 @@ async function uploadImage(file) {
             showImagePreview(file, data.image);
             
             // 동영상 생성 버튼 활성화
-            document.getElementById('generateVideoBtn').disabled = false;
+            if (generateVideoBtn) {
+                generateVideoBtn.disabled = false;
+            }
+            
+            console.log("[ImageUpload] 업로드 완료:", file.name);
         } else {
             alert('이미지 업로드 오류: ' + data.error);
         }
     } catch (error) {
         console.error("[ImageUpload] 오류:", error);
         alert('이미지 업로드 중 오류가 발생했습니다.');
+    } finally {
+        // 업로드 완료 후 UI 복원
+        isImageUploading = false;
+        
+        if (uploadArea) {
+            uploadArea.style.opacity = '1';
+            uploadArea.style.pointerEvents = 'auto';
+        }
     }
 }
 

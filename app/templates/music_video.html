@@ -51,12 +51,12 @@
                             <h3>🎵 음원 파일</h3>
                             <div class="upload-area" id="audioUploadArea">
                                 <div class="upload-icon">🎵</div>
-                                <p>음악 파일을 선택하세요</p>
+                                <p>음악 파일을 드래그하거나 클릭하여 선택하세요</p>
                                 <p class="file-types">MP3, WAV, M4A, FLAC</p>
                                 <input type="file" id="audioFileInput" accept=".mp3,.wav,.m4a,.flac" hidden>
-                                <button class="btn btn-primary" onclick="document.getElementById('audioFileInput').click()">
+                                <div class="btn btn-primary btn-display-only">
                                     파일 선택
-                                </button>
+                                </div>
                             </div>
                             <div class="file-info" id="audioInfo" style="display: none;">
                                 <div class="file-preview">
@@ -84,12 +84,12 @@
                             <div class="tab-content active" id="uploadTab">
                                 <div class="upload-area" id="imageUploadArea">
                                     <div class="upload-icon">🖼️</div>
-                                    <p>이미지 파일을 선택하세요</p>
+                                    <p>이미지 파일을 드래그하거나 클릭하여 선택하세요</p>
                                     <p class="file-types">JPG, PNG, BMP, GIF</p>
                                     <input type="file" id="imageFileInput" accept=".jpg,.jpeg,.png,.bmp,.gif" hidden>
-                                    <button class="btn btn-primary" onclick="document.getElementById('imageFileInput').click()">
+                                    <div class="btn btn-primary btn-display-only">
                                         파일 선택
-                                    </button>
+                                    </div>
                                 </div>
                                 <label class="checkbox-label">
                                     <input type="checkbox" id="applyLogoCheckbox" name="apply_logo">
@@ -543,6 +543,12 @@
         justify-content: center;
     }
 
+    .btn-display-only {
+        pointer-events: none;
+        cursor: default;
+        opacity: 0.8;
+    }
+    
     @media (max-width: 768px) {
         .form-grid {
             grid-template-columns: 1fr;

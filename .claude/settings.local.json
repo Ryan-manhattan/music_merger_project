@@ -47,7 +47,8 @@
       "Bash(npm run lint)",
       "Bash(npm run test:*)",
       "Bash(find:*)",
-      "WebFetch(domain:cookbook.openai.com)"
+      "WebFetch(domain:cookbook.openai.com)",
+      "Bash(\"C:\\Users\\Ryan.김준형\\Documents\\Projects\\music_merger_project\\venv_win\\Scripts\\pip.exe\" install praw spotipy)"
     ],
     "deny": []
   }

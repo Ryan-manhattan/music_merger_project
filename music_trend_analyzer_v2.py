@@ -20,8 +20,8 @@ from comment_trend_analyzer import CommentTrendAnalyzer
 #from trends_analyzer import TrendsAnalyzer
 from database import DatabaseManager
 from youtube_chart_collector import YouTubeChartCollector
-from lastfm_connector import LastfmConnector
-from billboard_connector import BillboardConnector
+# from lastfm_connector import LastfmConnector  # 파일 존재하지 않음
+# from billboard_connector import BillboardConnector  # 파일 존재하지 않음
 
 class MusicTrendAnalyzerV2:
     def __init__(self, console_log=None):
@@ -84,15 +84,17 @@ class MusicTrendAnalyzerV2:
             self.youtube_chart_collector = None
         
         try:
-            self.lastfm_connector = LastfmConnector(console_log=self.console_log)
-            self.console_log("[TrendV2] Last.fm 연결기 초기화 완료")
+            # self.lastfm_connector = LastfmConnector(console_log=self.console_log)  # 모듈 없음
+            self.lastfm_connector = None
+            self.console_log("[TrendV2] Last.fm 연결기 비활성화 (모듈 없음)")
         except Exception as e:
             self.console_log(f"[TrendV2] Last.fm 연결기 초기화 실패: {str(e)}")
             self.lastfm_connector = None
         
         try:
-            self.billboard_connector = BillboardConnector(console_log=self.console_log)
-            self.console_log("[TrendV2] Billboard 연결기 초기화 완료")
+            # self.billboard_connector = BillboardConnector(console_log=self.console_log)  # 모듈 없음
+            self.billboard_connector = None
+            self.console_log("[TrendV2] Billboard 연결기 비활성화 (모듈 없음)")
         except Exception as e:
             self.console_log(f"[TrendV2] Billboard 연결기 초기화 실패: {str(e)}")
             self.billboard_connector = None
