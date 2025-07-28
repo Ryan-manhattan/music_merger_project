@@ -9,7 +9,10 @@ echo.
 cd /d "%~dp0"
 
 :: 가상환경 확인 및 활성화
-if exist "venv\Scripts\activate.bat" (
+if exist "venv_win\Scripts\activate.bat" (
+    echo 📦 Windows 가상환경 활성화 중...
+    call venv_win\Scripts\activate.bat
+) else if exist "venv\Scripts\activate.bat" (
     echo 📦 가상환경 활성화 중...
     call venv\Scripts\activate.bat
 ) else (
