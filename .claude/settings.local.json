@@ -48,7 +48,13 @@
       "Bash(npm run test:*)",
       "Bash(find:*)",
       "WebFetch(domain:cookbook.openai.com)",
-      "Bash(\"C:\\Users\\Ryan.김준형\\Documents\\Projects\\music_merger_project\\venv_win\\Scripts\\pip.exe\" install praw spotipy)"
+      "Bash(\"C:\\Users\\Ryan.김준형\\Documents\\Projects\\music_merger_project\\venv_win\\Scripts\\pip.exe\" install praw spotipy)",
+      "WebFetch(domain:vibe.naver.com)",
+      "WebFetch(domain:www.music-flo.com)",
+      "Bash(git checkout:*)",
+      "Bash(copy apptemplatesindex.html apptemplatesindex_backup.html)",
+      "Bash(copy apptemplatesindex_new.html apptemplatesindex.html)",
+      "Bash(cp:*)"
     ],
     "deny": []
   }

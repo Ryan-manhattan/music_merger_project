@@ -16,8 +16,9 @@ FFPROBE_EXE = os.path.join(ffmpeg_path, 'ffprobe.exe') if os.path.exists(ffmpeg_
 class AudioProcessor:
     """FFmpeg 기반 오디오 파일 처리 클래스"""
     
-    def __init__(self, console_log=None):
+    def __init__(self, console_log=None, processed_folder=None):
         self.console_log = console_log or print
+        self.processed_folder = processed_folder
         
     def log(self, message):
         """로그 메시지 출력"""
@@ -134,6 +135,8 @@ class AudioProcessor:
                 cmd, 
                 capture_output=True, 
                 text=True, 
+                encoding='utf-8', 
+                errors='ignore',
                 timeout=300  # 5분 타임아웃
             )
             
@@ -195,7 +198,7 @@ class AudioProcessor:
             output_path
         ]
         
-        result = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+        result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=300)
         
         if result.returncode != 0:
             self.log(f"재인코딩 실패: {result.stderr}")
@@ -233,11 +236,27 @@ class AudioProcessor:
         self.log(f"오디오 자르기 시작: {input_path} -> {duration_seconds}초")
         
         try:
-            # 출력 파일명 생성
+            # 출력 파일명 생성 - processed 태그 추가
             base_name = os.path.splitext(os.path.basename(input_path))[0]
-            output_dir = os.path.dirname(input_path)
-            output_filename = f"{base_name}_trimmed_{duration_seconds}s.mp3"
+            
+            # 이미 처리된 파일인지 확인하고 기본명 추출
+            if '_processed_' in base_name:
+                # 이미 처리된 파일인 경우 기본명만 추출
+                clean_base_name = base_name.split('_processed_')[0]
+            else:
+                clean_base_name = base_name
+            
+            output_dir = self.processed_folder if self.processed_folder else os.path.dirname(input_path)
+            output_filename = f"{clean_base_name}_processed_trim{duration_seconds}s.mp3"
             output_path = os.path.join(output_dir, output_filename)
+            
+            # processed 폴더가 존재하지 않으면 생성
+            if self.processed_folder and not os.path.exists(output_dir):
+                os.makedirs(output_dir, exist_ok=True)
+                self.log(f"processed 폴더 생성: {output_dir}")
+            
+            self.log(f"파일 저장 경로: {output_path}")
+            self.log(f"출력 파일명: {output_filename}")
             
             # FFmpeg 명령어
             cmd = [
@@ -257,6 +276,8 @@ class AudioProcessor:
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='ignore',
                 timeout=60  # 1분 타임아웃
             )
             
@@ -292,12 +313,28 @@ class AudioProcessor:
         self.log(f"키 조절 시작 (속도 유지): {input_path} -> {pitch_shift_semitones} 반음")
         
         try:
-            # 출력 파일명 생성
+            # 출력 파일명 생성 - processed 태그 추가
             base_name = os.path.splitext(os.path.basename(input_path))[0]
-            output_dir = os.path.dirname(input_path)
+            
+            # 이미 처리된 파일인지 확인하고 기본명 추출
+            if '_processed_' in base_name:
+                # 이미 처리된 파일인 경우 기본명만 추출
+                clean_base_name = base_name.split('_processed_')[0]
+            else:
+                clean_base_name = base_name
+                
+            output_dir = self.processed_folder if self.processed_folder else os.path.dirname(input_path)
             pitch_str = f"+{pitch_shift_semitones}" if pitch_shift_semitones > 0 else str(pitch_shift_semitones)
-            output_filename = f"{base_name}_pitch{pitch_str}.mp3"
+            output_filename = f"{clean_base_name}_processed_pitch{pitch_str}.mp3"
             output_path = os.path.join(output_dir, output_filename)
+            
+            # processed 폴더가 존재하지 않으면 생성
+            if self.processed_folder and not os.path.exists(output_dir):
+                os.makedirs(output_dir, exist_ok=True)
+                self.log(f"processed 폴더 생성: {output_dir}")
+            
+            self.log(f"파일 저장 경로: {output_path}")
+            self.log(f"출력 파일명: {output_filename}")
             
             # FFmpeg rubberband 필터 사용 (속도 유지하면서 피치만 변경)
             # rubberband가 없는 경우를 대비해 두 가지 방식 시도
@@ -324,6 +361,8 @@ class AudioProcessor:
                         cmd_rubberband,
                         capture_output=True,
                         text=True,
+                        encoding='utf-8',
+                        errors='ignore',
                         timeout=120
                     )
                     
@@ -390,6 +429,8 @@ class AudioProcessor:
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='ignore',
                 timeout=120  # 2분 타임아웃
             )
             
@@ -455,6 +496,8 @@ class AudioProcessor:
                 cmd,
                 capture_output=True,
                 text=True,
+                encoding='utf-8',
+                errors='ignore',
                 timeout=120  # 2분 타임아웃
             )
             

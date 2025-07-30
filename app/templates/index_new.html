@@ -6,11 +6,16 @@
     <header class="studio-header">
         <div class="studio-title">
             <h1>🎵 음악 스튜디오</h1>
-            <p>파일 업로드부터 플레이리스트 생성, 음원 추출까지 한 번에</p>
+            <p>파일 업로드부터 플레이리스트 생성, 음원 추출, 영상 제작까지 한 번에</p>
         </div>
     </header>
 
-    <!-- 통합 스튜디오만 표시 -->
+    <!-- 네비게이션 탭 -->
+    <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="showStudioMode()">🎵 통합 스튜디오</button>
+        <button class="nav-tab" onclick="showTab('analysis')">📊 음악 분석</button>
+        <button class="nav-tab" onclick="location.href='/charts'">🎧 실시간 차트</button>
+    </nav>
 
     <!-- 통합 스튜디오 모드 -->
     <div id="studioMode" class="studio-content active">
@@ -62,6 +67,11 @@
                     <h4>음원 추출 & 편집</h4>
                     <p>음원 추출, 키 변경, 자르기</p>
                 </div>
+                <div class="work-option" onclick="selectWork('video')">
+                    <div class="work-icon">🎬</div>
+                    <h4>음원 영상 만들기</h4>
+                    <p>음원 + 이미지로 동영상 생성</p>
+                </div>
             </div>
         </section>
 
@@ -108,6 +118,43 @@
                 </div>
             </div>
 
+            <!-- 동영상 생성 설정 -->
+            <div class="settings-panel" id="videoSettings">
+                <h3>🎬 동영상 생성 설정</h3>
+                <div class="settings-group">
+                    <!-- 이미지 업로드 -->
+                    <div class="image-upload-section">
+                        <label>배경 이미지:</label>
+                        <div class="image-upload-area" id="imageUploadArea">
+                            <div class="upload-placeholder">
+                                <span class="upload-icon">🖼️</span>
+                                <p>이미지를 선택하거나 드래그하세요</p>
+                                <p class="file-types">JPG, PNG, BMP, GIF</p>
+                            </div>
+                            <input type="file" id="imageInput" accept=".jpg,.jpeg,.png,.bmp,.gif" hidden>
+                            <button class="btn btn-outline" onclick="document.getElementById('imageInput').click()">
+                                이미지 선택
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label>동영상 품질:</label>
+                        <select id="videoQuality" class="form-select">
+                            <option value="youtube_hd">유튜브 HD (1080p)</option>
+                            <option value="youtube_standard">유튜브 표준 (720p)</option>
+                            <option value="youtube_mobile">모바일 최적화</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="applyLogo">
+                            <span>로고 워터마크 추가</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
             
             <!-- 실행 버튼 -->
             <div class="execute-section">
@@ -139,42 +186,37 @@
         </section>
     </div>
 
-</div>
-<!-- 파일 아이템 템플릿 -->
-<template id="fileItemTemplate">
-    <div class="file-item" data-filename="">
-        <div class="file-header">
-            <span class="file-icon">🎵</span>
-            <span class="file-name"></span>
-            <div class="file-actions">
-                <button class="btn-icon" onclick="audioStudio.fileManager.toggleFileSettings(this)" title="설정">⚙️</button>
-                <button class="btn-icon" onclick="audioStudio.fileManager.moveFileUp(this)" title="위로">⬆️</button>
-                <button class="btn-icon" onclick="audioStudio.fileManager.moveFileDown(this)" title="아래로">⬇️</button>
-                <button class="btn-icon btn-danger" onclick="audioStudio.fileManager.removeFileByButton(this)" title="삭제">❌</button>
+    <!-- 음악 분석 탭 (기존) -->
+    <div id="analysisTab" class="tab-content">
+        <section class="analysis-section">
+            <div class="analysis-area">
+                <div class="upload-icon">🎵</div>
+                <h2>YouTube 음악 분석</h2>
+                <p>YouTube 링크를 입력하여 음악을 분석하세요</p>
+                <div class="link-input-group">
+                    <input type="url" id="analysisLinkInput" placeholder="https://youtube.com/watch?v=..." class="link-input">
+                    <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeMusic()">
+                        🔍 분석하기
+                    </button>
+                </div>
             </div>
-        </div>
-        <div class="file-settings" style="display: none;">
-            <div class="setting-group">
-                <label>페이드인 (초): <span class="value-display">2</span></label>
-                <input type="range" class="slider" name="fadeIn" min="0" max="10" value="2" step="0.5">
-            </div>
-            <div class="setting-group">
-                <label>페이드아웃 (초): <span class="value-display">3</span></label>
-                <input type="range" class="slider" name="fadeOut" min="0" max="10" value="3" step="0.5">
-            </div>
-            <div class="setting-group">
-                <label>볼륨 (dB): <span class="value-display">0</span></label>
-                <input type="range" class="slider" name="volume" min="-20" max="20" value="0" step="1">
-            </div>
-            <div class="setting-group">
-                <label>간격 (초): <span class="value-display">1</span></label>
-                <input type="range" class="slider" name="gap" min="0" max="5" value="1" step="0.5">
-            </div>
-        </div>
-    </div>
-</template>
-</div>
+        </section>
 
+        <!-- 분석 진행 상황 -->
+        <section class="analysis-progress-section" id="analysisProgressSection" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="analysisProgressFill"></div>
+            </div>
+            <p class="progress-text" id="analysisProgressText">분석 중...</p>
+        </section>
+
+        <!-- 분석 결과 -->
+        <section class="analysis-result-section" id="analysisResultSection" style="display: none;">
+            <h3>✅ 분석 완료!</h3>
+            <div class="analysis-result" id="analysisResult"></div>
+        </section>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_css %}

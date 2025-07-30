@@ -497,6 +497,291 @@ function updateNavigation() {
     });
 }
 
+// 차트 분석 기능
+function showChart(chartType) {
+    // 모든 탭 비활성화
+    document.querySelectorAll('.chart-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // 선택된 탭 활성화
+    event.target.classList.add('active');
+    
+    // 차트 컨테이너 가져오기
+    const container = document.getElementById('chartsContainer');
+    
+    // 로딩 표시
+    container.innerHTML = '<div class="loading">차트 데이터 로딩 중...</div>';
+    
+    // API 호출
+    let apiUrl;
+    switch(chartType) {
+        case 'melon':
+            apiUrl = '/api/melon/charts?type=realtime&limit=50';
+            break;
+        case 'bugs':
+            apiUrl = '/api/korea-charts/all?services=bugs&limit=50';
+            break;
+        case 'genie':
+            apiUrl = '/api/korea-charts/all?services=genie&limit=50';
+            break;
+        case 'korea':
+            apiUrl = '/api/korea-charts/all?limit=50';
+            break;
+        default:
+            apiUrl = '/api/melon/charts?type=realtime&limit=50';
+    }
+    
+    fetch(apiUrl)
+        .then(response => response.json())
+        .then(data => {
+            displayChartData(data, chartType);
+        })
+        .catch(error => {
+            console.error('차트 데이터 로드 실패:', error);
+            container.innerHTML = '<div class="error">차트 데이터를 불러올 수 없습니다.</div>';
+        });
+}
+
+function displayChartData(data, chartType) {
+    const container = document.getElementById('chartsContainer');
+    
+    console.log('=== 차트 데이터 디버깅 ===');
+    console.log('전체 데이터:', data);
+    console.log('데이터 타입:', typeof data);
+    console.log('데이터 키들:', Object.keys(data || {}));
+    
+    // 데이터 구조를 더 자세히 분석
+    let tracks = [];
+    let debugInfo = '';
+    
+    if (data && typeof data === 'object') {
+        // 경우 1: { chart_data: { success: true, tracks: [...] } } 형태 (멜론 API)
+        if (data.chart_data && typeof data.chart_data === 'object') {
+            const chartData = data.chart_data;
+            if (chartData.success && chartData.tracks && Array.isArray(chartData.tracks)) {
+                tracks = chartData.tracks;
+                debugInfo = '형태1: chart_data';
+            }
+        }
+        // 경우 2: { success: true, tracks: [...] } 형태
+        else if (data.success && data.tracks && Array.isArray(data.tracks)) {
+            tracks = data.tracks;
+            debugInfo = '형태2: success + tracks';
+        }
+        // 경우 3: { services: { service: { chartType: { success: true, tracks: [...] } } } } 형태 (벅스/지니 API)
+        else if (data.services && typeof data.services === 'object') {
+            const serviceKeys = Object.keys(data.services);
+            console.log('서비스들:', serviceKeys);
+            
+            for (const service of serviceKeys) {
+                const serviceData = data.services[service];
+                console.log(`${service} 서비스 데이터:`, serviceData);
+                
+                if (serviceData && typeof serviceData === 'object') {
+                    // realtime, daily 등 차트 타입 확인
+                    const chartTypeKeys = Object.keys(serviceData);
+                    for (const chartType of chartTypeKeys) {
+                        const chartData = serviceData[chartType];
+                        console.log(`${service}.${chartType} 데이터:`, chartData);
+                        
+                        if (chartData && chartData.success && chartData.tracks && Array.isArray(chartData.tracks)) {
+                            tracks = chartData.tracks;
+                            debugInfo = `형태3: services.${service}.${chartType}`;
+                            break;
+                        }
+                    }
+                    if (tracks.length > 0) break;
+                }
+            }
+        }
+        // 경우 4: { charts: { service: { success: true, tracks: [...] } } } 형태
+        else if (data.charts && typeof data.charts === 'object') {
+            const chartKeys = Object.keys(data.charts);
+            console.log('차트 서비스들:', chartKeys);
+            
+            for (const service of chartKeys) {
+                const serviceData = data.charts[service];
+                console.log(`${service} 데이터:`, serviceData);
+                
+                if (serviceData && serviceData.success && serviceData.tracks && Array.isArray(serviceData.tracks)) {
+                    tracks = serviceData.tracks;
+                    debugInfo = `형태4: charts.${service}`;
+                    break;
+                }
+            }
+        }
+        // 경우 5: 직접 tracks 배열
+        else if (data.tracks && Array.isArray(data.tracks)) {
+            tracks = data.tracks;
+            debugInfo = '형태5: 직접 tracks';
+        }
+        // 경우 6: 데이터 자체가 배열
+        else if (Array.isArray(data)) {
+            tracks = data;
+            debugInfo = '형태6: 직접 배열';
+        }
+        // 경우 7: 다른 가능한 구조들 확인
+        else {
+            console.log('알 수 없는 데이터 구조 - 모든 속성 탐색:');
+            for (const [key, value] of Object.entries(data)) {
+                console.log(`  ${key}:`, value);
+                if (Array.isArray(value) && value.length > 0) {
+                    console.log(`    ${key}는 배열이고 ${value.length}개 항목 포함`);
+                    if (value[0] && (value[0].title || value[0].name || value[0].artist)) {
+                        tracks = value;
+                        debugInfo = `형태7: ${key} 배열`;
+                        break;
+                    }
+                } else if (value && typeof value === 'object' && value.tracks && Array.isArray(value.tracks)) {
+                    console.log(`    ${key}.tracks 발견: ${value.tracks.length}개 항목`);
+                    tracks = value.tracks;
+                    debugInfo = `형태7: ${key}.tracks`;
+                    break;
+                }
+            }
+        }
+    }
+    
+    console.log('추출된 트랙 개수:', tracks.length);
+    console.log('디버그 정보:', debugInfo);
+    
+    if (tracks.length > 0) {
+        console.log('첫 번째 트랙 샘플:', tracks[0]);
+    }
+    
+    if (!tracks || tracks.length === 0) {
+        container.innerHTML = `
+            <div class="no-data">
+                <p>차트 데이터가 없습니다.</p>
+                <p><small>디버그: ${debugInfo || '데이터 구조 인식 실패'}</small></p>
+                <details>
+                    <summary>원본 데이터 보기</summary>
+                    <pre>${JSON.stringify(data, null, 2)}</pre>
+                </details>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="chart-header">
+            <div class="chart-title-wrapper">
+                <h3 class="chart-title">${getChartTitle(chartType)}</h3>
+                <div class="chart-info">
+                    <span class="track-count">${tracks.length}곡</span>
+                    <span class="update-time">${new Date().toLocaleTimeString('ko-KR', {hour: '2-digit', minute: '2-digit'})} 업데이트</span>
+                </div>
+            </div>
+            <div class="chart-decoration">
+                <div class="music-note">♪</div>
+                <div class="music-note delay-1">♫</div>
+                <div class="music-note delay-2">♪</div>
+            </div>
+        </div>
+    `;
+    html += '<div class="chart-list">';
+    
+    tracks.forEach((track, index) => {
+        const rank = track.rank || track.ranking || (index + 1);
+        const title = track.name || track.title || track.song || track.songName || '제목 없음';
+        
+        let artist = '아티스트 없음';
+        if (track.artists) {
+            if (Array.isArray(track.artists)) {
+                artist = track.artists.map(a => a.name || a).join(', ');
+            } else {
+                artist = track.artists;
+            }
+        } else if (track.artist) {
+            artist = track.artist;
+        } else if (track.singer) {
+            artist = track.singer;
+        }
+        
+        const popularity = track.popularity || track.score || track.point || '';
+        
+        html += `
+            <div class="chart-item">
+                <div class="rank">${rank}</div>
+                <div class="track-info">
+                    <div class="track-title">${title}</div>
+                    <div class="track-artist">${artist}</div>
+                </div>
+                <div class="track-popularity">${popularity}${popularity ? (popularity > 1 ? '' : '%') : ''}</div>
+            </div>
+        `;
+    });
+    
+    html += '</div>';
+    container.innerHTML = html;
+}
+
+function getChartTitle(chartType) {
+    switch(chartType) {
+        case 'melon': return '멜론 차트';
+        case 'bugs': return '벅스 차트';
+        case 'genie': return '지니 차트';
+        case 'korea': return '통합 한국 차트';
+        default: return '멜론 차트';
+    }
+}
+
+// 하위 탭 전환 기능
+function showSubTab(tabName) {
+    // 모든 하위 탭 버튼 비활성화
+    document.querySelectorAll('.sub-tab').forEach(tab => {
+        tab.classList.remove('active');
+    });
+    
+    // 모든 하위 탭 컨텐츠 숨김
+    document.querySelectorAll('.sub-tab-content').forEach(content => {
+        content.classList.remove('active');
+    });
+    
+    // 클릭된 버튼 활성화
+    event.target.classList.add('active');
+    
+    // 해당 탭 컨텐츠 표시
+    let tabId;
+    switch(tabName) {
+        case 'music-analysis':
+            tabId = 'musicAnalysisTab';
+            break;
+        case 'charts-analysis':
+            tabId = 'chartsAnalysisTab';
+            // 차트 탭이 활성화되면 기본 차트 로드
+            setTimeout(() => {
+                if (document.getElementById('chartsContainer')) {
+                    showChart('melon');
+                }
+            }, 100);
+            break;
+    }
+    
+    if (tabId) {
+        const tabContent = document.getElementById(tabId);
+        if (tabContent) {
+            tabContent.classList.add('active');
+        }
+    }
+}
+
+// 페이지 로드 시 초기화
+window.addEventListener('DOMContentLoaded', function() {
+    // 기본적으로 실시간 차트 분석 탭 활성화
+    const chartsAnalysisTab = document.getElementById('chartsAnalysisTab');
+    if (chartsAnalysisTab) {
+        chartsAnalysisTab.classList.add('active');
+        // 기본 차트 로드 (멜론)
+        setTimeout(() => {
+            if (document.getElementById('chartsContainer')) {
+                showChart('melon');
+            }
+        }, 100);
+    }
+});
+
 // 페이지 언로드 시 폴링 정리
 window.addEventListener('beforeunload', function() {
     if (window.musicAnalysis) {

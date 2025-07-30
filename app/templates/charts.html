@@ -79,13 +79,13 @@
             transition: all 0.2s ease;
         }
         
-        .filter-btn.active, .source-btn.active, .melon-type-btn.active {
+        .filter-btn.active, .source-btn.active, .melon-type-btn.active, .korea-service-btn.active {
             background: var(--primary-color);
             color: white;
             border-color: var(--primary-color);
         }
         
-        .source-btn, .melon-type-btn {
+        .source-btn, .melon-type-btn, .korea-service-btn {
             padding: var(--spacing-sm) var(--spacing-md);
             border: 1px solid var(--border);
             border-radius: 6px;
@@ -283,6 +283,77 @@
                 gap: var(--spacing-md);
             }
         }
+
+        /* 통합 차트 전용 스타일 */
+        .cross-platform-track {
+            border-left: 4px solid var(--primary-color);
+            background: linear-gradient(90deg, rgba(29, 185, 84, 0.05), transparent);
+        }
+
+        .cross-platform-score {
+            font-weight: bold;
+            color: var(--primary-color);
+            text-align: center;
+            min-width: 60px;
+        }
+
+        .services-badge {
+            background: var(--primary-color);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            margin-right: var(--spacing-xs);
+        }
+
+        .rank-badge {
+            background: var(--success-color);
+            color: white;
+            padding: 2px 6px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            margin-right: var(--spacing-xs);
+        }
+
+        .services-list {
+            color: var(--text-secondary);
+            font-size: 0.8rem;
+        }
+
+        .service-badge {
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.7rem;
+            font-weight: bold;
+            text-align: center;
+            min-width: 50px;
+        }
+
+        .service-badge.melon { background: #00C73C; color: white; }
+        .service-badge.bugs { background: #FF6B00; color: white; }
+        .service-badge.genie { background: #FF0080; color: white; }
+        .service-badge.vibe { background: #03C75A; color: white; }
+        .service-badge.flo { background: #FF4081; color: white; }
+
+        .service-chart {
+            margin-bottom: var(--spacing-xl);
+            border: 1px solid var(--border);
+            overflow: hidden;
+        }
+
+        .service-chart h3 {
+            background: var(--surface);
+            padding: var(--spacing-md);
+            margin: 0;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .track-details {
+            margin-top: var(--spacing-xs);
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--spacing-xs);
+        }
     </style>
 </head>
 <body>
@@ -293,8 +364,9 @@
             <p class="tagline">Spotify 실시간 차트</p>
             <nav class="nav">
                 <ul class="nav-list">
-                    <li class="nav-item"><a href="/" class="nav-link">홈</a></li>
-                    <li class="nav-item"><a href="/charts" class="nav-link active">차트</a></li>
+                    <li class="nav-item"><a href="/" class="nav-link">🎵 음악 스튜디오</a></li>
+                    <li class="nav-item"><a href="/music-video" class="nav-link">🎬 영상 스튜디오</a></li>
+                    <li class="nav-item"><a href="/music-analysis" class="nav-link">📊 분석 스튜디오</a></li>
                 </ul>
             </nav>
         </header>
@@ -336,19 +408,33 @@
                 <div class="chart-filters">
                     <div class="filter-group">
                         <span><strong>차트 소스:</strong></span>
-                        <button class="source-btn active" data-source="spotify">🎵 Spotify</button>
-                        <button class="source-btn" data-source="melon">🍈 멜론</button>
+                        <button class="source-btn active" data-source="melon">🍈 멜론</button>
+                        <button class="source-btn" data-source="bugs">🐛 벅스</button>
+                        <button class="source-btn" data-source="genie">🧞 지니</button>
+                        <button class="source-btn" data-source="korea-all">🇰🇷 통합차트</button>
                     </div>
-                    <div class="filter-group" id="spotifyFilters">
-                        <span><strong>필터:</strong></span>
-                        <button class="filter-btn active" data-filter="all">전체</button>
-                        <button class="filter-btn" data-filter="korea">🇰🇷 한국</button>
-                        <button class="filter-btn" data-filter="global">🌍 글로벌</button>
-                    </div>
-                    <div class="filter-group" id="melonFilters" style="display: none;">
+                    <div class="filter-group" id="melonFilters">
                         <span><strong>차트 타입:</strong></span>
                         <button class="melon-type-btn active" data-type="realtime">⚡ 실시간</button>
                         <button class="melon-type-btn" data-type="hot100">🔥 HOT100</button>
+                    </div>
+                    <div class="filter-group" id="bugsFilters" style="display: none;">
+                        <span><strong>차트 타입:</strong></span>
+                        <button class="bugs-type-btn active" data-type="realtime">⚡ 실시간</button>
+                        <button class="bugs-type-btn" data-type="daily">📅 일간</button>
+                        <button class="bugs-type-btn" data-type="weekly">📊 주간</button>
+                    </div>
+                    <div class="filter-group" id="genieFilters" style="display: none;">
+                        <span><strong>차트 타입:</strong></span>
+                        <button class="genie-type-btn active" data-type="realtime">⚡ 실시간</button>
+                        <button class="genie-type-btn" data-type="top200">🔥 TOP200</button>
+                    </div>
+                    <div class="filter-group" id="koreaFilters" style="display: none;">
+                        <span><strong>음원사:</strong></span>
+                        <button class="korea-service-btn active" data-services="melon,bugs,genie">전체</button>
+                        <button class="korea-service-btn" data-services="melon">멜론</button>
+                        <button class="korea-service-btn" data-services="bugs">벅스</button>
+                        <button class="korea-service-btn" data-services="genie">지니</button>
                     </div>
                 </div>
 
@@ -362,27 +448,61 @@
 
                 <!-- 차트 그리드 -->
                 <div class="chart-grid" id="chartGrid">
-                    <!-- Spotify 차트 -->
-                    <div id="spotifyCharts">
-                        <!-- 한국 차트 섹션 -->
-                        <div class="chart-section">
-                            <h3>🇰🇷 한국 Top 25</h3>
-                            <div class="track-list" id="koreaChart"></div>
-                        </div>
-
-                        <!-- 글로벌 차트 섹션 -->
-                        <div class="chart-section">
-                            <h3>🌍 글로벌 Top 25</h3>
-                            <div class="track-list" id="globalChart"></div>
-                        </div>
-                    </div>
 
                     <!-- 멜론 차트 -->
-                    <div id="melonCharts" style="display: none;">
+                    <div id="melonCharts">
                         <div class="chart-section melon-chart">
                             <h3 id="melonChartTitle">🍈 멜론 실시간 TOP 50</h3>
                             <div class="track-list" id="melonChart"></div>
                         </div>
+                    </div>
+
+                    <!-- 벅스 차트 -->
+                    <div id="bugsCharts" style="display: none;">
+                        <div class="chart-section bugs-chart">
+                            <h3 id="bugsChartTitle">🐛 벅스 실시간 TOP 50</h3>
+                            <div class="track-list" id="bugsChart"></div>
+                        </div>
+                    </div>
+
+                    <!-- 지니 차트 -->
+                    <div id="genieCharts" style="display: none;">
+                        <div class="chart-section genie-chart">
+                            <h3 id="genieChartTitle">🧞 지니 실시간 TOP 50</h3>
+                            <div class="track-list" id="genieChart"></div>
+                        </div>
+                    </div>
+
+
+                    <!-- 국내 통합 차트 -->
+                    <div id="koreaCharts" style="display: none;">
+                        <div class="charts-stats" id="koreaStats" style="display: none;">
+                            <div class="stat-card">
+                                <div class="stat-value" id="totalTracks">0</div>
+                                <div class="stat-label">총 수집곡</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="successfulServices">0</div>
+                                <div class="stat-label">수집 성공 서비스</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="successRate">0%</div>
+                                <div class="stat-label">성공률</div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-value" id="crossPlatformHits">0</div>
+                                <div class="stat-label">크로스 플랫폼 히트</div>
+                            </div>
+                        </div>
+
+                        <!-- 크로스 플랫폼 히트곡 -->
+                        <div class="chart-section" id="crossPlatformSection" style="display: none;">
+                            <h3>🏆 크로스 플랫폼 히트곡 TOP 20</h3>
+                            <div class="track-list" id="crossPlatformChart"></div>
+                        </div>
+
+                        <!-- 서비스별 차트 -->
+                        <div id="serviceCharts"></div>
                     </div>
                 </div>
             </div>

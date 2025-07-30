@@ -455,7 +455,7 @@ class LinkExtractor:
             
             self.console_log(f"[Trim] FFmpeg 명령어: {' '.join(cmd)}")
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=60)
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=60)
             
             if result.returncode == 0 and os.path.exists(output_path):
                 self.console_log(f"[Trim] 30초 자르기 성공: {output_path}")
@@ -503,7 +503,7 @@ class LinkExtractor:
             
             self.console_log(f"[Pitch] FFmpeg 명령어: {' '.join(cmd)}")
             
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=120)
             
             if result.returncode == 0 and os.path.exists(output_path):
                 self.console_log(f"[Pitch] 키 조절 성공: {output_path}")
@@ -571,7 +571,7 @@ class LinkExtractor:
             # FFmpeg 존재 여부 확인
             try:
                 ffmpeg_check = subprocess.run([self.ffmpeg_exe, '-version'], 
-                                            capture_output=True, text=True, timeout=10)
+                                            capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=10)
                 if ffmpeg_check.returncode == 0:
                     self.console_log(f"[Convert-Debug] FFmpeg 사용 가능")
                     # FFmpeg 버전 정보 첫 줄만 출력
@@ -602,7 +602,7 @@ class LinkExtractor:
             
             # FFmpeg 실행 시간 측정
             start_time = time.time()
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=180)
+            result = subprocess.run(cmd, capture_output=True, text=True, encoding='utf-8', errors='ignore', timeout=180)
             end_time = time.time()
             conversion_time = end_time - start_time
             

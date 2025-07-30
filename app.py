@@ -54,6 +54,27 @@ except ImportError as e:
     print(f"MelonConnector 로드 실패: {e}")
     melon_connector_available = False
 
+try:
+    from korea_music_charts_connector import KoreaMusicChartsConnector
+    korea_charts_connector_available = True
+except ImportError as e:
+    print(f"KoreaMusicChartsConnector 로드 실패: {e}")
+    korea_charts_connector_available = False
+
+try:
+    from chart_scheduler import get_scheduler, start_chart_scheduler, stop_chart_scheduler
+    chart_scheduler_available = True
+except ImportError as e:
+    print(f"ChartScheduler 로드 실패: {e}")
+    chart_scheduler_available = False
+
+try:
+    from chart_analysis import ChartAnalyzer
+    chart_analyzer_available = True
+except ImportError as e:
+    print(f"ChartAnalyzer 로드 실패: {e}")
+    chart_analyzer_available = False
+
 # Flask 앱 초기화 (Windows 경로 대응)
 app = Flask(__name__, 
            template_folder='app/templates', 
@@ -170,16 +191,18 @@ def index():
 
 
 @app.route('/music-analysis')
+@app.route('/analysis-studio')
 def music_analysis():
-    """음악 분석 페이지"""
-    console.log("[Route] /music-analysis - 음악 분석 페이지 요청")
+    """분석 스튜디오 페이지"""
+    console.log("[Route] /music-analysis | /analysis-studio - 분석 스튜디오 페이지 요청")
     return render_template('music_analysis.html')
 
 
 @app.route('/music-video')
+@app.route('/video-studio')
 def music_video():
-    """음원 영상 만들기 페이지"""
-    console.log("[Route] /music-video - 음원 영상 만들기 페이지 요청")
+    """영상 스튜디오 페이지"""
+    console.log("[Route] /music-video | /video-studio - 영상 스튜디오 페이지 요청")
     return render_template('music_video.html')
 
 
@@ -306,7 +329,7 @@ def process_audio_job(job_id, data):
     
     try:
         # 오디오 프로세서 생성
-        processor = AudioProcessor(console_log=console.log)
+        processor = AudioProcessor(console_log=console.log, processed_folder=app.config['PROCESSED_FOLDER'])
         
         # 파일 정보 준비
         file_list = []
@@ -363,6 +386,13 @@ def process_status(job_id):
     # 완료된 작업은 정보 제거 (메모리 정리)
     if job_info['status'] == 'completed' and job_info.get('result'):
         result = job_info['result']
+        
+        # download_url이 없으면 파일명을 기반으로 생성
+        if ('new_filename' in result or 'filename' in result) and 'download_url' not in result:
+            download_filename = result.get('new_filename') or result.get('filename')
+            result['download_url'] = f"/download/{download_filename}"
+            console.log(f"[Status] download_url 생성: {result['download_url']} (파일명: {download_filename})")
+        
         del processing_jobs[job_id]
         return jsonify({
             'status': 'completed',
@@ -650,7 +680,7 @@ def upload_extract_file():
         
         # 오디오 프로세서로 파일 정보 가져오기
         try:
-            processor = AudioProcessor(console_log=console.log)
+            processor = AudioProcessor(console_log=console.log, processed_folder=app.config['PROCESSED_FOLDER'])
             audio_info = processor.get_audio_info(filepath)
             
             file_info = {
@@ -695,7 +725,7 @@ def trim_audio():
     
     try:
         # 오디오 프로세서로 자르기
-        processor = AudioProcessor(console_log=console.log)
+        processor = AudioProcessor(console_log=console.log, processed_folder=app.config['PROCESSED_FOLDER'])
         result = processor.trim_audio(input_path, duration)
         
         if result['success']:
@@ -745,7 +775,7 @@ def adjust_audio_pitch():
     
     try:
         # 오디오 프로세서로 키 조절
-        processor = AudioProcessor(console_log=console.log)
+        processor = AudioProcessor(console_log=console.log, processed_folder=app.config['PROCESSED_FOLDER'])
         result = processor.adjust_pitch(input_path, pitch_shift)
         
         if result['success']:
@@ -791,7 +821,7 @@ def download_mp3(filename):
             return send_file(input_path, as_attachment=True, download_name=filename)
         
         # MP3로 변환 후 다운로드
-        processor = AudioProcessor(console_log=console.log)
+        processor = AudioProcessor(console_log=console.log, processed_folder=app.config['PROCESSED_FOLDER'])
         result = processor.convert_to_mp3(input_path)
         
         if result['success']:
@@ -825,7 +855,7 @@ def trim_file():
     
     try:
         # 오디오 프로세서로 자르기
-        processor = AudioProcessor(console_log=console.log)
+        processor = AudioProcessor(console_log=console.log, processed_folder=app.config['PROCESSED_FOLDER'])
         result = processor.trim_audio(input_path, duration)
         
         if result['success']:
@@ -875,7 +905,7 @@ def adjust_pitch():
     
     try:
         # 오디오 프로세서로 키 조절
-        processor = AudioProcessor(console_log=console.log)
+        processor = AudioProcessor(console_log=console.log, processed_folder=app.config['PROCESSED_FOLDER'])
         result = processor.adjust_pitch(input_path, pitch_shift)
         
         if result['success']:
@@ -1180,14 +1210,17 @@ def download_file(filename):
         
         if os.path.exists(upload_path):
             file_path = upload_path
-            # 링크 추출 파일인지 확인 (다양한 패턴 체크)
+            # 링크 추출 파일 및 처리된 파일인지 확인 (다양한 패턴 체크)
             filename_lower = safe_filename.lower()
             is_extracted_file = (
-                'youtube_' in filename_lower or  # 링크 추출 파일
-                '_30s.' in filename_lower or     # 30초 자른 파일
-                '_30s_' in filename_lower or     # 30초 자른 파일 (다른 패턴)
-                '_plus' in filename_lower or     # 키 올린 파일
-                '_minus' in filename_lower or    # 키 내린 파일
+                'youtube_' in filename_lower or          # 링크 추출 파일
+                '_processed_' in filename_lower or       # 새로운 처리된 파일 패턴
+                '_trimmed_' in filename_lower or         # 자른 파일 (레거시)
+                '_pitch' in filename_lower or            # 피치 조절 파일
+                '_30s.' in filename_lower or             # 30초 자른 파일 (레거시)
+                '_30s_' in filename_lower or             # 30초 자른 파일 (다른 패턴)
+                '_plus' in filename_lower or             # 키 올린 파일 (레거시)
+                '_minus' in filename_lower or            # 키 내린 파일 (레거시)
                 any(ext in filename_lower for ext in ['.mp4', '.webm', '.m4a']) and 'youtube' in filename_lower
             )
             console.log(f"[Download] 업로드된 파일 발견: {upload_path}, 추출 파일: {is_extracted_file}")
@@ -2009,6 +2042,427 @@ def get_all_melon_charts():
         console.log(f"[API] 멜론 전체 차트 오류: {str(e)}")
         return jsonify({'success': False, 'error': f'멜론 전체 차트 수집 중 오류: {str(e)}'}), 500
 
+@app.route('/api/korea-charts/all')
+def get_all_korea_charts():
+    """국내 주요 음원사 통합 차트 API (개별 API 사용)"""
+    console.log("[Route] /api/korea-charts/all - 국내 통합 차트 요청")
+    
+    try:
+        # 파라미터 파싱
+        services = request.args.getlist('services') or ['melon', 'bugs', 'genie']
+        limit_per_chart = min(int(request.args.get('limit', 50)), 100)
+        
+        console.log(f"[API] 통합 차트 요청 - 서비스: {services}, 차트별 limit: {limit_per_chart}")
+        
+        # 개별 커넥터 초기화
+        from korea_music_charts_connector import KoreaMusicChartsConnector
+        connector = KoreaMusicChartsConnector(console.log)
+        
+        # 서비스별 차트 수집
+        all_services = {}
+        total_tracks = 0
+        successful_services = 0
+        
+        for service in services:
+            try:
+                chart_result = None
+                if service == 'melon':
+                    chart_result = connector._get_melon_chart('realtime', limit_per_chart)
+                elif service == 'bugs':
+                    chart_result = connector._get_bugs_chart('realtime', limit_per_chart)
+                elif service == 'genie':
+                    chart_result = connector._get_genie_chart('realtime', limit_per_chart)
+                elif service == 'vibe':
+                    chart_result = connector._get_vibe_chart('chart', limit_per_chart)
+                else:
+                    continue
+                
+                # 반환 타입에 따른 처리
+                if isinstance(chart_result, dict):
+                    # 딕셔너리 형태 (멜론)
+                    if chart_result.get('success') and chart_result.get('tracks'):
+                        tracks = chart_result['tracks']
+                        all_services[service] = {
+                            'realtime': {
+                                'success': True,
+                                'tracks': tracks,
+                                'total_tracks': len(tracks)
+                            }
+                        }
+                        total_tracks += len(tracks)
+                        successful_services += 1
+                        console.log(f"[API] {service} 차트 수집 성공: {len(tracks)}곡")
+                    else:
+                        all_services[service] = {
+                            'realtime': {
+                                'success': False,
+                                'tracks': [],
+                                'total_tracks': 0,
+                                'error': chart_result.get('error', f'{service} 차트 수집 실패')
+                            }
+                        }
+                        console.log(f"[API] {service} 차트 수집 실패: {chart_result.get('error', 'Unknown')}")
+                elif isinstance(chart_result, list):
+                    # 리스트 형태 (기타 서비스)
+                    if chart_result and len(chart_result) > 0:
+                        all_services[service] = {
+                            'realtime': {
+                                'success': True,
+                                'tracks': chart_result,
+                                'total_tracks': len(chart_result)
+                            }
+                        }
+                        total_tracks += len(chart_result)
+                        successful_services += 1
+                        console.log(f"[API] {service} 차트 수집 성공: {len(chart_result)}곡")
+                    else:
+                        all_services[service] = {
+                            'realtime': {
+                                'success': False,
+                                'tracks': [],
+                                'total_tracks': 0,
+                                'error': f'{service} 차트 데이터 없음'
+                            }
+                        }
+                        console.log(f"[API] {service} 차트 수집 실패")
+                else:
+                    all_services[service] = {
+                        'realtime': {
+                            'success': False,
+                            'tracks': [],
+                            'total_tracks': 0,
+                            'error': f'{service} 차트 데이터 형식 오류'
+                        }
+                    }
+                    console.log(f"[API] {service} 차트 데이터 형식 오류: {type(chart_result)}")
+                    
+            except Exception as e:
+                all_services[service] = {
+                    'realtime': {
+                        'success': False,
+                        'tracks': [],
+                        'total_tracks': 0,
+                        'error': str(e)
+                    }
+                }
+                console.log(f"[API] {service} 차트 수집 오류: {str(e)}")
+        
+        # 성공률 계산
+        success_rate = (successful_services / len(services) * 100) if services else 0
+        
+        # 크로스 플랫폼 분석 (간단한 버전)
+        cross_platform_hits = []
+        if successful_services >= 2:
+            # 공통 트랙 찾기
+            all_tracks = {}
+            for service, charts in all_services.items():
+                if charts.get('realtime', {}).get('success'):
+                    for track in charts['realtime']['tracks']:
+                        track_key = f"{track.get('title', '').strip()} - {track.get('artist', '').strip()}"
+                        if track_key not in all_tracks:
+                            all_tracks[track_key] = {
+                                'title': track.get('title', ''),
+                                'artist': track.get('artist', ''),
+                                'services': [],
+                                'ranks': []
+                            }
+                        all_tracks[track_key]['services'].append(service)
+                        all_tracks[track_key]['ranks'].append(track.get('rank', 999))
+            
+            # 2개 이상 서비스에서 등장하는 트랙
+            for track_key, track_info in all_tracks.items():
+                if len(track_info['services']) >= 2:
+                    avg_rank = sum(track_info['ranks']) / len(track_info['ranks'])
+                    cross_platform_hits.append({
+                        'title': track_info['title'],
+                        'artist': track_info['artist'],
+                        'services': track_info['services'],
+                        'services_count': len(track_info['services']),
+                        'avg_rank': round(avg_rank, 1),
+                        'cross_platform_score': len(track_info['services']) * 100 - avg_rank
+                    })
+            
+            # 크로스 플랫폼 점수로 정렬
+            cross_platform_hits.sort(key=lambda x: x['cross_platform_score'], reverse=True)
+            cross_platform_hits = cross_platform_hits[:20]  # 상위 20개만
+        
+        return jsonify({
+            'success': True,
+            'timestamp': datetime.now().isoformat(),
+            'services': all_services,
+            'total_tracks': total_tracks,
+            'successful_services': successful_services,
+            'success_rate': round(success_rate, 1),
+            'cross_platform_analysis': {
+                'success': len(cross_platform_hits) > 0,
+                'cross_platform_hits': cross_platform_hits
+            },
+            'source': 'individual_connectors'
+        })
+            
+    except Exception as e:
+        console.log(f"[API] 국내 통합 차트 오류: {str(e)}")
+        return jsonify({'success': False, 'error': f'국내 통합 차트 수집 중 오류: {str(e)}'}), 500
+
+@app.route('/api/korea-charts/cross-analysis')
+def get_korea_charts_cross_analysis():
+    """국내 차트 크로스 플랫폼 분석만 반환"""
+    console.log("[Route] /api/korea-charts/cross-analysis - 크로스 플랫폼 분석")
+    
+    try:
+        if not korea_charts_connector_available:
+            return jsonify({'success': False, 'error': '커넥터 사용 불가'}), 500
+        
+        services = request.args.getlist('services') or ['melon', 'bugs', 'genie']
+        limit = min(int(request.args.get('limit', 30)), 50)
+        
+        korea_connector = KoreaMusicChartsConnector(console.log)
+        all_charts = korea_connector.get_all_charts(services=services, limit_per_chart=limit)
+        
+        if all_charts['success']:
+            cross_analysis = korea_connector.get_cross_platform_analysis(all_charts)
+            return jsonify(cross_analysis)
+        else:
+            return jsonify({'success': False, 'error': '차트 데이터 수집 실패'}), 500
+            
+    except Exception as e:
+        console.log(f"[API] 크로스 분석 오류: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/status')
+def get_scheduler_status():
+    """차트 스케줄러 상태 확인"""
+    console.log("[Route] /api/scheduler/status - 스케줄러 상태 확인")
+    
+    try:
+        if not chart_scheduler_available:
+            return jsonify({'success': False, 'error': '스케줄러를 사용할 수 없습니다'}), 500
+        
+        scheduler = get_scheduler()
+        status = scheduler.get_status()
+        
+        return jsonify({
+            'success': True,
+            'status': status,
+            'timestamp': datetime.now().isoformat()
+        })
+        
+    except Exception as e:
+        console.log(f"[API] 스케줄러 상태 확인 오류: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/start', methods=['POST'])
+def start_scheduler():
+    """차트 스케줄러 시작"""
+    console.log("[Route] /api/scheduler/start - 스케줄러 시작")
+    
+    try:
+        if not chart_scheduler_available:
+            return jsonify({'success': False, 'error': '스케줄러를 사용할 수 없습니다'}), 500
+        
+        scheduler = start_chart_scheduler()
+        
+        return jsonify({
+            'success': True,
+            'message': '차트 스케줄러가 시작되었습니다',
+            'status': scheduler.get_status()
+        })
+        
+    except Exception as e:
+        console.log(f"[API] 스케줄러 시작 오류: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/stop', methods=['POST'])
+def stop_scheduler():
+    """차트 스케줄러 중지"""
+    console.log("[Route] /api/scheduler/stop - 스케줄러 중지")
+    
+    try:
+        if not chart_scheduler_available:
+            return jsonify({'success': False, 'error': '스케줄러를 사용할 수 없습니다'}), 500
+        
+        stop_chart_scheduler()
+        
+        return jsonify({
+            'success': True,
+            'message': '차트 스케줄러가 중지되었습니다'
+        })
+        
+    except Exception as e:
+        console.log(f"[API] 스케줄러 중지 오류: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/scheduler/config', methods=['GET', 'POST'])
+def scheduler_config():
+    """스케줄러 설정 확인/변경"""
+    console.log(f"[Route] /api/scheduler/config - {request.method}")
+    
+    try:
+        if not chart_scheduler_available:
+            return jsonify({'success': False, 'error': '스케줄러를 사용할 수 없습니다'}), 500
+        
+        scheduler = get_scheduler()
+        
+        if request.method == 'GET':
+            return jsonify({
+                'success': True,
+                'config': scheduler.schedule_config
+            })
+        else:  # POST
+            data = request.get_json()
+            if data:
+                scheduler.update_config(data)
+                return jsonify({
+                    'success': True,
+                    'message': '스케줄러 설정이 업데이트되었습니다',
+                    'config': scheduler.schedule_config
+                })
+            else:
+                return jsonify({'success': False, 'error': '설정 데이터가 필요합니다'}), 400
+        
+    except Exception as e:
+        console.log(f"[API] 스케줄러 설정 오류: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/charts/analysis')
+def analyze_charts():
+    """차트 분석 및 비교"""
+    console.log("[Route] /api/charts/analysis - 차트 분석")
+    
+    try:
+        if not chart_analyzer_available:
+            return jsonify({'success': False, 'error': '차트 분석기를 사용할 수 없습니다'}), 500
+        
+        if not korea_charts_connector_available:
+            return jsonify({'success': False, 'error': '차트 커넥터를 사용할 수 없습니다'}), 500
+        
+        # 파라미터 파싱
+        services = request.args.getlist('services') or ['melon', 'bugs', 'genie']
+        limit = min(int(request.args.get('limit', 30)), 50)
+        
+        console.log(f"[API] 차트 분석 요청 - 서비스: {services}, limit: {limit}")
+        
+        # 차트 데이터 수집
+        korea_connector = KoreaMusicChartsConnector(console.log)
+        chart_data = korea_connector.get_all_charts(services=services, limit_per_chart=limit)
+        
+        if not chart_data['success']:
+            return jsonify({'success': False, 'error': '차트 데이터 수집 실패'}), 500
+        
+        # 차트 분석 실행
+        analyzer = ChartAnalyzer(console.log)
+        analysis_result = analyzer.analyze_service_differences(chart_data)
+        
+        if not analysis_result['success']:
+            return jsonify({'success': False, 'error': '차트 분석 실패'}), 500
+        
+        # 인사이트 생성
+        insights = analyzer.generate_insights_report(analysis_result)
+        
+        return jsonify({
+            'success': True,
+            'timestamp': datetime.now().isoformat(),
+            'analysis': analysis_result['analysis'],
+            'insights': insights if insights.get('success') else None,
+            'data_source': {
+                'services': services,
+                'total_tracks': chart_data.get('total_tracks', 0),
+                'successful_services': chart_data.get('successful_services', 0)
+            }
+        })
+        
+    except Exception as e:
+        console.log(f"[API] 차트 분석 오류: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/charts/insights')
+def get_chart_insights():
+    """차트 인사이트 요약"""
+    console.log("[Route] /api/charts/insights - 인사이트 요약")
+    
+    try:
+        if not chart_analyzer_available:
+            return jsonify({'success': False, 'error': '차트 분석기를 사용할 수 없습니다'}), 500
+        
+        # 최신 분석 결과 로드
+        analysis_dir = os.path.join(os.path.dirname(__file__), 'chart_analysis')
+        latest_file = os.path.join(analysis_dir, 'latest_analysis.json')
+        
+        if os.path.exists(latest_file):
+            with open(latest_file, 'r', encoding='utf-8') as f:
+                analysis_data = json.load(f)
+            
+            analyzer = ChartAnalyzer(console.log)
+            insights = analyzer.generate_insights_report({'success': True, 'analysis': analysis_data})
+            
+            return jsonify({
+                'success': True,
+                'insights': insights['insights'] if insights.get('success') else [],
+                'summary': insights.get('summary', {}),
+                'analysis_date': analysis_data.get('generated_at'),
+                'from_cache': True
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'error': '분석 데이터가 없습니다. 먼저 /api/charts/analysis를 호출하세요.'
+            }), 404
+            
+    except Exception as e:
+        console.log(f"[API] 인사이트 요약 오류: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+@app.route('/api/individual-chart/<service>')
+def get_individual_chart(service):
+    """개별 음원사 차트 API"""
+    console.log(f"[Route] /api/individual-chart/{service} - 개별 차트 요청")
+    
+    try:
+        if not korea_charts_connector_available:
+            return jsonify({'success': False, 'error': '차트 커넥터를 사용할 수 없습니다'}), 500
+        
+        # 파라미터 파싱
+        chart_type = request.args.get('type', 'realtime')
+        limit = min(int(request.args.get('limit', 50)), 100)
+        
+        console.log(f"[API] {service} {chart_type} 차트 요청 (limit: {limit})")
+        
+        # 개별 차트 커넥터 초기화
+        connector = KoreaMusicChartsConnector(console.log)
+        
+        # 서비스별 차트 수집
+        if service == 'bugs':
+            chart_data = connector._get_bugs_chart(chart_type, limit)
+        elif service == 'genie':
+            chart_data = connector._get_genie_chart(chart_type, limit)
+        elif service == 'vibe':
+            chart_data = connector._get_vibe_chart(chart_type, limit)
+        elif service == 'flo':
+            chart_data = connector._get_flo_chart(chart_type, limit)
+        else:
+            return jsonify({'success': False, 'error': f'지원하지 않는 서비스: {service}'}), 400
+        
+        if chart_data['success']:
+            return jsonify({
+                'success': True,
+                'service': service,
+                'chart_type': chart_type,
+                'total_tracks': chart_data.get('total_tracks', 0),
+                'tracks': chart_data.get('tracks', []),
+                'timestamp': datetime.now().isoformat(),
+                'note': chart_data.get('note')  # 샘플 데이터 알림 등
+            })
+        else:
+            return jsonify({
+                'success': False, 
+                'error': chart_data.get('error', f'{service} 차트 수집 실패'),
+                'service': service
+            }), 500
+            
+    except Exception as e:
+        console.log(f"[API] {service} 개별 차트 오류: {str(e)}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
 @app.route('/api/trends/v2/keywords', methods=['POST'])
 def trend_analyzer_v2_keywords():
     """키워드 트렌드 검색 분석"""
@@ -2695,8 +3149,8 @@ def trim_audio_job(job_id, filename):
     }
     
     try:
-        # LinkExtractor 사용
-        extractor = LinkExtractor(console_log=console.log)
+        # AudioProcessor 사용으로 변경
+        processor = AudioProcessor(console_log=console.log, processed_folder=app.config['PROCESSED_FOLDER'])
         
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
@@ -2705,7 +3159,12 @@ def trim_audio_job(job_id, filename):
         processing_jobs[job_id]['message'] = '30초 자르기 중...'
         
         # 30초 자르기 실행
-        result_path = extractor._trim_audio_to_30_seconds(file_path, app.config['UPLOAD_FOLDER'])
+        result = processor.trim_audio(file_path, 30)
+        
+        if result['success']:
+            result_path = result['output_path']
+        else:
+            result_path = None
         
         if result_path and os.path.exists(result_path):
             # 성공
@@ -2715,7 +3174,11 @@ def trim_audio_job(job_id, filename):
             processing_jobs[job_id]['result'] = {
                 'type': 'trim',
                 'original_filename': filename,
-                'new_filename': os.path.basename(result_path)
+                'new_filename': result['filename'],  # AudioProcessor의 올바른 파일명 사용
+                'file_info': {
+                    'filename': result['filename'],
+                    'output_path': result['output_path']
+                }
             }
             
             console.log(f"[Trim Job] {job_id} - 완료: {result_path}")
@@ -2965,8 +3428,8 @@ def pitch_adjust_job(job_id, filename, semitones):
     }
     
     try:
-        # LinkExtractor 사용
-        extractor = LinkExtractor(console_log=console.log)
+        # AudioProcessor 사용으로 변경
+        processor = AudioProcessor(console_log=console.log, processed_folder=app.config['PROCESSED_FOLDER'])
         
         file_path = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
@@ -2975,7 +3438,12 @@ def pitch_adjust_job(job_id, filename, semitones):
         processing_jobs[job_id]['message'] = f'키 조절 중... ({semitones:+d} 반음)'
         
         # 키 조절 실행
-        result_path = extractor.adjust_pitch(file_path, app.config['UPLOAD_FOLDER'], semitones)
+        result = processor.adjust_pitch(file_path, semitones)
+        
+        if result['success']:
+            result_path = result['output_path']
+        else:
+            result_path = None
         
         if result_path and os.path.exists(result_path):
             # 성공
@@ -2985,8 +3453,12 @@ def pitch_adjust_job(job_id, filename, semitones):
             processing_jobs[job_id]['result'] = {
                 'type': 'pitch',
                 'original_filename': filename,
-                'new_filename': os.path.basename(result_path),
-                'semitones': semitones
+                'new_filename': result['filename'],  # AudioProcessor의 올바른 파일명 사용
+                'semitones': semitones,
+                'file_info': {
+                    'filename': result['filename'],
+                    'output_path': result['output_path']
+                }
             }
             
             console.log(f"[Pitch Job] {job_id} - 완료: {result_path}")

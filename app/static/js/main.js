@@ -21,6 +21,12 @@ document.addEventListener('DOMContentLoaded', () => {
 
 // 이벤트 리스너 설정
 function setupEventListeners() {
+    // 통합 스튜디오 모드가 있으면 기존 이벤트 리스너 설정하지 않음
+    if (document.getElementById('studioMode')) {
+        console.log("[Init] 통합 스튜디오 모드 감지됨 - main.js 이벤트 리스너 설정 건너뜀");
+        return;
+    }
+    
     const uploadArea = document.getElementById('uploadArea');
     const fileInput = document.getElementById('fileInput');
     
@@ -66,6 +72,12 @@ function setupEventListeners() {
 
 // 파일 선택 처리
 function handleFileSelect(e) {
+    // 통합 스튜디오 모드가 활성화되어 있으면 무시
+    if (document.getElementById('studioMode') && document.getElementById('studioMode').style.display !== 'none') {
+        console.log("[FileSelect] 통합 스튜디오 모드 활성화됨 - main.js 기능 비활성화");
+        return;
+    }
+    
     console.log("[FileSelect] 파일 선택됨");
     const files = Array.from(e.target.files);
     uploadFiles(files);
@@ -87,6 +99,12 @@ function handleDrop(e) {
     e.preventDefault();
     e.currentTarget.classList.remove('drag-over');
     
+    // 통합 스튜디오 모드가 활성화되어 있으면 무시
+    if (document.getElementById('studioMode') && document.getElementById('studioMode').style.display !== 'none') {
+        console.log("[Drop] 통합 스튜디오 모드 활성화됨 - main.js 기능 비활성화");
+        return;
+    }
+    
     console.log("[Drop] 파일 드롭됨");
     const files = Array.from(e.dataTransfer.files);
     uploadFiles(files);
@@ -94,6 +112,12 @@ function handleDrop(e) {
 
 // 파일 업로드
 async function uploadFiles(files) {
+    // 통합 스튜디오 모드가 활성화되어 있으면 무시
+    if (document.getElementById('studioMode') && document.getElementById('studioMode').style.display !== 'none') {
+        console.log("[Upload] 통합 스튜디오 모드 활성화됨 - main.js 업로드 기능 비활성화");
+        return;
+    }
+    
     console.log(`[Upload] ${files.length}개 파일 업로드 시작`);
     
     const formData = new FormData();
@@ -1621,8 +1645,20 @@ function showTab(tabName) {
     // 선택된 탭 버튼에 active 클래스 추가
     event.target.classList.add('active');
     
+    // 탭 이름 매핑 (playlist -> playlistTab, extract -> extractTab, video -> videoTab)
+    let tabId;
+    if (tabName === 'playlist') {
+        tabId = 'playlistTab';
+    } else if (tabName === 'extract') {
+        tabId = 'extractTab';
+    } else if (tabName === 'video') {
+        tabId = 'videoTab';
+    } else {
+        tabId = tabName + 'Tab';
+    }
+    
     // 선택된 탭 컨텐츠 표시
-    const tabContent = document.getElementById(tabName + 'Tab');
+    const tabContent = document.getElementById(tabId);
     if (tabContent) {
         tabContent.classList.add('active');
     }

@@ -1,0 +1,618 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="audio-studio">
+    <!-- 헤더 -->
+    <header class="studio-header">
+        <div class="studio-title">
+            <h1>🎵 음악 스튜디오</h1>
+            <p>파일 업로드부터 플레이리스트 생성, 음원 추출, 영상 제작까지 한 번에</p>
+        </div>
+    </header>
+
+    <!-- 네비게이션 탭 -->
+    <nav class="nav-tabs">
+        <button class="nav-tab active" onclick="showStudioMode()">🎵 통합 스튜디오</button>
+        <button class="nav-tab" onclick="showTab('analysis')">📊 음악 분석</button>
+        <button class="nav-tab" onclick="location.href='/charts'">🎧 실시간 차트</button>
+    </nav>
+
+    <!-- 통합 스튜디오 모드 -->
+    <div id="studioMode" class="studio-content active">
+        <!-- 파일 관리 섹션 (공통) -->
+        <section class="file-manager" id="fileManager">
+            <div class="upload-zone">
+                <div class="upload-area" id="uploadArea">
+                    <div class="upload-icon">📁</div>
+                    <h2>파일 업로드 또는 링크 입력</h2>
+                    <p>음원 파일 (MP3, WAV, M4A, FLAC) 또는 YouTube 링크를 입력하세요</p>
+                    
+                    <!-- 파일 업로드 -->
+                    <input type="file" id="fileInput" multiple accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" hidden>
+                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                        📁 파일 선택
+                    </button>
+                    
+                    <!-- URL 입력 -->
+                    <div class="url-input-section">
+                        <div class="section-divider">
+                            <span>또는</span>
+                        </div>
+                        <div class="url-input-group">
+                            <input type="url" id="urlInput" placeholder="https://youtube.com/watch?v=..." class="url-input">
+                            <button class="btn btn-secondary" onclick="extractFromUrl()">🔗 링크 추출</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 업로드된 파일 목록 -->
+            <div class="files-list" id="filesList" style="display: none;">
+                <h3>📂 업로드된 파일</h3>
+                <div class="files-container" id="filesContainer"></div>
+            </div>
+        </section>
+
+        <!-- 작업 선택 섹션 -->
+        <section class="work-selector" id="workSelector" style="display: none;">
+            <h3>🛠️ 작업 선택</h3>
+            <div class="work-options">
+                <div class="work-option" onclick="selectWork('playlist')">
+                    <div class="work-icon">🎵</div>
+                    <h4>플레이리스트 생성</h4>
+                    <p>여러 음원을 하나로 합치기</p>
+                </div>
+                <div class="work-option" onclick="selectWork('extract')">
+                    <div class="work-icon">🎧</div>
+                    <h4>음원 추출 & 편집</h4>
+                    <p>음원 추출, 키 변경, 자르기</p>
+                </div>
+                <div class="work-option" onclick="selectWork('video')">
+                    <div class="work-icon">🎬</div>
+                    <h4>음원 영상 만들기</h4>
+                    <p>음원 + 이미지로 동영상 생성</p>
+                </div>
+            </div>
+        </section>
+
+        <!-- 작업별 설정 섹션 -->
+        <section class="work-settings" id="workSettings" style="display: none;">
+            <!-- 플레이리스트 생성 설정 -->
+            <div class="settings-panel" id="playlistSettings">
+                <h3>🎵 플레이리스트 생성 설정</h3>
+                <div class="settings-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="normalizeVolume" checked>
+                        <span>볼륨 정규화</span>
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" id="crossfade">
+                        <span>크로스페이드</span>
+                    </label>
+                </div>
+            </div>
+
+            <!-- 음원 추출 설정 -->
+            <div class="settings-panel" id="extractSettings">
+                <h3>🎧 음원 추출 & 편집 설정</h3>
+                <div class="settings-group">
+                    <div class="setting-item">
+                        <label>출력 형식:</label>
+                        <select id="outputFormat" class="form-select">
+                            <option value="mp3">MP3 (권장)</option>
+                            <option value="wav">WAV (고음질)</option>
+                            <option value="original">원본 형식</option>
+                        </select>
+                    </div>
+                    <div class="setting-item">
+                        <label>키 조절 (반음): <span id="pitchValue">0</span></label>
+                        <input type="range" id="pitchSlider" min="-12" max="12" value="0" step="1" 
+                               oninput="document.getElementById('pitchValue').textContent = this.value">
+                    </div>
+                    <div class="setting-item">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="trimToThirty">
+                            <span>30초로 자르기</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 동영상 생성 설정 -->
+            <div class="settings-panel" id="videoSettings">
+                <h3>🎬 동영상 생성 설정</h3>
+                <div class="settings-group">
+                    <!-- 이미지 업로드 -->
+                    <div class="image-upload-section">
+                        <label>배경 이미지:</label>
+                        <div class="image-upload-area" id="imageUploadArea">
+                            <div class="upload-placeholder">
+                                <span class="upload-icon">🖼️</span>
+                                <p>이미지를 선택하거나 드래그하세요</p>
+                                <p class="file-types">JPG, PNG, BMP, GIF</p>
+                            </div>
+                            <input type="file" id="imageInput" accept=".jpg,.jpeg,.png,.bmp,.gif" hidden>
+                            <button class="btn btn-outline" onclick="document.getElementById('imageInput').click()">
+                                이미지 선택
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label>동영상 품질:</label>
+                        <select id="videoQuality" class="form-select">
+                            <option value="youtube_hd">유튜브 HD (1080p)</option>
+                            <option value="youtube_standard">유튜브 표준 (720p)</option>
+                            <option value="youtube_mobile">모바일 최적화</option>
+                        </select>
+                    </div>
+                    
+                    <div class="setting-item">
+                        <label class="checkbox-label">
+                            <input type="checkbox" id="applyLogo">
+                            <span>로고 워터마크 추가</span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 실행 버튼 -->
+            <div class="execute-section">
+                <button class="btn btn-success btn-large" id="executeBtn" onclick="executeWork()">
+                    <span id="executeText">🎵 실행하기</span>
+                </button>
+            </div>
+        </section>
+
+        <!-- 진행 상황 (공통) -->
+        <section class="progress-section" id="progressSection" style="display: none;">
+            <h3 id="progressTitle">처리 중...</h3>
+            <div class="progress-bar">
+                <div class="progress-fill" id="progressFill"></div>
+            </div>
+            <p class="progress-text" id="progressText">준비 중...</p>
+        </section>
+
+        <!-- 결과 (공통) -->
+        <section class="result-section" id="resultSection" style="display: none;">
+            <h3>✅ 완료!</h3>
+            <div class="result-content" id="resultContent">
+                <!-- 동적으로 채워짐 -->
+            </div>
+            <div class="result-actions">
+                <button class="btn btn-primary" id="downloadBtn">📥 다운로드</button>
+                <button class="btn btn-secondary" onclick="resetStudio()">🔄 새로 시작</button>
+            </div>
+        </section>
+    </div>
+
+    <!-- 음악 합치기 탭 -->
+    <div id="uploadTab" class="tab-content active">
+    <!-- 파일 업로드 영역 -->
+    <section class="upload-section">
+        <div class="upload-area" id="uploadArea">
+            <div class="upload-icon">📁</div>
+            <h2>파일 선택 또는 드래그 앤 드롭</h2>
+            <p>MP3, WAV, M4A, FLAC, MP4, WEBM 파일을 업로드하세요</p>
+            <input type="file" id="fileInput" multiple accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" hidden>
+            <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
+                파일 선택
+            </button>
+        </div>
+        
+        <!-- 링크 입력 영역 -->
+        <div class="link-section">
+            <div class="section-divider">
+                <span>또는</span>
+            </div>
+            <div class="link-input-area">
+                <div class="upload-icon">🔗</div>
+                <h3>YouTube/음악 링크에서 추출</h3>
+                <p>YouTube, SoundCloud 등의 링크를 입력하세요</p>
+                <div class="link-input-group">
+                    <input type="url" id="linkInput" placeholder="https://youtube.com/watch?v=..." class="link-input">
+                    <button class="btn btn-secondary" id="extractBtn" onclick="extractFromLink()">
+                        🎵 추출
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- 업로드된 파일 목록 -->
+    <section class="files-section" id="filesSection" style="display: none;">
+        <div class="files-header">
+            <h3>업로드된 파일 목록</h3>
+            <button class="btn btn-small" onclick="showAllFiles()" title="모든 파일 보기">📂 모든 파일 보기</button>
+        </div>
+        <div class="files-list" id="filesList"></div>
+    </section>
+
+    <!-- 전체 설정 -->
+    <section class="global-settings" id="globalSettings" style="display: none;">
+        <h3>전체 설정</h3>
+        <div class="settings-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="normalizeVolume" checked>
+                <span>볼륨 정규화</span>
+            </label>
+            <label class="checkbox-label">
+                <input type="checkbox" id="crossfade">
+                <span>크로스페이드</span>
+            </label>
+        </div>
+    </section>
+
+    <!-- 처리 버튼 -->
+    <section class="action-section" id="actionSection" style="display: none;">
+        <button class="btn btn-success btn-large" id="processBtn" onclick="processAudio()">
+            🎵 합치기 시작
+        </button>
+    </section>
+
+    <!-- 진행 상황 -->
+    <section class="progress-section" id="progressSection" style="display: none;">
+        <div class="progress-bar">
+            <div class="progress-fill" id="progressFill"></div>
+        </div>
+        <p class="progress-text" id="progressText">처리 중...</p>
+    </section>
+
+    <!-- 결과 -->
+    <section class="result-section" id="resultSection" style="display: none;">
+        <h3>✅ 처리 완료!</h3>
+        <p class="result-info" id="resultInfo"></p>
+        <div class="result-actions">
+            <button class="btn btn-primary" id="downloadBtn">
+                📥 오디오 다운로드
+            </button>
+            <button class="btn btn-success" id="createVideoBtn" onclick="showVideoSection()">
+                🎬 동영상 만들기
+            </button>
+            <button class="btn btn-secondary" onclick="resetApp()">
+                새로 시작
+            </button>
+        </div>
+    </section>
+
+    <!-- 동영상 생성 -->
+    <section class="video-section" id="videoSection" style="display: none;">
+        <h3>🎬 동영상 생성</h3>
+        <div class="video-form">
+            <div class="form-group">
+                <label for="imageUpload">배경 이미지 업로드:</label>
+                <div class="image-upload-area" id="imageUploadArea">
+                    <div class="upload-placeholder">
+                        <span class="upload-icon">🖼️</span>
+                        <p>이미지를 드래그하거나 클릭하여 선택하세요</p>
+                        <p class="file-info">JPG, PNG, BMP 파일 지원</p>
+                    </div>
+                    <input type="file" id="imageUpload" accept=".jpg,.jpeg,.png,.bmp,.gif" hidden>
+                </div>
+                <div class="image-preview" id="imagePreview" style="display: none;">
+                    <img id="previewImg" src="" alt="미리보기">
+                    <p id="imageInfo"></p>
+                </div>
+            </div>
+            
+            <div class="form-group">
+                <label for="videoPreset">동영상 품질:</label>
+                <select id="videoPreset" class="form-select">
+                    <option value="youtube_hd">유튜브 HD (1080p, 30fps)</option>
+                    <option value="youtube_hd_60">유튜브 HD (1080p, 60fps)</option>
+                    <option value="youtube_standard">유튜브 표준 (720p)</option>
+                    <option value="youtube_mobile">모바일 최적화 (720p)</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label class="checkbox-label">
+                    <input type="checkbox" id="applyLogoOption" name="apply_logo">
+                    <span>로고 합성 적용 (Music Merger 로고)</span>
+                </label>
+            </div>
+            
+            <div class="form-group">
+                <button class="btn btn-success btn-large" id="generateVideoBtn" onclick="generateVideo()" disabled>
+                    🎬 동영상 생성
+                </button>
+            </div>
+        </div>
+    </section>
+
+    <!-- 동영상 진행 상황 -->
+    <section class="video-progress-section" id="videoProgressSection" style="display: none;">
+        <h3>🎬 동영상 생성 중...</h3>
+        <div class="progress-bar">
+            <div class="progress-fill" id="videoProgressFill"></div>
+        </div>
+        <p class="progress-text" id="videoProgressText">동영상 생성 준비 중...</p>
+    </section>
+
+    <!-- 동영상 결과 -->
+    <section class="video-result-section" id="videoResultSection" style="display: none;">
+        <h3>✅ 동영상 생성 완료!</h3>
+        <p class="result-info" id="videoResultInfo"></p>
+        <div class="result-actions">
+            <button class="btn btn-primary" id="downloadVideoBtn">
+                📥 동영상 다운로드
+            </button>
+            <button class="btn btn-secondary" onclick="resetApp()">
+                새로 시작
+            </button>
+        </div>
+    </section>
+    </div>
+
+    <!-- 음원 추출 탭 -->
+    <div id="extractTab" class="tab-content">
+        <!-- 링크 추출 섹션 -->
+        <section class="extract-section">
+            <div class="extract-area">
+                <div class="upload-icon">🔗</div>
+                <h2>음원 링크 추출</h2>
+                <p>YouTube, SoundCloud 등의 링크에서 음원을 추출하세요</p>
+                <div class="link-input-group">
+                    <input type="url" id="extractLinkInput" placeholder="https://youtube.com/watch?v=..." class="link-input">
+                    <button class="btn btn-primary" id="extractFromLinkBtn" onclick="extractMusicFromLink()">
+                        🎵 추출하기
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 파일 업로드 섹션 -->
+        <section class="upload-section">
+            <div class="section-divider">
+                <span>또는</span>
+            </div>
+            <div class="upload-area" id="extractUploadArea">
+                <div class="upload-icon">📁</div>
+                <h2>음원 파일 업로드</h2>
+                <p>MP3, WAV, M4A, FLAC, MP4, WEBM 파일을 업로드하세요</p>
+                <input type="file" id="extractFileInput" accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" hidden>
+                <button class="btn btn-secondary" onclick="document.getElementById('extractFileInput').click()">
+                    파일 선택
+                </button>
+            </div>
+        </section>
+
+        <!-- 추출/업로드 진행 상황 -->
+        <section class="extract-progress-section" id="extractProgressSection" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="extractProgressFill"></div>
+            </div>
+            <p class="progress-text" id="extractProgressText">처리 중...</p>
+        </section>
+
+        <!-- 음원 파일 목록 -->
+        <section class="extracted-files-section" id="extractedFilesSection" style="display: none;">
+            <div class="files-header">
+                <h3>추출된 음원 파일</h3>
+            </div>
+            <div class="files-list" id="extractedFilesList"></div>
+        </section>
+
+        <!-- 음원 편집 도구 -->
+        <section class="audio-tools-section" id="audioToolsSection" style="display: none;">
+            <div class="tools-header">
+                <h3>🛠️ 음원 편집 도구</h3>
+                <p>업로드된 음원을 편집하고 다운로드하세요</p>
+            </div>
+            
+            <div class="tools-container">
+                <!-- 편집 도구들 -->
+                <div class="tools-row">
+                    <div class="tool-group">
+                        <div class="tool-header">
+                            <span class="tool-icon">✂️</span>
+                            <div class="tool-info">
+                                <h4>30초 자르기</h4>
+                                <p>음원을 30초로 자릅니다</p>
+                            </div>
+                        </div>
+                        <div class="tool-action">
+                            <button class="btn btn-warning btn-tool" id="trimToThirtyBtn" onclick="trimAudioToThirty()">
+                                <span class="btn-icon">✂️</span>
+                                30초로 자르기
+                            </button>
+                        </div>
+                    </div>
+                    
+                    <div class="tool-group">
+                        <div class="tool-header">
+                            <span class="tool-icon">🎹</span>
+                            <div class="tool-info">
+                                <h4>키 변경 (속도 유지)</h4>
+                                <p>음원의 키(피치)를 조절합니다 (템포는 그대로 유지)</p>
+                            </div>
+                        </div>
+                        <div class="tool-action pitch-control">
+                            <div class="pitch-display">
+                                <label>현재 키: <span id="pitchDisplayValue" class="pitch-value">0</span> 반음</label>
+                            </div>
+                            <div class="pitch-slider-container">
+                                <button class="btn btn-small pitch-btn" onclick="adjustPitch(-1)">-1</button>
+                                <input type="range" id="pitchSlider" min="-12" max="12" value="0" step="1" class="pitch-slider">
+                                <button class="btn btn-small pitch-btn" onclick="adjustPitch(1)">+1</button>
+                            </div>
+                            <button class="btn btn-info btn-tool" onclick="applyPitchChange()">
+                                <span class="btn-icon">🎹</span>
+                                키 변경 적용
+                            </button>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 다운로드 섹션 -->
+                <div class="download-section">
+                    <div class="download-header">
+                        <span class="tool-icon">📥</span>
+                        <div class="tool-info">
+                            <h4>다운로드</h4>
+                            <p>편집된 음원을 원하는 형식으로 다운로드하세요</p>
+                        </div>
+                    </div>
+                    <div class="download-buttons">
+                        <button class="btn btn-success btn-download" id="downloadMp3Btn" onclick="downloadAsMp3()">
+                            <span class="btn-icon">🎵</span>
+                            <div class="btn-content">
+                                <span class="btn-title">MP3로 다운로드</span>
+                                <span class="btn-desc">압축 음질 (권장)</span>
+                            </div>
+                        </button>
+                        <button class="btn btn-secondary btn-download" id="downloadOriginalBtn" onclick="downloadOriginal()">
+                            <span class="btn-icon">💾</span>
+                            <div class="btn-content">
+                                <span class="btn-title">원본 형식</span>
+                                <span class="btn-desc">원본 음질 유지</span>
+                            </div>
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <!-- 편집 결과 -->
+        <section class="edit-result-section" id="editResultSection" style="display: none;">
+            <h3>✅ 편집 완료!</h3>
+            <p class="result-info" id="editResultInfo"></p>
+            <div class="result-actions">
+                <button class="btn btn-primary" id="finalDownloadBtn">
+                    📥 최종 파일 다운로드
+                </button>
+                <button class="btn btn-secondary" onclick="resetExtractApp()">
+                    새로 시작
+                </button>
+            </div>
+        </section>
+    </div>
+
+    <!-- 음악 분석 탭 -->
+    <div id="analysisTab" class="tab-content">
+        <section class="analysis-section">
+            <div class="analysis-area">
+                <div class="upload-icon">🎵</div>
+                <h2>YouTube 음악 분석</h2>
+                <p>YouTube 링크를 입력하여 음악을 분석하세요</p>
+                <div class="link-input-group">
+                    <input type="url" id="analysisLinkInput" placeholder="https://youtube.com/watch?v=..." class="link-input">
+                    <button class="btn btn-primary" id="analyzeBtn" onclick="analyzeMusic()">
+                        🔍 분석하기
+                    </button>
+                </div>
+            </div>
+        </section>
+
+        <!-- 분석 진행 상황 -->
+        <section class="analysis-progress-section" id="analysisProgressSection" style="display: none;">
+            <div class="progress-bar">
+                <div class="progress-fill" id="analysisProgressFill"></div>
+            </div>
+            <p class="progress-text" id="analysisProgressText">분석 중...</p>
+        </section>
+
+        <!-- 분석 결과 -->
+        <section class="analysis-result-section" id="analysisResultSection" style="display: none;">
+            <h3>✅ 분석 완료!</h3>
+            
+            <!-- 상세 분석 결과 -->
+            <div class="detailed-analysis-results">
+                <div class="analysis-grid">
+                    <div class="analysis-card">
+                        <h4>🎵 음악 정보</h4>
+                        <div id="detailedMusicInfo" class="analysis-content">
+                            <!-- 동적으로 채워짐 -->
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-card">
+                        <h4>🎨 음악 특성</h4>
+                        <div id="detailedMusicFeatures" class="analysis-content">
+                            <!-- 동적으로 채워짐 -->
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-card">
+                        <h4>📊 오디오 분석</h4>
+                        <div id="detailedAudioAnalysis" class="analysis-content">
+                            <!-- 동적으로 채워짐 -->
+                        </div>
+                    </div>
+                    
+                    <div class="analysis-card">
+                        <h4>🎭 감정 분석</h4>
+                        <div id="detailedEmotionAnalysis" class="analysis-content">
+                            <!-- 동적으로 채워짐 -->
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 프롬프트 정보 -->
+                <div class="prompt-info-section">
+                    <h4>🤖 AI 프롬프트 정보</h4>
+                    <div id="detailedPromptInfo" class="prompt-content">
+                        <!-- 동적으로 채워짐 -->
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 기존 간단한 결과 (호환성) -->
+            <div class="analysis-result" id="analysisResult" style="display: none;"></div>
+        </section>
+    </div>
+
+</div>
+
+<!-- 파일 아이템 템플릿 -->
+<template id="fileItemTemplate">
+    <div class="file-item" data-filename="">
+        <div class="file-header">
+            <span class="file-icon">🎵</span>
+            <span class="file-name"></span>
+            <div class="file-actions">
+                <!-- 링크 추출 음원 전용 액션 -->
+                <button class="btn-icon extracted-only" onclick="downloadExtractedFileMp3(this)" style="display: none;" title="MP3로 다운로드">🎵</button>
+                <button class="btn-icon extracted-only" onclick="downloadExtractedFileOriginal(this)" style="display: none;" title="원본 형식으로 다운로드">💾</button>
+                <button class="btn-icon" onclick="trimFile(this)" title="30초 자르기">✂️</button>
+                <button class="btn-icon" onclick="showPitchAdjust(this)" title="키 조절">🎹</button>
+                <!-- 기본 액션 -->
+                <button class="btn-icon" onclick="toggleFileSettings(this)">⚙️</button>
+                <button class="btn-icon" onclick="moveFileUp(this)">⬆️</button>
+                <button class="btn-icon" onclick="moveFileDown(this)">⬇️</button>
+                <button class="btn-icon btn-danger" onclick="removeFile(this)">❌</button>
+            </div>
+        </div>
+        <div class="file-settings" style="display: none;">
+            <div class="setting-group">
+                <label>페이드인 (초): <span class="value-display">2</span></label>
+                <input type="range" class="slider" name="fadeIn" min="0" max="10" value="2" step="0.5">
+            </div>
+            <div class="setting-group">
+                <label>페이드아웃 (초): <span class="value-display">3</span></label>
+                <input type="range" class="slider" name="fadeOut" min="0" max="10" value="3" step="0.5">
+            </div>
+            <div class="setting-group">
+                <label>볼륨 (dB): <span class="value-display">0</span></label>
+                <input type="range" class="slider" name="volume" min="-20" max="20" value="0" step="1">
+            </div>
+            <div class="setting-group">
+                <label>간격 (초): <span class="value-display">1</span></label>
+                <input type="range" class="slider" name="gap" min="0" max="5" value="1" step="0.5">
+            </div>
+            
+            <!-- 키 조절 UI (추출된 음원용) -->
+            <div class="pitch-adjust-section extracted-only" style="display: none;">
+                <div class="setting-group">
+                    <label>키 조절 (반음): <span class="pitch-value">0</span></label>
+                    <div class="pitch-control">
+                        <input type="range" class="pitch-slider" min="-12" max="12" value="0" step="1">
+                        <button class="btn btn-small" onclick="applyPitchAdjust(this)">적용</button>
+                    </div>
+                    <small class="pitch-description">-12 ~ +12 반음 범위로 키를 조절합니다</small>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+{% endblock %}

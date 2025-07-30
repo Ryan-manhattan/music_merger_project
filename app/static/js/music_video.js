@@ -87,7 +87,7 @@ function switchImageTab(tabName) {
     
     // 활성 탭 표시
     const activeTabBtn = document.querySelector(`.tab-btn[onclick="switchImageTab('${tabName}')"]`);
-    const activeTabContent = document.getElementById(tabName === 'upload' ? 'uploadTab' : 'aiTab');
+    const activeTabContent = document.getElementById(tabName === 'upload' ? 'uploadImageTab' : 'aiImageTab');
     
     if (activeTabBtn) activeTabBtn.classList.add('active');
     if (activeTabContent) activeTabContent.classList.add('active');
