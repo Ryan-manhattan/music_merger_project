@@ -21,55 +21,55 @@ from datetime import datetime
 import json
 import threading
 import uuid
-from utils import validate_audio_file, generate_safe_filename, get_file_size_mb
-from audio_processor import AudioProcessor
-from link_extractor import LinkExtractor
-from video_processor import VideoProcessor
+from core.utils import validate_audio_file, generate_safe_filename, get_file_size_mb
+from processors.audio_processor import AudioProcessor
+from processors.link_extractor import LinkExtractor
+from processors.video_processor import VideoProcessor
 # 무거운 의존성들을 선택적으로 로드
 try:
-    from music_service import MusicService
+    from core.music_service import MusicService
     music_service_available = True
 except ImportError as e:
     print(f"MusicService 로드 실패: {e}")
     music_service_available = False
 
 try:
-    from database import DatabaseManager
+    from core.database import DatabaseManager
     database_available = True
 except ImportError as e:
     print(f"DatabaseManager 로드 실패: {e}")
     database_available = False
 
 try:
-    from music_trend_analyzer_v2 import MusicTrendAnalyzerV2
+    from analyzers.music_trend_analyzer_v2 import MusicTrendAnalyzerV2
     trend_analyzer_available = True
 except ImportError as e:
     print(f"MusicTrendAnalyzerV2 로드 실패: {e}")
     trend_analyzer_available = False
 
 try:
-    from melon_connector import MelonConnector
+    from connectors.melon_connector import MelonConnector
     melon_connector_available = True
 except ImportError as e:
     print(f"MelonConnector 로드 실패: {e}")
     melon_connector_available = False
 
 try:
-    from korea_music_charts_connector import KoreaMusicChartsConnector
+    from connectors.korea_music_charts_connector import KoreaMusicChartsConnector
     korea_charts_connector_available = True
 except ImportError as e:
     print(f"KoreaMusicChartsConnector 로드 실패: {e}")
     korea_charts_connector_available = False
 
 try:
-    from chart_scheduler import get_scheduler, start_chart_scheduler, stop_chart_scheduler
+    from analyzers.chart_scheduler import get_scheduler, start_chart_scheduler, stop_chart_scheduler
     chart_scheduler_available = True
 except ImportError as e:
     print(f"ChartScheduler 로드 실패: {e}")
     chart_scheduler_available = False
 
 try:
-    from chart_analysis import ChartAnalyzer
+    from analyzers.chart_analysis import ChartAnalyzer
     chart_analyzer_available = True
 except ImportError as e:
     print(f"ChartAnalyzer 로드 실패: {e}")

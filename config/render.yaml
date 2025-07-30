@@ -1,0 +1,20 @@
+services:
+  - type: web
+    name: music-merger
+    env: python
+    plan: free
+    region: oregon
+    buildCommand: "./scripts/build.sh"
+    startCommand: "gunicorn --bind 0.0.0.0:$PORT app:app"
+    healthCheckPath: /
+    envVars:
+      - key: PYTHON_VERSION
+        value: 3.11.9
+      - key: PIP_NO_CACHE_DIR
+        value: "1"
+      - key: PIP_DISABLE_PIP_VERSION_CHECK
+        value: "1"
+    disk:
+      name: music-merger-disk
+      mountPath: /opt/render/project/src/app/uploads
+      sizeGB: 1

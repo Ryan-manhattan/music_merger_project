@@ -1,0 +1,142 @@
+{
+  "service_stats": {
+    "melon": {
+      "chart_count": 1,
+      "total_tracks": 3,
+      "avg_tracks_per_chart": 3.0,
+      "avg_title_length": 9.0,
+      "artist_count": 3
+    },
+    "bugs": {
+      "chart_count": 1,
+      "total_tracks": 3,
+      "avg_tracks_per_chart": 3.0,
+      "avg_title_length": 8.666666666666666,
+      "artist_count": 3
+    }
+  },
+  "genre_preferences": {
+    "melon": {
+      "ballad": 33.33,
+      "dance": 33.33,
+      "hiphop": 33.33,
+      "rock": 0.0,
+      "trot": 0.0,
+      "indie": 0.0,
+      "electronic": 0.0
+    },
+    "bugs": {
+      "ballad": 33.33,
+      "dance": 33.33,
+      "hiphop": 0.0,
+      "rock": 33.33,
+      "trot": 0.0,
+      "indie": 0.0,
+      "electronic": 0.0
+    }
+  },
+  "artist_dominance": {
+    "melon": {
+      "total_unique_artists": 3,
+      "total_tracks": 3,
+      "top_artists": [
+        {
+          "artist": "홍길동",
+          "count": 1,
+          "percentage": 33.33
+        },
+        {
+          "artist": "김철수",
+          "count": 1,
+          "percentage": 33.33
+        },
+        {
+          "artist": "박영희",
+          "count": 1,
+          "percentage": 33.33
+        }
+      ],
+      "top_10_dominance": 100.0,
+      "diversity_score": 100.0
+    },
+    "bugs": {
+      "total_unique_artists": 3,
+      "total_tracks": 3,
+      "top_artists": [
+        {
+          "artist": "김철수",
+          "count": 1,
+          "percentage": 33.33
+        },
+        {
+          "artist": "이민수",
+          "count": 1,
+          "percentage": 33.33
+        },
+        {
+          "artist": "홍길동",
+          "count": 1,
+          "percentage": 33.33
+        }
+      ],
+      "top_10_dominance": 100.0,
+      "diversity_score": 100.0
+    }
+  },
+  "ranking_correlations": {
+    "common_tracks_count": 2,
+    "total_unique_tracks": 4,
+    "overlap_percentage": 50.0,
+    "pairwise_correlations": {
+      "melon_vs_bugs": {
+        "correlation": -1.0,
+        "common_tracks": 2,
+        "sample_tracks": [
+          "사랑하는 사람아 - 홍길동",
+          "Dance Tonight - 김철수"
+        ]
+      }
+    }
+  },
+  "unique_tracks": {
+    "melon": {
+      "exclusive_count": 1,
+      "exclusive_tracks": [
+        "힙합 라이프 - 박영희"
+      ],
+      "exclusivity_rate": 33.33
+    },
+    "bugs": {
+      "exclusive_count": 1,
+      "exclusive_tracks": [
+        "록 스피릿 - 이민수"
+      ],
+      "exclusivity_rate": 33.33
+    }
+  },
+  "overlap_analysis": {
+    "total_unique_tracks": 4,
+    "service_track_counts": {
+      "melon": 3,
+      "bugs": 3
+    },
+    "overlap_matrix": {
+      "melon": {
+        "melon": 100.0,
+        "bugs": 50.0
+      },
+      "bugs": {
+        "melon": 50.0,
+        "bugs": 100.0
+      }
+    }
+  },
+  "temporal_patterns": {},
+  "generated_at": "2025-07-29T12:10:14.031095",
+  "visualizations": [
+    "C:\\Users\\Ryan.김준형\\Documents\\Projects\\music_merger_project\\chart_analysis\\visualizations\\track_count_comparison.png",
+    "C:\\Users\\Ryan.김준형\\Documents\\Projects\\music_merger_project\\chart_analysis\\visualizations\\genre_preferences_heatmap.png",
+    "C:\\Users\\Ryan.김준형\\Documents\\Projects\\music_merger_project\\chart_analysis\\visualizations\\artist_diversity_analysis.png",
+    "C:\\Users\\Ryan.김준형\\Documents\\Projects\\music_merger_project\\chart_analysis\\visualizations\\overlap_matrix.png"
+  ]
+}

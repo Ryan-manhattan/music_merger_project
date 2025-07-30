@@ -1,0 +1,50 @@
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+env/
+venv/
+ENV/
+VENV/
+.venv
+
+# Flask
+instance/
+.env
+.env.local
+.env.production
+
+# Google Cloud Service Account
+service-account-key.json
+*service-account*.json
+
+# Audio files
+app/uploads/*
+app/processed/*
+app/temp_downloads/*
+!app/uploads/.gitkeep
+!app/processed/.gitkeep
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+__MACOSX/
+
+# FFmpeg
+ffmpeg/
+*.zip
+
+# Temporary files
+*.tmp
+test_logs.json
+
+# Logs
+*.log
