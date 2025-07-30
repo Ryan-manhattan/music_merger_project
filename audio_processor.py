@@ -1,5 +1,5 @@
 """
-Music Merger - 오디오 처리 엔진 (FFmpeg 기반)
+Moodo - 오디오 처리 엔진 (FFmpeg 기반)
 """
 
 import os

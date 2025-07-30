@@ -1,9 +1,9 @@
-# Claude Instructions for Music Merger Project
+# Claude Instructions for Moodo Project
 
-This file contains instructions and context for Claude when working on the music merger project.
+This file contains instructions and context for Claude when working on the Moodo project.
 
 ## Project Overview
-A music merger application that combines and processes audio files.
+Moodo is an all-in-one music processing application that combines and processes audio files, creates videos, and analyzes music charts.
 
 ## Development Commands
 - `npm run dev` - Start development server

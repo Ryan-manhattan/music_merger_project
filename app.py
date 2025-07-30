@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Music Merger - 음악 파일 이어붙이기 웹 서비스
+Moodo - 음악 파일 처리 웹 서비스
 메인 Flask 애플리케이션 파일
 """
 
