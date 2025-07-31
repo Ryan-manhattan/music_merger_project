@@ -109,7 +109,8 @@ class StemSeparator:
     def load_model(self):
         """모델 로드"""
         if not DEMUCS_AVAILABLE:
-            raise ImportError("Demucs가 설치되지 않았습니다. pip install demucs를 실행하세요.")
+            self.console_log("[StemSeparator] Demucs 미설치 - 기본 분리 모드로 전환")
+            return False
         
         try:
             self.console_log(f"[StemSeparator] 모델 로딩 중: {self.model_name}")

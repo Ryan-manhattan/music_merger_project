@@ -121,9 +121,12 @@ class ChordExtractor:
             elif LIBROSA_AVAILABLE:
                 # Librosa 기반 폴백
                 self.console_log("[ChordExtractor] Librosa 기반 프로세서 사용")
+            else:
+                self.console_log("[ChordExtractor] 고급 라이브러리 미설치 - 기본 템플릿 매칭 사용")
                 
         except Exception as e:
             self.console_log(f"[ChordExtractor] 프로세서 초기화 오류: {str(e)}")
+            self.console_log("[ChordExtractor] 기본 템플릿 매칭으로 대체")
     
     def _initialize_chord_templates(self):
         """코드 템플릿 초기화"""

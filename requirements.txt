@@ -67,11 +67,13 @@ seaborn>=0.13.0
 # scikit-learn>=1.3.0
 
 # Audio Process Package Dependencies (New)
-# High-quality stem separation
-demucs>=4.0.0
+# Note: Some packages may fail on Render due to compilation requirements
 
-# Advanced chord recognition
-madmom>=0.16.1
+# High-quality stem separation (lightweight alternative)
+# demucs>=4.0.0  # Commented out - requires compilation on Render
+
+# Advanced chord recognition (problematic on Render)
+# madmom>=0.16.1  # Commented out - compilation issues on Render
 
 # Audio feature extraction
 librosa>=0.10.0
@@ -79,19 +81,17 @@ soundfile>=0.12.0
 
 # MIDI processing
 mido>=1.3.0
-pretty_midi>=0.2.10
+# pretty_midi>=0.2.10  # May cause issues on Render
 
-# AI-based audio transcription  
-basic-pitch>=1.0.0
+# AI-based audio transcription (heavy dependency)
+# basic-pitch>=1.0.0  # Commented out - requires TensorFlow
 
 # Scientific computing
 scipy>=1.11.0
-matplotlib>=3.10.0
-seaborn>=0.13.0
 
-# Music information retrieval
-mir_eval>=0.7.0
+# Music information retrieval (lightweight)
+# mir_eval>=0.7.0  # Commented out - may have compilation issues
 
-# PyTorch for AI models (CPU version)
-torch>=2.0.0
-torchaudio>=2.0.0
+# PyTorch (commented out for Render compatibility)
+# torch>=2.0.0  # Too heavy for Render free tier
+# torchaudio>=2.0.0
