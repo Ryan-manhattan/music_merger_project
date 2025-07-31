@@ -231,6 +231,10 @@ class FileManager {
     async extractFromUrl() {
         const urlInput = document.getElementById('urlInput');
         const url = urlInput?.value?.trim();
+        const extractBtn = document.getElementById('extractBtn');
+        const extractProgress = document.getElementById('extractProgress');
+        const progressFill = document.getElementById('extractProgressFill');
+        const progressText = document.getElementById('extractProgressText');
         
         if (!url) {
             alert('URL을 입력해주세요.');
@@ -238,6 +242,13 @@ class FileManager {
         }
 
         console.log(`[FileManager] URL에서 추출: ${url}`);
+        
+        // UI 상태 변경
+        extractBtn.disabled = true;
+        extractBtn.textContent = '🔄 추출 중...';
+        extractProgress.style.display = 'block';
+        progressFill.style.width = '0%';
+        progressText.textContent = '추출 준비 중...';
         
         try {
             // URL 추출 API 호출
@@ -251,9 +262,11 @@ class FileManager {
             
             if (data.success && data.job_id) {
                 console.log(`[FileManager] 추출 작업 시작: ${data.job_id}`);
+                progressText.textContent = '추출 작업 시작됨...';
+                progressFill.style.width = '10%';
                 
-                // 작업 상태 확인 대기
-                const result = await this.waitForExtractJob(data.job_id);
+                // 작업 상태 확인 대기 (진행상황 표시 포함)
+                const result = await this.waitForExtractJobWithProgress(data.job_id, progressFill, progressText);
                 console.log('[FileManager] 추출 결과:', result);
                 
                 const fileData = {
@@ -270,22 +283,39 @@ class FileManager {
                 console.log(`[FileManager] URL 추출 완료: ${fileId}`);
                 console.log('[FileManager] 현재 파일 목록:', this.state.getFiles());
                 
+                // 완료 상태 표시
+                progressFill.style.width = '100%';
+                progressText.textContent = '추출 완료!';
+                
                 this.updateFilesList();
                 this.showWorkSelector();
                 
                 // URL 입력 초기화
                 urlInput.value = '';
+                
+                // 2초 후 진행바 숨김
+                setTimeout(() => {
+                    extractProgress.style.display = 'none';
+                }, 2000);
+                
             } else {
                 throw new Error(data.error || 'URL 추출 실패');
             }
         } catch (error) {
             console.error('[FileManager] URL 추출 오류:', error);
             alert(`URL 추출 실패: ${error.message}`);
+            
+            // 오류 시 진행바 숨김
+            extractProgress.style.display = 'none';
+        } finally {
+            // 버튼 상태 복원
+            extractBtn.disabled = false;
+            extractBtn.textContent = '🔗 링크 추출';
         }
     }
 
-    async waitForExtractJob(jobId) {
-        console.log(`[FileManager] 추출 작업 상태 확인 시작: ${jobId}`);
+    async waitForExtractJobWithProgress(jobId, progressFill, progressText) {
+        console.log(`[FileManager] 추출 작업 상태 확인 시작 (진행상황 표시): ${jobId}`);
         
         const maxAttempts = 60; // 최대 5분 대기
         let attempts = 0;
@@ -296,6 +326,19 @@ class FileManager {
                 const status = await response.json();
                 
                 console.log(`[FileManager] 추출 작업 상태 [${attempts + 1}/${maxAttempts}]:`, status);
+                
+                // 진행상황 업데이트
+                if (status.progress !== undefined) {
+                    const progress = Math.max(10, Math.min(95, status.progress)); // 10-95% 범위
+                    progressFill.style.width = `${progress}%`;
+                    progressText.textContent = status.message || `진행 중... ${progress}%`;
+                } else {
+                    // 진행상황이 없으면 시간 기반으로 표시
+                    const baseProgress = 10 + (attempts * 2); // 10%부터 시작해서 점진적 증가
+                    const progress = Math.min(90, baseProgress);
+                    progressFill.style.width = `${progress}%`;
+                    progressText.textContent = `처리 중... (${attempts + 1}/${maxAttempts})`;
+                }
                 
                 if (status.status === 'completed') {
                     const fileInfo = status.result.file_info;
@@ -1119,12 +1162,29 @@ class WorkManager {
         
         console.log('[WorkManager] 최종 처리 완료, 파일명:', currentFilename);
         
+        // MP3 변환이 필요한 경우 다운로드 URL에 파라미터 추가
+        let downloadUrl = `/download/${currentFilename}`;
+        let displayFilename = currentFilename;
+        
+        if (outputFormat === 'mp3') {
+            downloadUrl += '?mp3=true';
+            // 표시 파일명을 MP3 확장자로 변경
+            const baseName = currentFilename.replace(/\.[^/.]+$/, "");
+            displayFilename = `${baseName}.mp3`;
+        } else if (outputFormat === 'original') {
+            downloadUrl += '?mp3=false';
+        }
+        
+        console.log('[WorkManager] 최종 다운로드 URL:', downloadUrl);
+        console.log('[WorkManager] 표시 파일명:', displayFilename);
+        
         return {
             success: true,
-            filename: currentFilename,
-            download_url: `/download/${currentFilename}`,
+            filename: displayFilename,  // 표시용 파일명 (MP3 확장자)
+            original_filename: currentFilename,  // 실제 서버 파일명
+            download_url: downloadUrl,
             format: outputFormat,
-            file_size: result.file_size || result.file_info?.file_size || 'N/A'
+            file_size: result.file_size || result.file_info?.size_mb || result.file_info?.file_size || 'N/A'
         };
     }
 
@@ -1545,7 +1605,7 @@ class WorkManager {
                     <h4>🎧 음원 추출 완료</h4>
                     <p><strong>파일명:</strong> ${result.filename}</p>
                     <p><strong>형식:</strong> ${result.format || 'N/A'}</p>
-                    <p><strong>크기:</strong> ${result.file_size || 'N/A'}</p>
+                    <p><strong>크기:</strong> ${result.file_size !== 'N/A' ? (typeof result.file_size === 'number' ? result.file_size + ' MB' : result.file_size) : 'N/A'}</p>
                 </div>
             `,
             video: `

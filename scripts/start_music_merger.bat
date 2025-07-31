@@ -5,8 +5,8 @@ title Music Merger Server
 echo 🎵 Music Merger 서버를 시작합니다...
 echo.
 
-:: 현재 스크립트 디렉토리로 이동
-cd /d "%~dp0"
+:: 프로젝트 루트 디렉토리로 이동
+cd /d "%~dp0\.."
 
 :: 가상환경 확인 및 활성화
 if exist "venv_win\Scripts\activate.bat" (
@@ -16,7 +16,7 @@ if exist "venv_win\Scripts\activate.bat" (
     echo 📦 가상환경 활성화 중...
     call venv\Scripts\activate.bat
 ) else (
-    echo ⚠️  가상환경을 찾을 수 없습니다. 시스템 Python을 사용합니다.
+    echo ⚠️ 가상환경을 찾을 수 없습니다. 시스템 Python을 사용합니다.
 )
 
 :: Python 버전 확인

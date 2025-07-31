@@ -1363,6 +1363,21 @@ body {
 .progress-text {
     text-align: center;
     color: var(--text-secondary);
+    font-size: 14px;
+    margin-bottom: var(--spacing-sm);
+}
+
+/* 링크 추출 진행바 */
+.extract-progress {
+    margin-top: var(--spacing-md);
+    padding: var(--spacing-md);
+    background-color: var(--surface);
+    border-radius: 8px;
+    border: 1px solid var(--border);
+}
+
+.progress-container {
+    width: 100%;
 }
 
 /* 결과 섹션 */

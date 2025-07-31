@@ -35,7 +35,17 @@
                         </div>
                         <div class="url-input-group">
                             <input type="url" id="urlInput" placeholder="https://youtube.com/watch?v=..." class="url-input">
-                            <button class="btn btn-secondary" onclick="extractFromUrl()">🔗 링크 추출</button>
+                            <button class="btn btn-secondary" id="extractBtn" onclick="extractFromUrl()">🔗 링크 추출</button>
+                        </div>
+                        
+                        <!-- 링크 추출 진행바 -->
+                        <div class="extract-progress" id="extractProgress" style="display: none;">
+                            <div class="progress-container">
+                                <div class="progress-bar">
+                                    <div class="progress-fill" id="extractProgressFill"></div>
+                                </div>
+                                <div class="progress-text" id="extractProgressText">진행 중...</div>
+                            </div>
                         </div>
                     </div>
                 </div>

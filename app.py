@@ -668,15 +668,23 @@ def upload_extract_file():
     file = request.files['file']
     
     if file and validate_audio_file(file.filename):
-        # 안전한 파일명 생성
-        filename = generate_safe_filename(file.filename)
+        # 파일 데이터 읽기 (중복 체크용)
+        file_data = file.read()
+        file.seek(0)  # 파일 포인터 초기화
+        
+        # 안전한 파일명 생성 (중복 체크 포함)
+        filename = generate_safe_filename(file.filename, file_data, app.config['UPLOAD_FOLDER'])
         filepath = os.path.join(app.config['UPLOAD_FOLDER'], filename)
         
         console.log(f"[Upload Extract File] 파일 저장 경로: {filepath}")
         
-        # 파일 저장
-        file.save(filepath)
-        console.log(f"[Upload Extract File] 파일 저장 완료: {filename}")
+        # 중복된 파일이면 저장하지 않고 기존 정보 반환
+        if os.path.exists(filepath):
+            console.log(f"[Upload Extract File] 중복 파일 발견, 기존 파일 사용: {filename}")
+        else:
+            # 파일 저장
+            file.save(filepath)
+            console.log(f"[Upload Extract File] 새 파일 저장 완료: {filename}")
         
         # 오디오 프로세서로 파일 정보 가져오기
         try:
@@ -2055,7 +2063,7 @@ def get_all_korea_charts():
         console.log(f"[API] 통합 차트 요청 - 서비스: {services}, 차트별 limit: {limit_per_chart}")
         
         # 개별 커넥터 초기화
-        from korea_music_charts_connector import KoreaMusicChartsConnector
+        from connectors.korea_music_charts_connector import KoreaMusicChartsConnector
         connector = KoreaMusicChartsConnector(console.log)
         
         # 서비스별 차트 수집

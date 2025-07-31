@@ -130,20 +130,49 @@ def cleanup_old_files(folder_path, hours=1):
         console_log(f"정리 중 오류: {e}")
 
 
-def generate_safe_filename(original_filename):
+def generate_safe_filename(original_filename, file_data=None, upload_folder=None):
     """
-    안전한 파일명 생성
+    안전한 파일명 생성 (중복 파일 체크 포함)
+    Args:
+        original_filename: 원본 파일명
+        file_data: 파일 데이터 (중복 체크용)
+        upload_folder: 업로드 폴더 경로
     """
     from werkzeug.utils import secure_filename
     import uuid
+    import hashlib
     
     # 기본 secure_filename 적용
     safe_name = secure_filename(original_filename)
-    
-    # 확장자 분리
     name, ext = os.path.splitext(safe_name)
     
-    # UUID 추가하여 중복 방지
+    # 파일 데이터가 있고 업로드 폴더가 지정된 경우 중복 체크
+    if file_data and upload_folder and os.path.exists(upload_folder):
+        try:
+            # 파일 해시 계산
+            file_hash = hashlib.md5(file_data).hexdigest()[:8]
+            console_log = lambda msg: print(f"[SafeFilename] {msg}")
+            console_log(f"파일 해시: {file_hash}")
+            
+            # 기존 파일들과 비교
+            for existing_file in os.listdir(upload_folder):
+                if existing_file.endswith(ext):
+                    existing_path = os.path.join(upload_folder, existing_file)
+                    try:
+                        with open(existing_path, 'rb') as f:
+                            existing_data = f.read()
+                            existing_hash = hashlib.md5(existing_data).hexdigest()[:8]
+                            
+                        if existing_hash == file_hash:
+                            console_log(f"중복 파일 발견: {existing_file}")
+                            return existing_file  # 기존 파일명 반환
+                    except:
+                        continue  # 파일 읽기 실패 시 무시
+                        
+        except Exception as e:
+            print(f"[SafeFilename] 중복 체크 오류: {e}")
+    
+    # 중복되지 않은 경우 새 파일명 생성
     unique_id = str(uuid.uuid4())[:8]
     timestamp = datetime.now().strftime('%Y%m%d_%H%M%S')
     

@@ -27,7 +27,7 @@ except ImportError as e:
 
 # 기존 멜론 커넥터 임포트
 try:
-    from melon_connector import MelonConnector
+    from .melon_connector import MelonConnector
     MELON_AVAILABLE = True
 except ImportError:
     MELON_AVAILABLE = False
