@@ -14,7 +14,7 @@ if os.name == 'nt':  # Windows에서만 실행
         if ffmpeg_path not in current_path:
             os.environ['PATH'] = ffmpeg_path + os.pathsep + current_path
 
-from flask import Flask, render_template, request, jsonify, send_file
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from datetime import datetime
@@ -74,6 +74,13 @@ try:
 except ImportError as e:
     print(f"ChartAnalyzer 로드 실패: {e}")
     chart_analyzer_available = False
+
+try:
+    from utils.supabase_client import SupabaseClient
+    supabase_available = True
+except ImportError as e:
+    print(f"SupabaseClient 로드 실패: {e}")
+    supabase_available = False
 
 # Flask 앱 초기화 (Windows 경로 대응)
 app = Flask(__name__, 
@@ -185,8 +192,26 @@ def allowed_image_file(filename):
 
 @app.route('/')
 def index():
-    """메인 페이지"""
-    print("[Route] / - 메인 페이지 요청")
+    """메인 페이지 - 커뮤니티"""
+    console.log("[Route] / - 커뮤니티 메인 페이지 요청")
+    try:
+        if supabase_available:
+            supabase = SupabaseClient()
+            posts = supabase.get_posts(limit=50)
+        else:
+            posts = []
+    except Exception as e:
+        print(f"[ERROR] 커뮤니티 게시글 조회 실패: {e}")
+        posts = []
+    
+    return render_template('community.html', posts=posts)
+
+
+@app.route('/studio')
+@app.route('/music-studio')
+def music_studio():
+    """음악 스튜디오 페이지"""
+    console.log("[Route] /studio - 음악 스튜디오 페이지 요청")
     return render_template('index.html')
 
 
@@ -204,6 +229,114 @@ def music_video():
     """영상 스튜디오 페이지"""
     console.log("[Route] /music-video | /video-studio - 영상 스튜디오 페이지 요청")
     return render_template('music_video.html')
+
+
+@app.route('/community')
+def community():
+    """커뮤니티 페이지 (리다이렉트)"""
+    return redirect(url_for('index'))
+
+
+@app.route('/community/post/<post_id>')
+def community_post(post_id):
+    """커뮤니티 게시글 상세 페이지"""
+    console.log(f"[Route] /community/post/{post_id} - 게시글 상세 페이지 요청")
+    try:
+        if supabase_available:
+            supabase = SupabaseClient()
+            post = supabase.get_post(post_id)
+        else:
+            post = None
+    except Exception as e:
+        print(f"[ERROR] 게시글 조회 실패: {e}")
+        post = None
+    
+    if not post:
+        return render_template('community.html', error="게시글을 찾을 수 없습니다."), 404
+    
+    return render_template('community_post.html', post=post)
+
+
+@app.route('/community/write')
+def community_write():
+    """글쓰기 페이지"""
+    console.log("[Route] /community/write - 글쓰기 페이지 요청")
+    return render_template('community_write.html')
+
+
+@app.route('/api/community/posts', methods=['POST'])
+def create_post():
+    """게시글 생성 API"""
+    try:
+        data = request.get_json()
+        title = data.get('title', '').strip()
+        content = data.get('content', '').strip()
+        author = data.get('author', 'Anonymous').strip() or 'Anonymous'
+        
+        if not title or not content:
+            return jsonify({'success': False, 'error': '제목과 내용을 입력해주세요.'}), 400
+        
+        if supabase_available:
+            supabase = SupabaseClient()
+            post_id = supabase.create_post(title, content, author)
+            
+            if post_id:
+                return jsonify({'success': True, 'post_id': post_id}), 201
+            else:
+                return jsonify({'success': False, 'error': '게시글 생성에 실패했습니다.'}), 500
+        else:
+            return jsonify({'success': False, 'error': 'Supabase 연결이 불가능합니다.'}), 503
+            
+    except Exception as e:
+        print(f"[ERROR] 게시글 생성 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/community/posts/<post_id>', methods=['PUT'])
+def update_post_api(post_id):
+    """게시글 수정 API"""
+    try:
+        data = request.get_json()
+        title = data.get('title', '').strip()
+        content = data.get('content', '').strip()
+        
+        if not title or not content:
+            return jsonify({'success': False, 'error': '제목과 내용을 입력해주세요.'}), 400
+        
+        if supabase_available:
+            supabase = SupabaseClient()
+            success = supabase.update_post(post_id, title, content)
+            
+            if success:
+                return jsonify({'success': True}), 200
+            else:
+                return jsonify({'success': False, 'error': '게시글 수정에 실패했습니다.'}), 500
+        else:
+            return jsonify({'success': False, 'error': 'Supabase 연결이 불가능합니다.'}), 503
+            
+    except Exception as e:
+        print(f"[ERROR] 게시글 수정 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/community/posts/<post_id>', methods=['DELETE'])
+def delete_post_api(post_id):
+    """게시글 삭제 API"""
+    try:
+        if supabase_available:
+            supabase = SupabaseClient()
+            success = supabase.delete_post(post_id)
+            
+            if success:
+                return jsonify({'success': True}), 200
+            else:
+                return jsonify({'success': False, 'error': '게시글 삭제에 실패했습니다.'}), 500
+        else:
+            return jsonify({'success': False, 'error': 'Supabase 연결이 불가능합니다.'}), 503
+            
+    except Exception as e:
+        print(f"[ERROR] 게시글 삭제 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 

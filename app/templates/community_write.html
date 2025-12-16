@@ -1,0 +1,273 @@
+{% extends "base.html" %}
+
+{% block title %}이야기 남기기 - Moodo{% endblock %}
+
+{% block extra_css %}
+<style>
+    .write-container {
+        max-width: 36rem;
+        margin: 0 auto;
+        padding: 3rem 1rem;
+        position: relative;
+        z-index: 10;
+    }
+    
+    .write-header {
+        text-align: center;
+        margin-bottom: 2rem;
+    }
+    
+    .write-header h2 {
+        font-size: 2rem;
+        font-weight: bold;
+        color: rgba(241, 245, 249, 0.9);
+        margin-bottom: 0.5rem;
+    }
+    
+    .write-form {
+        background: rgba(30, 41, 59, 0.4);
+        backdrop-filter: blur(12px);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        border-radius: 1rem;
+        padding: 2rem;
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    
+    .form-group {
+        margin-bottom: 1.5rem;
+    }
+    
+    .form-group label {
+        display: block;
+        font-weight: 600;
+        color: rgba(241, 245, 249, 0.9);
+        margin-bottom: 0.5rem;
+        font-size: 1rem;
+    }
+    
+    .form-group input,
+    .form-group textarea {
+        width: 100%;
+        padding: 0.75rem;
+        background: rgba(15, 23, 42, 0.3);
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-family: inherit;
+        color: rgba(241, 245, 249, 0.9);
+        transition: all 0.3s ease;
+    }
+    
+    .form-group input:focus,
+    .form-group textarea:focus {
+        outline: none;
+        border-color: rgba(99, 102, 241, 0.5);
+        background: rgba(15, 23, 42, 0.5);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+    
+    .form-group input::placeholder,
+    .form-group textarea::placeholder {
+        color: rgba(148, 163, 184, 0.5);
+    }
+    
+    .form-group input {
+        height: 3rem;
+    }
+    
+    .form-group textarea {
+        min-height: 12rem;
+        resize: vertical;
+    }
+    
+    .form-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+        margin-top: 2rem;
+    }
+    
+    .btn {
+        padding: 0.75rem 1.5rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .btn-primary {
+        background: rgba(99, 102, 241, 0.8);
+        backdrop-filter: blur(10px);
+        color: white;
+        border: 1px solid rgba(255, 255, 255, 0.1);
+        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+    }
+    
+    .btn-primary:hover {
+        background: rgba(99, 102, 241, 1);
+        transform: translateY(-2px);
+        box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.4);
+    }
+    
+    .btn-secondary {
+        background: rgba(30, 41, 59, 0.4);
+        backdrop-filter: blur(10px);
+        color: rgba(241, 245, 249, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-secondary:hover {
+        background: rgba(30, 41, 59, 0.6);
+        color: rgba(241, 245, 249, 1);
+    }
+    
+    .btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    .message {
+        padding: 0.75rem 1rem;
+        border-radius: 0.5rem;
+        margin-bottom: 1.25rem;
+        backdrop-filter: blur(10px);
+    }
+    
+    .message-success {
+        background: rgba(34, 197, 94, 0.2);
+        color: rgba(187, 247, 208, 0.9);
+        border: 1px solid rgba(34, 197, 94, 0.3);
+    }
+    
+    .message-error {
+        background: rgba(220, 38, 38, 0.2);
+        color: rgba(254, 226, 226, 0.9);
+        border: 1px solid rgba(220, 38, 38, 0.3);
+    }
+    
+    .char-count {
+        text-align: right;
+        color: rgba(148, 163, 184, 0.6);
+        font-size: 0.875rem;
+        margin-top: 0.25rem;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="write-container">
+    <div class="write-header">
+        <h2>이야기 남기기</h2>
+    </div>
+    
+    <div class="write-form">
+        <div id="message-container"></div>
+        
+        <form id="write-form">
+            <div class="form-group">
+                <label for="author">닉네임</label>
+                <input type="text" id="author" name="author" placeholder="이름을 입력하세요 (선택사항)" maxlength="50">
+            </div>
+            
+            <div class="form-group">
+                <label for="title">제목 *</label>
+                <input type="text" id="title" name="title" placeholder="제목을 입력하세요" required maxlength="200">
+                <div class="char-count"><span id="title-count">0</span>/200</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="content">내용 *</label>
+                <textarea id="content" name="content" placeholder="이 노래를 들으며 떠오르는 생각을 적어주세요..." required maxlength="10000"></textarea>
+                <div class="char-count"><span id="content-count">0</span>/10000</div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('index') }}'">취소</button>
+                <button type="submit" class="btn btn-primary" id="submit-btn">기록하기</button>
+            </div>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // 글자 수 카운터
+    const titleInput = document.getElementById('title');
+    const contentInput = document.getElementById('content');
+    const titleCount = document.getElementById('title-count');
+    const contentCount = document.getElementById('content-count');
+    
+    titleInput.addEventListener('input', () => {
+        titleCount.textContent = titleInput.value.length;
+    });
+    
+    contentInput.addEventListener('input', () => {
+        contentCount.textContent = contentInput.value.length;
+    });
+    
+    // 폼 제출
+    document.getElementById('write-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        const submitBtn = document.getElementById('submit-btn');
+        const messageContainer = document.getElementById('message-container');
+        
+        const title = titleInput.value.trim();
+        const content = contentInput.value.trim();
+        const author = document.getElementById('author').value.trim() || 'Anonymous';
+        
+        if (!title || !content) {
+            showMessage('제목과 내용을 입력해주세요.', 'error');
+            return;
+        }
+        
+        submitBtn.disabled = true;
+        submitBtn.textContent = '작성 중...';
+        
+        try {
+            const response = await fetch('/api/community/posts', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    title,
+                    content,
+                    author
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                showMessage('게시글이 작성되었습니다!', 'success');
+                setTimeout(() => {
+                    window.location.href = `/community/post/${data.post_id}`;
+                }, 1000);
+            } else {
+                showMessage(data.error || '게시글 작성에 실패했습니다.', 'error');
+                submitBtn.disabled = false;
+                submitBtn.textContent = '기록하기';
+            }
+        } catch (error) {
+            showMessage('오류가 발생했습니다: ' + error.message, 'error');
+            submitBtn.disabled = false;
+            submitBtn.textContent = '기록하기';
+        }
+    });
+    
+    function showMessage(message, type) {
+        const messageContainer = document.getElementById('message-container');
+        messageContainer.innerHTML = `<div class="message message-${type}">${message}</div>`;
+        
+        if (type === 'success') {
+            setTimeout(() => {
+                messageContainer.innerHTML = '';
+            }, 3000);
+        }
+    }
+</script>
+{% endblock %}

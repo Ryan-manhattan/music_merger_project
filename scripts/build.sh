@@ -21,6 +21,6 @@ pip install --only-binary=all --no-cache-dir scikit-learn>=1.3.2,<1.6.0
 
 # 나머지 requirements 설치
 echo "📋 나머지 패키지 설치"
-pip install --no-cache-dir -r config/requirements.txt
+pip install --no-cache-dir -r requirements.txt
 
 echo "✅ 빌드 완료!"
