@@ -192,121 +192,105 @@
         51%, 100% { opacity: 0; }
     }
     
-    /* SoundCloud 플레이어 스타일 */
+    /* SoundCloud 플레이어 스타일 (숨김) */
     .soundcloud-player-section {
-        background: black;
-        border: 4px solid white;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
+        background: rgba(0, 0, 0, 0.6);
+        border: 2px solid rgba(255, 255, 255, 0.2);
+        padding: 0.75rem 1rem;
+        border-radius: 8px;
+        backdrop-filter: blur(10px);
     }
     
-    .soundcloud-input-container h3 {
-        font-family: 'Nanum Gothic Coding', monospace;
-        color: white;
-        margin-bottom: 1rem;
-        font-size: 1.25rem;
-        font-weight: 700;
+    .soundcloud-player-section:hover {
+        opacity: 0.9 !important;
+        border-color: rgba(255, 255, 255, 0.4);
     }
     
-    .soundcloud-input-group {
+    .soundcloud-input-container {
         display: flex;
-        gap: 0.75rem;
         align-items: center;
+        gap: 0.75rem;
     }
     
     .soundcloud-input {
-        flex: 1;
-        padding: 0.75rem 1rem;
-        background: #1a1a1a;
-        border: 2px solid #333;
+        display: none;
+    }
+    
+    .soundcloud-controls {
+        display: flex;
+        gap: 0.5rem;
+        align-items: center;
+    }
+    
+    .soundcloud-play-btn,
+    .soundcloud-stop-btn {
+        background: rgba(255, 255, 255, 0.15);
         color: white;
-        font-size: 1rem;
+        border: 2px solid rgba(255, 255, 255, 0.3);
         font-family: 'Nanum Gothic Coding', monospace;
-        outline: none;
-        transition: all 0.2s ease;
-    }
-    
-    .soundcloud-input:focus {
-        border-color: white;
-        background: black;
-    }
-    
-    .soundcloud-input::placeholder {
-        color: #666;
-    }
-    
-    .soundcloud-play-btn {
-        padding: 0.75rem 1.5rem;
-        background: white;
-        color: black;
-        border: 2px solid white;
-        font-family: 'Nanum Gothic Coding', monospace;
-        font-size: 1rem;
         cursor: pointer;
-        transition: all 0.2s ease;
-        box-shadow: 4px 4px 0 0 #666;
+        transition: all 0.3s ease;
         font-weight: 700;
-        white-space: nowrap;
+        padding: 0.625rem 1.25rem;
+        font-size: 1rem;
+        border-radius: 4px;
+        min-width: 50px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
     }
     
-    .soundcloud-play-btn:hover {
-        transform: translateY(2px);
-        box-shadow: 2px 2px 0 0 #666;
+    .soundcloud-play-btn:hover,
+    .soundcloud-stop-btn:hover {
+        background: rgba(255, 255, 255, 0.25);
+        border-color: rgba(255, 255, 255, 0.5);
+        transform: translateY(-1px);
+        box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
+    }
+    
+    .soundcloud-play-btn:active,
+    .soundcloud-stop-btn:active {
+        transform: translateY(0);
+        box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
     }
     
     .soundcloud-info {
-        background: #1a1a1a;
-        border: 2px solid #333;
-        padding: 1rem;
-        font-family: 'Nanum Gothic Coding', monospace;
-        color: #ccc;
-    }
-    
-    .soundcloud-info h4 {
-        color: white;
-        margin: 0 0 0.5rem 0;
-        font-size: 1.125rem;
-    }
-    
-    .soundcloud-info p {
-        margin: 0.25rem 0;
-        color: #999;
-        font-size: 0.875rem;
+        display: none;
     }
     
     #soundcloudPlayer {
-        background: #1a1a1a;
-        border: 2px solid white;
-        border-radius: 0;
+        display: none;
     }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script>
+    let currentPlayer = null;
+    
     async function playSoundCloud() {
         const urlInput = document.getElementById('soundcloudUrlInput');
-        const playerContainer = document.getElementById('soundcloudPlayerContainer');
         const player = document.getElementById('soundcloudPlayer');
-        const info = document.getElementById('soundcloudInfo');
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        
+        // 이미 재생 중이면 정지
+        if (currentPlayer && !currentPlayer.paused) {
+            stopSoundCloud();
+            return Promise.resolve();
+        }
         
         const url = urlInput.value.trim();
         
         if (!url) {
-            alert('Please enter a SoundCloud URL');
-            return;
+            return Promise.reject('No URL');
         }
         
         // SoundCloud URL인지 확인
         if (!url.includes('soundcloud.com')) {
-            alert('Please enter a valid SoundCloud URL');
-            return;
+            return Promise.reject('Invalid URL');
         }
-        
-        // 로딩 표시
-        info.innerHTML = '<p>Loading stream URL...</p>';
-        playerContainer.style.display = 'block';
-        player.style.display = 'none';
         
         try {
             const response = await fetch('/api/get_stream_url', {
@@ -324,30 +308,47 @@
             if (data.success) {
                 // 플레이어에 스트리밍 URL 설정
                 player.src = data.stream_url;
-                player.style.display = 'block';
+                currentPlayer = player;
                 
-                // 정보 표시
-                const duration = data.duration ? formatDuration(data.duration) : 'Unknown';
-                info.innerHTML = `
-                    <h4>${data.title || 'Unknown Title'}</h4>
-                    <p>👤 Artist: ${data.uploader || 'Unknown'}</p>
-                    <p>⏱️ Duration: ${duration}</p>
-                    <p>🎵 Format: ${data.format || 'Unknown'}</p>
-                `;
-                
-                // 자동 재생
-                player.play().catch(e => {
+                // 재생 시도
+                return player.play().then(() => {
+                    playBtn.style.display = 'none';
+                    stopBtn.style.display = 'block';
+                    return Promise.resolve();
+                }).catch(e => {
                     console.log('Auto-play prevented:', e);
-                    // 자동 재생이 막히면 사용자에게 알림
-                    info.innerHTML += '<p style="color: #999; margin-top: 0.5rem; font-size: 0.75rem;">Click play button to start</p>';
+                    // 사용자 상호작용 후 재생 시도
+                    document.addEventListener('click', function tryPlayOnce() {
+                        player.play().then(() => {
+                            playBtn.style.display = 'none';
+                            stopBtn.style.display = 'block';
+                        });
+                        document.removeEventListener('click', tryPlayOnce);
+                    }, { once: true });
+                    return Promise.reject(e);
                 });
             } else {
-                info.innerHTML = `<p style="color: #dc2626;">Error: ${data.error || 'Failed to get stream URL'}</p>`;
+                return Promise.reject(data.error || 'Failed to get stream URL');
             }
         } catch (error) {
             console.error('Error:', error);
-            info.innerHTML = `<p style="color: #dc2626;">Error: ${error.message}</p>`;
+            return Promise.reject(error);
         }
+    }
+    
+    function stopSoundCloud() {
+        const player = document.getElementById('soundcloudPlayer');
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        
+        if (player) {
+            player.pause();
+            player.currentTime = 0;
+        }
+        
+        playBtn.style.display = 'block';
+        stopBtn.style.display = 'none';
+        currentPlayer = null;
     }
     
     function formatDuration(seconds) {
@@ -355,13 +356,6 @@
         const secs = Math.floor(seconds % 60);
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     }
-    
-    // Enter 키로 재생
-    document.getElementById('soundcloudUrlInput').addEventListener('keypress', function(e) {
-        if (e.key === 'Enter') {
-            playSoundCloud();
-        }
-    });
     
     // 페이지 로드 시 자동 재생
     document.addEventListener('DOMContentLoaded', function() {
@@ -374,10 +368,46 @@
             urlInput.value = defaultUrl;
         }
         
-        // 자동으로 재생 시작
-        setTimeout(() => {
-            playSoundCloud();
-        }, 500); // 페이지 로드 후 0.5초 후 재생
+        // 자동으로 재생 시작 (여러 번 시도)
+        let retryCount = 0;
+        const maxRetries = 5;
+        
+        function tryAutoPlay() {
+            setTimeout(() => {
+                playSoundCloud().then(() => {
+                    console.log('Auto-play started');
+                }).catch(() => {
+                    retryCount++;
+                    if (retryCount < maxRetries) {
+                        tryAutoPlay();
+                    }
+                });
+            }, 500 + (retryCount * 500));
+        }
+        
+        tryAutoPlay();
+        
+        // 플레이어 이벤트 리스너
+        const player = document.getElementById('soundcloudPlayer');
+        const playBtn = document.getElementById('playBtn');
+        const stopBtn = document.getElementById('stopBtn');
+        
+        if (player) {
+            player.addEventListener('play', () => {
+                playBtn.style.display = 'none';
+                stopBtn.style.display = 'block';
+            });
+            
+            player.addEventListener('pause', () => {
+                playBtn.style.display = 'block';
+                stopBtn.style.display = 'none';
+            });
+            
+            player.addEventListener('ended', () => {
+                playBtn.style.display = 'block';
+                stopBtn.style.display = 'none';
+            });
+        }
     });
 </script>
 {% endblock %}
@@ -396,17 +426,17 @@
         </a>
     </div>
     
-    <!-- SoundCloud 플레이어 섹션 -->
-    <div class="soundcloud-player-section" style="margin-bottom: 2rem;">
+    <!-- SoundCloud 플레이어 섹션 (숨김) -->
+    <div class="soundcloud-player-section" style="position: fixed; bottom: 20px; right: 20px; z-index: 1000; opacity: 0.25; transition: opacity 0.3s ease;">
         <div class="soundcloud-input-container">
-            <h3 style="font-family: 'Nanum Gothic Coding', monospace; color: white; margin-bottom: 1rem; font-size: 1.25rem;">🎵 PLAY MUSIC</h3>
-            <div class="soundcloud-input-group">
-                <input type="url" id="soundcloudUrlInput" class="soundcloud-input" placeholder="Enter SoundCloud URL (e.g., https://soundcloud.com/artist/track)">
-                <button class="soundcloud-play-btn" onclick="playSoundCloud()">▶️ PLAY</button>
+            <input type="url" id="soundcloudUrlInput" class="soundcloud-input" style="display: none;" placeholder="Enter SoundCloud URL">
+            <div class="soundcloud-controls">
+                <button class="soundcloud-play-btn" id="playBtn" onclick="playSoundCloud()">▶</button>
+                <button class="soundcloud-stop-btn" id="stopBtn" onclick="stopSoundCloud()" style="display: none;">⏸</button>
             </div>
-            <div id="soundcloudPlayerContainer" style="display: none; margin-top: 1.5rem;">
+            <div id="soundcloudPlayerContainer" style="display: none;">
                 <div class="soundcloud-info" id="soundcloudInfo"></div>
-                <audio id="soundcloudPlayer" controls style="width: 100%; margin-top: 1rem;"></audio>
+                <audio id="soundcloudPlayer" style="display: none;"></audio>
             </div>
         </div>
     </div>
