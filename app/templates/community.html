@@ -10,6 +10,8 @@
         padding: 2rem 1rem 5rem;
         position: relative;
         z-index: 10;
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .community-header {
@@ -17,6 +19,9 @@
         margin-bottom: 3rem;
         border-bottom: 2px solid white;
         padding-bottom: 2rem;
+        padding-left: 0.5rem;
+        padding-right: 0.5rem;
+        box-sizing: border-box;
     }
     
     .community-header h2 {
@@ -26,6 +31,9 @@
         margin-bottom: 0.5rem;
         letter-spacing: 0.1em;
         font-weight: 700;
+        word-break: break-word;
+        padding-left: 60px; /* 모바일에서 메뉴 버튼 공간 확보 */
+        box-sizing: border-box;
     }
     
     .community-header h2::after {
@@ -75,6 +83,8 @@
         cursor: pointer;
         transition: all 0.3s ease;
         box-shadow: 8px 8px 0 0 rgba(255,255,255,0.2);
+        width: 100%;
+        box-sizing: border-box;
     }
     
     .post-card:hover {
@@ -190,6 +200,66 @@
     @keyframes blink {
         0%, 50% { opacity: 1; }
         51%, 100% { opacity: 0; }
+    }
+    
+    /* 모바일 최적화 */
+    @media (max-width: 768px) {
+        .community-container {
+            padding: 1rem 0.75rem 3rem;
+            max-width: 100%;
+        }
+        
+        .community-header {
+            margin-bottom: 2rem;
+            padding-bottom: 1.5rem;
+            padding-left: 0.75rem;
+            padding-right: 0.75rem;
+        }
+        
+        .community-header h2 {
+            font-size: 1.75rem;
+            padding-left: 50px;
+            padding-right: 0.5rem;
+        }
+        
+        .community-header p {
+            font-size: 1.125rem;
+        }
+        
+        .write-btn {
+            padding: 0.625rem 1.25rem;
+            font-size: 1rem;
+        }
+        
+        .post-card {
+            padding: 1rem;
+            border-width: 3px;
+        }
+        
+        .post-title {
+            font-size: 1.25rem;
+        }
+        
+        .post-content {
+            font-size: 1rem;
+            margin-bottom: 1rem;
+        }
+        
+        .posts-list {
+            gap: 2rem;
+            padding: 0 0.5rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .community-header h2 {
+            font-size: 1.5rem;
+            padding-left: 45px;
+        }
+        
+        .post-card {
+            padding: 0.875rem;
+        }
     }
 </style>
 {% endblock %}
