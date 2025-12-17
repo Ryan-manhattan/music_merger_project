@@ -321,8 +321,20 @@ def update_post_api(post_id):
 
 @app.route('/api/community/posts/<post_id>', methods=['DELETE'])
 def delete_post_api(post_id):
-    """게시글 삭제 API"""
+    """게시글 삭제 API (관리자만 가능)"""
     try:
+        # 관리자 비밀번호 확인
+        data = request.get_json() or {}
+        admin_password = data.get('password', '')
+        required_password = os.environ.get('ADMIN_PASSWORD', '')
+        
+        if not required_password:
+            return jsonify({'success': False, 'error': '관리자 비밀번호가 설정되지 않았습니다.'}), 500
+        
+        if admin_password != required_password:
+            return jsonify({'success': False, 'error': '관리자 비밀번호가 일치하지 않습니다.'}), 403
+        
+        # 비밀번호 확인 후 삭제 진행
         if supabase_available:
             supabase = SupabaseClient()
             success = supabase.delete_post(post_id)

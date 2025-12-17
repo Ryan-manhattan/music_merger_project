@@ -251,19 +251,20 @@
                         <span>글쓰기</span>
                     </a>
                 </li>
-                <li class="sidebar-menu-item">
+                <!-- 스튜디오 메뉴 숨김 처리 (기능은 유지) -->
+                <li class="sidebar-menu-item" style="display: none;">
                     <a href="{{ url_for('music_studio') }}" class="sidebar-menu-link {% if request.endpoint == 'music_studio' %}active{% endif %}">
                         <span class="sidebar-menu-icon">🎵</span>
                         <span>음악 스튜디오</span>
                     </a>
                 </li>
-                <li class="sidebar-menu-item">
+                <li class="sidebar-menu-item" style="display: none;">
                     <a href="{{ url_for('music_video') }}" class="sidebar-menu-link {% if request.endpoint == 'music_video' %}active{% endif %}">
                         <span class="sidebar-menu-icon">🎬</span>
                         <span>영상 스튜디오</span>
                     </a>
                 </li>
-                <li class="sidebar-menu-item">
+                <li class="sidebar-menu-item" style="display: none;">
                     <a href="{{ url_for('music_analysis') }}" class="sidebar-menu-link {% if request.endpoint == 'music_analysis' %}active{% endif %}">
                         <span class="sidebar-menu-icon">📊</span>
                         <span>분석 스튜디오</span>

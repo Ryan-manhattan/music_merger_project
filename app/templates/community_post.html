@@ -148,6 +148,129 @@
         color: rgba(254, 226, 226, 0.9);
         border: 1px solid rgba(220, 38, 38, 0.3);
     }
+    
+    /* 비밀번호 입력 모달 */
+    .modal-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: rgba(0, 0, 0, 0.7);
+        backdrop-filter: blur(4px);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        z-index: 10000;
+        animation: fadeIn 0.3s ease;
+    }
+    
+    .modal-content {
+        background: rgba(30, 41, 59, 0.95);
+        backdrop-filter: blur(20px);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 1rem;
+        padding: 2rem;
+        max-width: 400px;
+        width: 90%;
+        box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+        animation: slideUp 0.3s ease;
+    }
+    
+    .modal-header {
+        margin-bottom: 1.5rem;
+    }
+    
+    .modal-header h3 {
+        color: rgba(241, 245, 249, 0.9);
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+    
+    .modal-body {
+        margin-bottom: 1.5rem;
+    }
+    
+    .modal-body p {
+        color: rgba(148, 163, 184, 0.9);
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+    }
+    
+    .modal-input {
+        width: 100%;
+        padding: 0.75rem 1rem;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(255, 255, 255, 0.2);
+        border-radius: 0.5rem;
+        color: rgba(241, 245, 249, 0.9);
+        font-size: 1rem;
+        transition: all 0.3s ease;
+        outline: none;
+    }
+    
+    .modal-input:focus {
+        border-color: rgba(253, 224, 71, 0.5);
+        box-shadow: 0 0 0 3px rgba(253, 224, 71, 0.1);
+    }
+    
+    .modal-actions {
+        display: flex;
+        gap: 0.75rem;
+        justify-content: flex-end;
+    }
+    
+    .btn-modal {
+        padding: 0.625rem 1.25rem;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 0.875rem;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        font-weight: 500;
+    }
+    
+    .btn-modal-cancel {
+        background: rgba(30, 41, 59, 0.4);
+        color: rgba(241, 245, 249, 0.8);
+        border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    .btn-modal-cancel:hover {
+        background: rgba(30, 41, 59, 0.6);
+    }
+    
+    .btn-modal-submit {
+        background: rgba(220, 38, 38, 0.6);
+        color: white;
+        border: 1px solid rgba(220, 38, 38, 0.3);
+    }
+    
+    .btn-modal-submit:hover {
+        background: rgba(220, 38, 38, 0.8);
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(220, 38, 69, 0.4);
+    }
+    
+    @keyframes fadeIn {
+        from { opacity: 0; }
+        to { opacity: 1; }
+    }
+    
+    @keyframes slideUp {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
 </style>
 {% endblock %}
 
@@ -174,7 +297,24 @@
         
         <div class="post-actions">
             <a href="{{ url_for('index') }}" class="btn btn-secondary">목록</a>
-            <button class="btn btn-danger" onclick="deletePost('{{ post.id }}')">삭제</button>
+            <button class="btn btn-danger" onclick="showDeleteModal('{{ post.id }}')">삭제</button>
+        </div>
+    </div>
+</div>
+
+<!-- 비밀번호 입력 모달 -->
+<div id="deleteModal" class="modal-overlay" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>🔒 관리자 인증</h3>
+        </div>
+        <div class="modal-body">
+            <p>게시글을 삭제하려면 관리자 비밀번호를 입력하세요.</p>
+            <input type="password" id="adminPassword" class="modal-input" placeholder="비밀번호 입력" autofocus>
+        </div>
+        <div class="modal-actions">
+            <button class="btn-modal btn-modal-cancel" onclick="closeDeleteModal()">취소</button>
+            <button class="btn-modal btn-modal-submit" onclick="confirmDelete()">삭제</button>
         </div>
     </div>
 </div>
@@ -182,17 +322,60 @@
 
 {% block extra_js %}
 <script>
-    async function deletePost(postId) {
+    let currentPostId = null;
+    
+    function showDeleteModal(postId) {
+        currentPostId = postId;
+        const modal = document.getElementById('deleteModal');
+        const input = document.getElementById('adminPassword');
+        modal.style.display = 'flex';
+        input.value = '';
+        input.focus();
+        
+        // Enter 키로 제출
+        input.addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                confirmDelete();
+            }
+        });
+        
+        // ESC 키로 닫기
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeDeleteModal();
+            }
+        });
+    }
+    
+    function closeDeleteModal() {
+        const modal = document.getElementById('deleteModal');
+        modal.style.display = 'none';
+        currentPostId = null;
+    }
+    
+    async function confirmDelete() {
+        const password = document.getElementById('adminPassword').value;
+        
+        if (!password) {
+            showMessage('비밀번호를 입력해주세요.', 'error');
+            return;
+        }
+        
         if (!confirm('정말 이 게시글을 삭제하시겠습니까?')) {
             return;
         }
         
+        closeDeleteModal();
+        
         try {
-            const response = await fetch(`/api/community/posts/${postId}`, {
+            const response = await fetch(`/api/community/posts/${currentPostId}`, {
                 method: 'DELETE',
                 headers: {
                     'Content-Type': 'application/json',
-                }
+                },
+                body: JSON.stringify({
+                    password: password
+                })
             });
             
             const data = await response.json();
@@ -220,5 +403,12 @@
             }, 3000);
         }
     }
+    
+    // 모달 외부 클릭 시 닫기
+    document.getElementById('deleteModal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeDeleteModal();
+        }
+    });
 </script>
 {% endblock %}
