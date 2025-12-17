@@ -317,14 +317,18 @@
                     return Promise.resolve();
                 }).catch(e => {
                     console.log('Auto-play prevented:', e);
-                    // 사용자 상호작용 후 재생 시도
-                    document.addEventListener('click', function tryPlayOnce() {
+                    // 사용자 상호작용 후 재생 시도 (여러 이벤트)
+                    const tryPlayOnce = () => {
                         player.play().then(() => {
                             playBtn.style.display = 'none';
                             stopBtn.style.display = 'block';
-                        });
-                        document.removeEventListener('click', tryPlayOnce);
-                    }, { once: true });
+                        }).catch(() => {});
+                    };
+                    
+                    ['click', 'touchstart', 'keydown'].forEach(eventType => {
+                        document.addEventListener(eventType, tryPlayOnce, { once: true });
+                    });
+                    
                     return Promise.reject(e);
                 });
             } else {
@@ -368,25 +372,6 @@
             urlInput.value = defaultUrl;
         }
         
-        // 자동으로 재생 시작 (여러 번 시도)
-        let retryCount = 0;
-        const maxRetries = 5;
-        
-        function tryAutoPlay() {
-            setTimeout(() => {
-                playSoundCloud().then(() => {
-                    console.log('Auto-play started');
-                }).catch(() => {
-                    retryCount++;
-                    if (retryCount < maxRetries) {
-                        tryAutoPlay();
-                    }
-                });
-            }, 500 + (retryCount * 500));
-        }
-        
-        tryAutoPlay();
-        
         // 플레이어 이벤트 리스너
         const player = document.getElementById('soundcloudPlayer');
         const playBtn = document.getElementById('playBtn');
@@ -408,6 +393,67 @@
                 stopBtn.style.display = 'none';
             });
         }
+        
+        // 자동 재생 시도 (더 적극적으로)
+        let hasStarted = false;
+        
+        // 즉시 시도
+        setTimeout(() => {
+            if (!hasStarted) {
+                playSoundCloud().then(() => {
+                    hasStarted = true;
+                    console.log('Auto-play started');
+                }).catch(() => {
+                    console.log('First auto-play attempt failed');
+                });
+            }
+        }, 300);
+        
+        // 사용자 상호작용 감지하여 재생
+        const tryPlayOnInteraction = () => {
+            if (!hasStarted && player && player.paused) {
+                playSoundCloud().then(() => {
+                    hasStarted = true;
+                    console.log('Auto-play started on user interaction');
+                }).catch(() => {});
+            }
+        };
+        
+        // 다양한 이벤트에서 재생 시도
+        ['click', 'touchstart', 'keydown', 'mousemove'].forEach(eventType => {
+            document.addEventListener(eventType, tryPlayOnInteraction, { once: true });
+        });
+        
+        // 추가 재시도 (최대 10회)
+        let retryCount = 0;
+        const maxRetries = 10;
+        
+        function tryAutoPlay() {
+            if (hasStarted) return;
+            
+            setTimeout(() => {
+                if (hasStarted) return;
+                
+                playSoundCloud().then(() => {
+                    hasStarted = true;
+                    console.log('Auto-play started after retry');
+                }).catch(() => {
+                    retryCount++;
+                    if (retryCount < maxRetries) {
+                        tryAutoPlay();
+                    } else {
+                        console.log('Max retries reached, waiting for user interaction');
+                    }
+                });
+            }, 1000 + (retryCount * 1000));
+        }
+        
+        // 1초 후부터 재시도 시작
+        setTimeout(() => {
+            if (!hasStarted) {
+                tryAutoPlay();
+            }
+        }, 1000);
     });
 </script>
 {% endblock %}
