@@ -483,26 +483,11 @@
                     player.src = data.stream_url;
                     currentPlayer = player;
                     
-                    // 재생 시도
+                    // 버튼 클릭으로만 재생 시도
                     return player.play().then(() => {
                         playBtn.style.display = 'none';
                         stopBtn.style.display = 'block';
                         return Promise.resolve();
-                    }).catch(e => {
-                        console.log('Auto-play prevented:', e);
-                        // 사용자 상호작용 후 재생 시도
-                        const tryPlayOnce = () => {
-                            player.play().then(() => {
-                                playBtn.style.display = 'none';
-                                stopBtn.style.display = 'block';
-                            }).catch(() => {});
-                        };
-                        
-                        ['click', 'touchstart', 'keydown'].forEach(eventType => {
-                            document.addEventListener(eventType, tryPlayOnce, { once: true });
-                        });
-                        
-                        return Promise.reject(e);
                     });
                 } else {
                     return Promise.reject(data.error || 'Failed to get stream URL');
@@ -528,7 +513,7 @@
             currentPlayer = null;
         }
         
-        // 페이지 로드 시 자동 재생 초기화
+        // 페이지 로드 시 플레이어만 초기화 (자동 재생 없음)
         function initSoundCloudPlayer() {
             if (playerInitialized) return;
             
@@ -543,8 +528,8 @@
             }
             
             playerInitialized = true;
-            
-            // URL 설정
+
+            // 기본 URL만 설정 (자동 재생 X)
             if (!urlInput.value) {
                 urlInput.value = defaultUrl;
             }
@@ -564,64 +549,6 @@
                 if (playBtn) playBtn.style.display = 'block';
                 if (stopBtn) stopBtn.style.display = 'none';
             });
-            
-            // 자동 재생 시도
-            let hasStarted = false;
-            
-            // 즉시 시도
-            setTimeout(() => {
-                if (!hasStarted && player.paused) {
-                    playSoundCloud().then(() => {
-                        hasStarted = true;
-                        console.log('Auto-play started');
-                    }).catch(() => {
-                        console.log('First auto-play attempt failed');
-                    });
-                }
-            }, 500);
-            
-            // 사용자 상호작용 감지하여 재생
-            const tryPlayOnInteraction = () => {
-                if (!hasStarted && player && player.paused) {
-                    playSoundCloud().then(() => {
-                        hasStarted = true;
-                        console.log('Auto-play started on user interaction');
-                    }).catch(() => {});
-                }
-            };
-            
-            // 다양한 이벤트에서 재생 시도
-            ['click', 'touchstart', 'keydown', 'mousemove'].forEach(eventType => {
-                document.addEventListener(eventType, tryPlayOnInteraction, { once: true });
-            });
-            
-            // 추가 재시도
-            let retryCount = 0;
-            const maxRetries = 10;
-            
-            function tryAutoPlay() {
-                if (hasStarted) return;
-                
-                setTimeout(() => {
-                    if (hasStarted || !player.paused) return;
-                    
-                    playSoundCloud().then(() => {
-                        hasStarted = true;
-                        console.log('Auto-play started after retry');
-                    }).catch(() => {
-                        retryCount++;
-                        if (retryCount < maxRetries) {
-                            tryAutoPlay();
-                        }
-                    });
-                }, 1000 + (retryCount * 1000));
-            }
-            
-            setTimeout(() => {
-                if (!hasStarted) {
-                    tryAutoPlay();
-                }
-            }, 1000);
         }
         
         // DOM 로드 시 초기화

@@ -173,6 +173,80 @@
         margin-top: 0.25rem;
         font-family: 'Nanum Gothic Coding', monospace;
     }
+
+    /* 모바일 최적화 */
+    @media (max-width: 768px) {
+        .write-container {
+            max-width: 100%;
+            padding: 1.5rem 1rem 4rem;
+            box-sizing: border-box;
+        }
+
+        .write-header {
+            margin-bottom: 1.5rem;
+        }
+
+        .write-header h2 {
+            font-size: 1.75rem;
+            padding-left: 56px; /* 모바일 메뉴 버튼과 겹치지 않도록 여백 */
+        }
+
+        .write-header p {
+            font-size: 1rem;
+        }
+
+        .write-form-inner {
+            padding: 1.25rem;
+        }
+
+        .form-group {
+            margin-bottom: 1.25rem;
+        }
+
+        .form-group input {
+            height: 2.75rem;
+            padding: 0.75rem 0.85rem;
+            font-size: 0.95rem;
+        }
+
+        .form-group textarea {
+            min-height: 14rem;
+            font-size: 1.1rem;
+            line-height: 1.6;
+            background-image: linear-gradient(transparent 2.4rem, #222 2.5rem);
+            background-size: 100% 2.5rem;
+        }
+
+        .form-actions {
+            flex-direction: column-reverse;
+            align-items: stretch;
+        }
+
+        .btn {
+            width: 100%;
+            text-align: center;
+        }
+    }
+
+    @media (max-width: 480px) {
+        .write-container {
+            padding: 1.25rem 0.75rem 3.5rem;
+        }
+
+        .write-header h2 {
+            font-size: 1.5rem;
+            padding-left: 52px;
+        }
+
+        .write-header p {
+            font-size: 0.95rem;
+        }
+
+        .form-group textarea {
+            min-height: 12rem;
+            font-size: 1rem;
+        }
+    }
 </style>
 {% endblock %}
 

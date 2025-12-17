@@ -195,6 +195,42 @@ class SupabaseClient:
             print(f"[ERROR] Supabase 게시글 삭제 실패: {e}")
             return False
     
+    def log_visitor(self, ip_address: str, user_agent: str, page_url: str, referer: str = None) -> bool:
+        """
+        방문자 로그 기록
+        
+        Args:
+            ip_address: 방문자 IP 주소
+            user_agent: 브라우저/디바이스 정보
+            page_url: 방문한 페이지 URL
+            referer: 이전 페이지 URL (선택)
+        
+        Returns:
+            bool: 성공 여부
+        """
+        try:
+            data = {
+                "ip_address": ip_address,
+                "user_agent": user_agent[:500] if user_agent else None,  # 길이 제한
+                "page_url": page_url[:500] if page_url else None,
+                "referer": referer[:500] if referer else None,
+                "visited_at": datetime.now().isoformat()
+            }
+            
+            response = self.client.table("visitor_logs").insert(data).execute()
+            
+            if response.data:
+                print(f"[INFO] 방문자 로그 기록 성공: {ip_address} - {page_url}")
+                return True
+            else:
+                print("[ERROR] 방문자 로그 기록 실패: 응답 데이터 없음")
+                return False
+                
+        except Exception as e:
+            # 로그 기록 실패해도 앱은 계속 동작해야 함
+            print(f"[ERROR] 방문자 로그 기록 실패: {e}")
+            return False
+    
     def test_connection(self) -> bool:
         """
         Supabase 연결 테스트

@@ -190,6 +190,62 @@ def allowed_image_file(filename):
 # cleanup 함수 제거 - 파일 자동 삭제 방지
 
 
+@app.before_request
+def log_visitor():
+    """모든 요청에 대해 방문자 로그 기록"""
+    # 정적 파일, API 엔드포인트는 제외
+    excluded_paths = ['/static/', '/api/', '/favicon.ico', '/robots.txt']
+    path = request.path
+    
+    # 제외 경로 체크
+    if any(path.startswith(excluded) for excluded in excluded_paths):
+        return None
+    
+    # 방문자 로그 기록 (비동기로 처리하여 응답 속도에 영향 없도록)
+    if supabase_available:
+        try:
+            # IP 주소 가져오기 (프록시 환경 고려)
+            ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+            if ip_address:
+                ip_address = ip_address.split(',')[0].strip()
+            else:
+                ip_address = request.remote_addr or 'Unknown'
+            
+            # User-Agent 가져오기
+            user_agent = request.headers.get('User-Agent', 'Unknown')
+            
+            # 현재 페이지 URL
+            page_url = request.url
+            
+            # Referer 가져오기
+            referer = request.headers.get('Referer')
+            
+            # 비동기로 로그 기록 (응답 속도에 영향 없도록)
+            def log_async():
+                try:
+                    supabase = SupabaseClient()
+                    supabase.log_visitor(
+                        ip_address=ip_address,
+                        user_agent=user_agent,
+                        page_url=page_url,
+                        referer=referer
+                    )
+                except Exception as e:
+                    # 로그 기록 실패해도 앱은 계속 동작
+                    console.log(f"[WARN] 방문자 로그 기록 실패: {e}")
+            
+            # 별도 스레드에서 실행
+            thread = threading.Thread(target=log_async)
+            thread.daemon = True
+            thread.start()
+            
+        except Exception as e:
+            # 로그 기록 실패해도 앱은 계속 동작
+            console.log(f"[WARN] 방문자 로그 초기화 실패: {e}")
+    
+    return None
+
+
 @app.route('/')
 def index():
     """메인 페이지 - 커뮤니티"""
