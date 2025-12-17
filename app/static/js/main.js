@@ -31,12 +31,16 @@ function setupEventListeners() {
     const fileInput = document.getElementById('fileInput');
     
     // 파일 선택 이벤트
-    fileInput.addEventListener('change', handleFileSelect);
+    if (fileInput) {
+        fileInput.addEventListener('change', handleFileSelect);
+    }
     
     // 드래그 앤 드롭 이벤트
-    uploadArea.addEventListener('dragover', handleDragOver);
-    uploadArea.addEventListener('dragleave', handleDragLeave);
-    uploadArea.addEventListener('drop', handleDrop);
+    if (uploadArea) {
+        uploadArea.addEventListener('dragover', handleDragOver);
+        uploadArea.addEventListener('dragleave', handleDragLeave);
+        uploadArea.addEventListener('drop', handleDrop);
+    }
     
     // 이미지 업로드 이벤트
     const imageUpload = document.getElementById('imageUpload');

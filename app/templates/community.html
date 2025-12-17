@@ -5,9 +5,9 @@
 {% block extra_css %}
 <style>
     .community-container {
-        max-width: 4xl;
+        max-width: 48rem;
         margin: 0 auto;
-        padding: 3rem 1rem;
+        padding: 2rem 1rem 5rem;
         position: relative;
         z-index: 10;
     }
@@ -15,153 +15,400 @@
     .community-header {
         text-align: center;
         margin-bottom: 3rem;
-        animation: float 6s ease-in-out infinite;
+        border-bottom: 2px solid white;
+        padding-bottom: 2rem;
     }
     
     .community-header h2 {
         font-size: 2.5rem;
-        font-weight: bold;
-        color: rgba(241, 245, 249, 0.9);
-        margin-bottom: 1rem;
-        text-shadow: 0 2px 10px rgba(0, 0, 0, 0.3);
+        font-family: 'Nanum Gothic Coding', monospace;
+        color: white;
+        margin-bottom: 0.5rem;
+        letter-spacing: 0.1em;
+        font-weight: 700;
+    }
+    
+    .community-header h2::after {
+        content: '_';
+        animation: blink 1s infinite;
+    }
+    
+    .community-header p {
+        font-family: 'Nanum Myeongjo', serif;
+        font-size: 1.5rem;
+        color: #999;
     }
     
     .write-btn {
-        background: rgba(99, 102, 241, 0.8);
-        backdrop-filter: blur(10px);
-        color: white;
+        background: white;
+        color: black;
         padding: 0.75rem 1.5rem;
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 0.5rem;
-        font-size: 1rem;
+        border: 2px solid white;
+        font-family: 'Nanum Gothic Coding', monospace;
+        font-size: 1.125rem;
         cursor: pointer;
         text-decoration: none;
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        transition: all 0.3s ease;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        transition: all 0.2s ease;
+        box-shadow: 4px 4px 0 0 #666;
+        font-weight: 700;
     }
     
     .write-btn:hover {
-        background: rgba(99, 102, 241, 1);
-        transform: translateY(-2px);
-        box-shadow: 0 12px 40px 0 rgba(99, 102, 241, 0.4);
+        transform: translateY(2px);
+        box-shadow: 2px 2px 0 0 #666;
     }
     
     .posts-list {
         display: flex;
         flex-direction: column;
-        gap: 2rem;
-        max-width: 36rem;
-        margin: 0 auto;
+        gap: 3rem;
     }
     
     .post-card {
-        background: rgba(30, 41, 59, 0.4);
-        backdrop-filter: blur(12px);
-        border: 1px solid rgba(255, 255, 255, 0.1);
-        border-radius: 1rem;
-        padding: 2rem;
-        transition: all 0.5s ease;
-        cursor: pointer;
-        box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.37);
+        background: black;
+        border: 4px solid white;
+        padding: 1.5rem;
         position: relative;
+        cursor: pointer;
+        transition: all 0.3s ease;
+        box-shadow: 8px 8px 0 0 rgba(255,255,255,0.2);
     }
     
     .post-card:hover {
-        transform: scale(1.01);
-        background: rgba(30, 41, 59, 0.5);
-        border-color: rgba(255, 255, 255, 0.2);
-        box-shadow: 0 12px 48px 0 rgba(0, 0, 0, 0.5);
+        transform: translateY(-4px);
+        box-shadow: 8px 8px 0 0 rgba(255,255,255,0.4);
+    }
+    
+    /* Decorative Corner Pixels */
+    .post-card::before,
+    .post-card::after {
+        content: '';
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: white;
+    }
+    
+    .post-card::before {
+        top: 0;
+        left: 0;
+    }
+    
+    .post-card::after {
+        top: 0;
+        right: 0;
+    }
+    
+    .post-card .corner-bottom-left,
+    .post-card .corner-bottom-right {
+        position: absolute;
+        width: 8px;
+        height: 8px;
+        background: white;
+        bottom: 0;
+    }
+    
+    .post-card .corner-bottom-left {
+        left: 0;
+    }
+    
+    .post-card .corner-bottom-right {
+        right: 0;
     }
     
     .post-title {
         font-size: 1.5rem;
-        font-weight: bold;
-        color: rgba(241, 245, 249, 0.9);
+        font-family: 'Nanum Gothic Coding', monospace;
+        color: white;
         margin-bottom: 1rem;
-        line-height: 1.6;
-        display: -webkit-box;
-        -webkit-line-clamp: 2;
-        -webkit-box-orient: vertical;
-        overflow: hidden;
+        line-height: 1.4;
+        font-weight: 700;
     }
     
     .post-content {
-        color: rgba(241, 245, 249, 0.8);
+        color: #ccc;
         margin-bottom: 1.5rem;
         line-height: 1.8;
-        font-size: 1.1rem;
+        font-size: 1.25rem;
+        font-family: 'Nanum Myeongjo', serif;
         display: -webkit-box;
         -webkit-line-clamp: 3;
         -webkit-box-orient: vertical;
         overflow: hidden;
-        font-weight: 300;
     }
     
     .post-meta {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding-top: 1.25rem;
-        border-top: 1px solid rgba(255, 255, 255, 0.1);
+        padding-top: 1rem;
+        border-top: 1px dashed #333;
         font-size: 0.875rem;
+        font-family: 'Nanum Gothic Coding', monospace;
     }
     
     .post-author {
-        font-weight: 600;
-        color: rgba(253, 224, 71, 0.9);
-        text-shadow: 0 0 10px rgba(253, 224, 71, 0.5);
+        color: #999;
     }
     
     .post-date {
-        color: rgba(148, 163, 184, 0.8);
-        font-family: 'Noto Sans KR', sans-serif;
+        color: #666;
     }
     
     .empty-state {
         text-align: center;
         padding: 4rem 1.25rem;
-        color: rgba(148, 163, 184, 0.8);
     }
     
     .empty-state h3 {
         font-size: 1.875rem;
+        font-family: 'Nanum Gothic Coding', monospace;
+        color: white;
         margin-bottom: 0.75rem;
-        color: rgba(241, 245, 249, 0.9);
-        font-weight: bold;
+        font-weight: 700;
     }
     
     .empty-state p {
         font-size: 1.125rem;
+        font-family: 'Nanum Myeongjo', serif;
+        color: #999;
         margin-bottom: 1.5rem;
-        color: rgba(148, 163, 184, 0.8);
     }
     
     .error-message {
-        background: rgba(220, 38, 38, 0.2);
-        backdrop-filter: blur(10px);
-        color: rgba(254, 226, 226, 0.9);
+        background: black;
+        border: 2px solid #dc2626;
+        color: #fee2e2;
         padding: 1rem;
-        border-radius: 0.5rem;
         margin-bottom: 1.25rem;
-        border: 1px solid rgba(220, 38, 38, 0.3);
+        font-family: 'Nanum Gothic Coding', monospace;
+    }
+    
+    @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
+    }
+    
+    /* SoundCloud 플레이어 스타일 */
+    .soundcloud-player-section {
+        background: black;
+        border: 4px solid white;
+        padding: 1.5rem;
+        margin-bottom: 2rem;
+    }
+    
+    .soundcloud-input-container h3 {
+        font-family: 'Nanum Gothic Coding', monospace;
+        color: white;
+        margin-bottom: 1rem;
+        font-size: 1.25rem;
+        font-weight: 700;
+    }
+    
+    .soundcloud-input-group {
+        display: flex;
+        gap: 0.75rem;
+        align-items: center;
+    }
+    
+    .soundcloud-input {
+        flex: 1;
+        padding: 0.75rem 1rem;
+        background: #1a1a1a;
+        border: 2px solid #333;
+        color: white;
+        font-size: 1rem;
+        font-family: 'Nanum Gothic Coding', monospace;
+        outline: none;
+        transition: all 0.2s ease;
+    }
+    
+    .soundcloud-input:focus {
+        border-color: white;
+        background: black;
+    }
+    
+    .soundcloud-input::placeholder {
+        color: #666;
+    }
+    
+    .soundcloud-play-btn {
+        padding: 0.75rem 1.5rem;
+        background: white;
+        color: black;
+        border: 2px solid white;
+        font-family: 'Nanum Gothic Coding', monospace;
+        font-size: 1rem;
+        cursor: pointer;
+        transition: all 0.2s ease;
+        box-shadow: 4px 4px 0 0 #666;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+    
+    .soundcloud-play-btn:hover {
+        transform: translateY(2px);
+        box-shadow: 2px 2px 0 0 #666;
+    }
+    
+    .soundcloud-info {
+        background: #1a1a1a;
+        border: 2px solid #333;
+        padding: 1rem;
+        font-family: 'Nanum Gothic Coding', monospace;
+        color: #ccc;
+    }
+    
+    .soundcloud-info h4 {
+        color: white;
+        margin: 0 0 0.5rem 0;
+        font-size: 1.125rem;
+    }
+    
+    .soundcloud-info p {
+        margin: 0.25rem 0;
+        color: #999;
+        font-size: 0.875rem;
+    }
+    
+    #soundcloudPlayer {
+        background: #1a1a1a;
+        border: 2px solid white;
+        border-radius: 0;
     }
 </style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    async function playSoundCloud() {
+        const urlInput = document.getElementById('soundcloudUrlInput');
+        const playerContainer = document.getElementById('soundcloudPlayerContainer');
+        const player = document.getElementById('soundcloudPlayer');
+        const info = document.getElementById('soundcloudInfo');
+        
+        const url = urlInput.value.trim();
+        
+        if (!url) {
+            alert('Please enter a SoundCloud URL');
+            return;
+        }
+        
+        // SoundCloud URL인지 확인
+        if (!url.includes('soundcloud.com')) {
+            alert('Please enter a valid SoundCloud URL');
+            return;
+        }
+        
+        // 로딩 표시
+        info.innerHTML = '<p>Loading stream URL...</p>';
+        playerContainer.style.display = 'block';
+        player.style.display = 'none';
+        
+        try {
+            const response = await fetch('/api/get_stream_url', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    url: url
+                })
+            });
+            
+            const data = await response.json();
+            
+            if (data.success) {
+                // 플레이어에 스트리밍 URL 설정
+                player.src = data.stream_url;
+                player.style.display = 'block';
+                
+                // 정보 표시
+                const duration = data.duration ? formatDuration(data.duration) : 'Unknown';
+                info.innerHTML = `
+                    <h4>${data.title || 'Unknown Title'}</h4>
+                    <p>👤 Artist: ${data.uploader || 'Unknown'}</p>
+                    <p>⏱️ Duration: ${duration}</p>
+                    <p>🎵 Format: ${data.format || 'Unknown'}</p>
+                `;
+                
+                // 자동 재생
+                player.play().catch(e => {
+                    console.log('Auto-play prevented:', e);
+                    // 자동 재생이 막히면 사용자에게 알림
+                    info.innerHTML += '<p style="color: #999; margin-top: 0.5rem; font-size: 0.75rem;">Click play button to start</p>';
+                });
+            } else {
+                info.innerHTML = `<p style="color: #dc2626;">Error: ${data.error || 'Failed to get stream URL'}</p>`;
+            }
+        } catch (error) {
+            console.error('Error:', error);
+            info.innerHTML = `<p style="color: #dc2626;">Error: ${error.message}</p>`;
+        }
+    }
+    
+    function formatDuration(seconds) {
+        const mins = Math.floor(seconds / 60);
+        const secs = Math.floor(seconds % 60);
+        return `${mins}:${secs.toString().padStart(2, '0')}`;
+    }
+    
+    // Enter 키로 재생
+    document.getElementById('soundcloudUrlInput').addEventListener('keypress', function(e) {
+        if (e.key === 'Enter') {
+            playSoundCloud();
+        }
+    });
+    
+    // 페이지 로드 시 자동 재생
+    document.addEventListener('DOMContentLoaded', function() {
+        // 기본 SoundCloud URL 설정 (사용자가 제공한 URL)
+        const defaultUrl = 'https://soundcloud.com/rrrjunkim/off-2?si=32b788376bea4bd5b44d8c685a2b57f8&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing';
+        const urlInput = document.getElementById('soundcloudUrlInput');
+        
+        // URL 입력 필드에 기본값 설정
+        if (urlInput && !urlInput.value) {
+            urlInput.value = defaultUrl;
+        }
+        
+        // 자동으로 재생 시작
+        setTimeout(() => {
+            playSoundCloud();
+        }, 500); // 페이지 로드 후 0.5초 후 재생
+    });
+</script>
 {% endblock %}
 
 {% block content %}
 <div class="community-container">
     <div class="community-header">
-        <h2>오늘 밤, 당신의 마음은<br/>어떤 색으로 번지고 있나요?</h2>
+        <h2>COMMUNITY_FEED_</h2>
+        <p>Where Our Stories Flow</p>
     </div>
     
     <div style="text-align: center; margin-bottom: 2rem;">
         <a href="{{ url_for('community_write') }}" class="write-btn">
             <span>✏️</span>
-            <span>이야기 남기기</span>
+            <span>WRITE ENTRY</span>
         </a>
+    </div>
+    
+    <!-- SoundCloud 플레이어 섹션 -->
+    <div class="soundcloud-player-section" style="margin-bottom: 2rem;">
+        <div class="soundcloud-input-container">
+            <h3 style="font-family: 'Nanum Gothic Coding', monospace; color: white; margin-bottom: 1rem; font-size: 1.25rem;">🎵 PLAY MUSIC</h3>
+            <div class="soundcloud-input-group">
+                <input type="url" id="soundcloudUrlInput" class="soundcloud-input" placeholder="Enter SoundCloud URL (e.g., https://soundcloud.com/artist/track)">
+                <button class="soundcloud-play-btn" onclick="playSoundCloud()">▶️ PLAY</button>
+            </div>
+            <div id="soundcloudPlayerContainer" style="display: none; margin-top: 1.5rem;">
+                <div class="soundcloud-info" id="soundcloudInfo"></div>
+                <audio id="soundcloudPlayer" controls style="width: 100%; margin-top: 1rem;"></audio>
+            </div>
+        </div>
     </div>
     
     {% if error %}
@@ -173,24 +420,23 @@
     {% if posts %}
     <div class="posts-list">
         {% for post in posts %}
-        <div class="post-card" onclick="window.location.href='{{ url_for('community_post', post_id=post.id) }}'">
+        <article class="post-card" onclick="window.location.href='{{ url_for('community_post', post_id=post.id) }}'">
+            <div class="corner-bottom-left"></div>
+            <div class="corner-bottom-right"></div>
+            
             <div class="post-title">{{ post.title }}</div>
             <div class="post-content">{{ post.content }}</div>
             <div class="post-meta">
                 <span class="post-author">👤 {{ post.author }}</span>
                 <span class="post-date">{{ post.created_at[:10] if post.created_at else '' }}</span>
             </div>
-        </div>
+        </article>
         {% endfor %}
     </div>
     {% else %}
     <div class="empty-state">
-        <h3>아직 게시글이 없습니다</h3>
-        <p>첫 번째 이야기를 남겨보세요</p>
-        <a href="{{ url_for('community_write') }}" class="write-btn">
-            <span>✏️</span>
-            <span>이야기 남기기</span>
-        </a>
+        <h3>NO ENTRIES YET</h3>
+        <p>Be the first to share your story</p>
     </div>
     {% endif %}
 </div>

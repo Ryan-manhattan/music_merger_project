@@ -419,6 +419,60 @@ class LinkExtractor:
         
         return result
     
+    def get_stream_url(self, url):
+        """SoundCloud 등에서 스트리밍 URL 가져오기 (앱 등록 불필요)"""
+        try:
+            self.console_log(f"[Stream] 스트리밍 URL 추출 시작: {url}")
+            
+            # yt-dlp로 스트리밍 URL 추출
+            ydl_opts = {
+                'quiet': True,
+                'socket_timeout': 10,
+                'http_headers': {
+                    'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+                },
+                'format': 'bestaudio/best',  # 최고 품질 오디오
+            }
+            
+            with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+                info = ydl.extract_info(url, download=False)
+                
+                # 스트리밍 URL 추출
+                stream_url = None
+                
+                # SoundCloud의 경우 url 필드에 스트리밍 URL이 있음
+                if 'url' in info:
+                    stream_url = info['url']
+                elif 'requested_formats' in info and len(info['requested_formats']) > 0:
+                    # 여러 포맷 중 첫 번째 사용
+                    stream_url = info['requested_formats'][0].get('url')
+                elif 'formats' in info and len(info['formats']) > 0:
+                    # formats 리스트에서 최고 품질 찾기
+                    audio_formats = [f for f in info['formats'] if f.get('acodec') != 'none']
+                    if audio_formats:
+                        # 가장 높은 비트레이트 선택
+                        best_format = max(audio_formats, key=lambda x: x.get('abr', 0) or x.get('tbr', 0))
+                        stream_url = best_format.get('url')
+                
+                if stream_url:
+                    self.console_log(f"[Stream] 스트리밍 URL 추출 성공")
+                    return {
+                        'success': True,
+                        'stream_url': stream_url,
+                        'title': info.get('title', 'Unknown'),
+                        'duration': info.get('duration', 0),
+                        'uploader': info.get('uploader', 'Unknown'),
+                        'thumbnail': info.get('thumbnail', ''),
+                        'format': info.get('ext', 'unknown')
+                    }
+                else:
+                    self.console_log(f"[Stream] 스트리밍 URL을 찾을 수 없음")
+                    return {'success': False, 'error': '스트리밍 URL을 찾을 수 없습니다'}
+                    
+        except Exception as e:
+            self.console_log(f"[Stream] 스트리밍 URL 추출 실패: {str(e)}")
+            return {'success': False, 'error': f'스트리밍 URL 추출 실패: {str(e)}'}
+    
     def _format_duration(self, seconds):
         """초를 mm:ss 형식으로 변환"""
         if seconds < 0:

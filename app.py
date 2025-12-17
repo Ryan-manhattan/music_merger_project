@@ -254,7 +254,7 @@ def community_post(post_id):
     if not post:
         return render_template('community.html', error="게시글을 찾을 수 없습니다."), 404
     
-    return render_template('community_post.html', post=post)
+    return render_template('community_post.html', post=post, post_id=post_id)
 
 
 @app.route('/community/write')
@@ -799,6 +799,36 @@ def extract_status(job_id):
         return jsonify({'error': '작업을 찾을 수 없습니다'}), 404
     
     return jsonify(processing_jobs[job_id])
+
+
+@app.route('/api/get_stream_url', methods=['POST'])
+def get_stream_url():
+    """SoundCloud 등에서 스트리밍 URL 가져오기 (앱 등록 불필요)"""
+    console.log("[Route] /api/get_stream_url - 스트리밍 URL 요청")
+    
+    data = request.get_json()
+    
+    if not data or 'url' not in data:
+        console.log("[Stream URL] URL이 없음")
+        return jsonify({'success': False, 'error': 'URL이 필요합니다'}), 400
+    
+    url = data['url']
+    
+    try:
+        # LinkExtractor 사용
+        extractor = LinkExtractor(console_log=console.log)
+        result = extractor.get_stream_url(url)
+        
+        if result['success']:
+            console.log(f"[Stream URL] 스트리밍 URL 추출 성공: {result.get('title', 'Unknown')}")
+            return jsonify(result), 200
+        else:
+            console.log(f"[Stream URL] 스트리밍 URL 추출 실패: {result.get('error', 'Unknown error')}")
+            return jsonify(result), 400
+            
+    except Exception as e:
+        console.log(f"[Stream URL] 오류 발생: {str(e)}")
+        return jsonify({'success': False, 'error': f'오류: {str(e)}'}), 500
 
 
 @app.route('/upload_extract_file', methods=['POST'])

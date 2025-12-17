@@ -3,17 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Moodo - 커뮤니티{% endblock %}</title>
+    <title>{% block title %}Moodo - Community{% endblock %}</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     
     <!-- Fonts -->
-    <link href="https://fonts.googleapis.com/css2?family=Indie+Flower&family=Nanum+Myeongjo:wght@400;700&family=Noto+Sans+KR:wght@300;400;500;700&family=Patrick+Hand&display=swap" rel="stylesheet">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
     
     <!-- CSS -->
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/starlight.css') }}">
     
     <!-- Tailwind Config -->
     <script>
@@ -21,20 +22,24 @@
         theme: {
           extend: {
             fontFamily: {
-              sans: ['"Noto Sans KR"', 'sans-serif'],
-              serif: ['"Nanum Myeongjo"', 'serif'],
-              hand: ['"Indie Flower"', '"Patrick Hand"', 'cursive'],
+              'pixel': ['"Nanum Gothic Coding"', 'monospace'],
+              'diary': ['"Nanum Myeongjo"', 'serif'],
             },
-            animation: {
-              'spin-slow': 'spin 8s linear infinite',
-              'float': 'float 6s ease-in-out infinite',
-              'pulse-slow': 'pulse 4s cubic-bezier(0.4, 0, 0.6, 1) infinite',
+            colors: {
+              'pixel-black': '#0a0a0a',
+              'pixel-dark': '#1a1a1a',
+              'pixel-gray': '#4a4a4a',
+              'pixel-light': '#d4d4d4',
+              'pixel-white': '#ffffff',
+              'pixel-accent': '#667eea', 
             },
-            keyframes: {
-              float: {
-                '0%, 100%': { transform: 'translateY(0)' },
-                '50%': { transform: 'translateY(-10px)' },
-              }
+            backgroundImage: {
+              'dot-pattern': 'radial-gradient(#333 1px, transparent 1px)',
+            },
+            boxShadow: {
+              'retro': '4px 4px 0px 0px rgba(255,255,255,0.2)',
+              'retro-hover': '2px 2px 0px 0px rgba(255,255,255,0.4)',
+              'retro-card': '8px 8px 0px 0px #1a1a1a',
             }
           }
         }
@@ -43,159 +48,179 @@
     
     <!-- Custom Styles -->
     <style>
-      /* Impressionist Background */
-      .bg-impressionist {
-        background-color: #0b1026;
-        background-image: 
-          /* Stars */
-          radial-gradient(white, rgba(255,255,255,.1) 2px, transparent 3px),
-          radial-gradient(white, rgba(255,255,255,.1) 1px, transparent 2px),
-          /* Swirls resembling brush strokes */
-          radial-gradient(circle at 20% 30%, rgba(41, 78, 163, 0.6) 0%, transparent 50%),
-          radial-gradient(circle at 80% 70%, rgba(76, 29, 149, 0.5) 0%, transparent 50%),
-          radial-gradient(circle at 50% 50%, rgba(14, 165, 233, 0.15) 0%, transparent 60%),
-          /* Yellow moon glow */
-          radial-gradient(circle at 85% 15%, rgba(253, 224, 71, 0.25) 0%, transparent 30%);
-        background-size: 550px 550px, 350px 350px, 100% 100%, 100% 100%, 100% 100%, 100% 100%;
-        background-position: 0 0, 40px 60px, 0 0, 0 0, 0 0, 0 0;
-        background-attachment: fixed;
-        position: relative;
-        overflow-x: hidden;
-      }
-
-      /* Canvas Texture Overlay */
-      .bg-impressionist::before {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 200 200' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noiseFilter'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.65' numOctaves='3' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noiseFilter)' opacity='0.05'/%3E%3C/svg%3E");
-        pointer-events: none;
-        z-index: 0;
-      }
-
-      /* Moving cloud/fog effect */
-      .bg-impressionist::after {
-        content: "";
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 200%;
-        height: 200%;
-        background: radial-gradient(circle at 50% 50%, rgba(255, 255, 255, 0.03), transparent 60%);
-        animation: rotate-swirl 60s linear infinite;
-        pointer-events: none;
-        z-index: 0;
-      }
-
-      @keyframes rotate-swirl {
-        0% { transform: translate(-25%, -25%) rotate(0deg); }
-        100% { transform: translate(-25%, -25%) rotate(360deg); }
+      body {
+        background-color: #050505;
+        background-image: radial-gradient(#2a2a2a 1px, transparent 1px);
+        background-size: 24px 24px;
+        color: #e5e5e5;
       }
       
-      /* 사이드바 스타일 조정 */
-      .sidebar {
-        background: rgba(15, 23, 42, 0.8) !important;
-        backdrop-filter: blur(10px);
-        border-right: 1px solid rgba(255, 255, 255, 0.1);
+      /* Custom Scrollbar for Webkit */
+      ::-webkit-scrollbar {
+        width: 12px;
+        background: #000;
+        border-left: 2px solid #333;
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #444;
+        border: 2px solid #000;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #666;
       }
       
-      .main-wrapper {
-        background: transparent !important;
+      .pixel-border {
+        box-shadow: 
+          -2px 0 0 0 white,
+          2px 0 0 0 white,
+          0 -2px 0 0 white,
+          0 2px 0 0 white;
+        margin: 2px;
+      }
+      
+      .blink-cursor::after {
+        content: '_';
+        animation: blink 1s infinite;
+      }
+      
+      @keyframes blink {
+        0%, 50% { opacity: 1; }
+        51%, 100% { opacity: 0; }
       }
     </style>
     {% block extra_css %}{% endblock %}
     <style>
-        /* 사이드바 스타일 */
+        /* 사이드바 스타일 - Pixel Art */
         .sidebar {
             position: fixed;
             left: 0;
             top: 0;
-            width: 280px;
+            width: 288px;
             height: 100vh;
-            background: linear-gradient(180deg, #667eea 0%, #764ba2 100%);
+            background: #000000;
+            border-right: 4px solid white;
             color: white;
-            padding: 24px 0;
-            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
             z-index: 1000;
             overflow-y: auto;
+            transform: translateX(0);
+            transition: transform 0.3s ease-in-out;
         }
         
         .sidebar-header {
-            padding: 0 24px 24px;
-            border-bottom: 1px solid rgba(255, 255, 255, 0.2);
-            margin-bottom: 24px;
+            padding: 24px;
+            border-bottom: 4px dashed #333;
         }
         
         .sidebar-header h1 {
             margin: 0;
-            font-size: 1.8em;
-            font-weight: bold;
+            font-size: 2rem;
+            font-family: 'Nanum Gothic Coding', monospace;
+            color: white;
+            letter-spacing: 0.1em;
+            margin-bottom: 8px;
+            font-weight: 700;
         }
         
         .sidebar-header p {
-            margin: 8px 0 0;
-            font-size: 0.9em;
-            opacity: 0.9;
+            margin: 0;
+            font-size: 1.25rem;
+            font-family: 'Nanum Myeongjo', serif;
+            color: #999;
         }
         
         .sidebar-menu {
             list-style: none;
-            padding: 0;
+            padding: 16px;
             margin: 0;
         }
         
         .sidebar-menu-item {
-            margin: 0;
+            margin-bottom: 16px;
         }
         
         .sidebar-menu-link {
             display: flex;
             align-items: center;
-            padding: 16px 24px;
-            color: white;
+            padding: 12px;
+            color: #ccc;
             text-decoration: none;
-            transition: all 0.3s ease;
-            border-left: 3px solid transparent;
+            font-family: 'Nanum Gothic Coding', monospace;
+            font-size: 1.125rem;
+            border: 2px solid transparent;
+            transition: all 0.2s ease;
+            width: 100%;
+            background: transparent;
+            cursor: pointer;
         }
         
         .sidebar-menu-link:hover {
-            background: rgba(255, 255, 255, 0.1);
-            border-left-color: white;
+            border-color: #666;
+            color: white;
+            background: #1a1a1a;
         }
         
         .sidebar-menu-link.active {
-            background: rgba(255, 255, 255, 0.2);
-            border-left-color: white;
-            font-weight: 600;
+            background: white;
+            color: black;
+            border-color: white;
+            transform: translateX(8px);
+            box-shadow: -4px 4px 0 0 #444;
         }
         
         .sidebar-menu-icon {
-            font-size: 1.3em;
+            font-size: 1.25rem;
             margin-right: 12px;
-            width: 24px;
+            width: 20px;
             text-align: center;
+        }
+        
+        .sidebar-footer {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            padding: 24px;
+            border-top: 4px dashed #333;
+            text-align: center;
+        }
+        
+        .sidebar-footer p {
+            font-family: 'Nanum Gothic Coding', monospace;
+            font-size: 0.875rem;
+            color: #666;
+            margin: 0;
         }
         
         /* 메인 컨텐츠 영역 */
         .main-wrapper {
-            margin-left: 280px;
+            margin-left: 288px;
             min-height: 100vh;
-            background: #f5f5f5;
+            background: transparent;
         }
         
         .main-content {
             padding: 0;
         }
         
+        /* 모바일 메뉴 토글 */
+        .mobile-menu-toggle {
+            display: none;
+            position: fixed;
+            top: 16px;
+            left: 16px;
+            z-index: 1001;
+            background: black;
+            color: white;
+            border: 4px solid white;
+            padding: 12px;
+            font-size: 1.5rem;
+            cursor: pointer;
+            font-family: 'Nanum Gothic Coding', monospace;
+        }
+        
         /* 반응형 */
         @media (max-width: 768px) {
             .sidebar {
-                width: 240px;
                 transform: translateX(-100%);
-                transition: transform 0.3s ease;
             }
             
             .sidebar.open {
@@ -208,17 +233,6 @@
             
             .mobile-menu-toggle {
                 display: block;
-                position: fixed;
-                top: 16px;
-                left: 16px;
-                z-index: 1001;
-                background: #667eea;
-                color: white;
-                border: none;
-                padding: 12px;
-                border-radius: 8px;
-                font-size: 1.2em;
-                cursor: pointer;
             }
         }
         
@@ -229,12 +243,15 @@
         }
     </style>
 </head>
-<body class="bg-impressionist font-serif">
+<body>
+    <!-- 모바일 오버레이 -->
+    <div id="mobileOverlay" class="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm" style="display: none;" onclick="toggleSidebar()"></div>
+    
     <!-- 사이드바 -->
-    <aside class="sidebar" id="sidebar" style="z-index: 1000;">
+    <aside class="sidebar" id="sidebar">
         <div class="sidebar-header">
-            <h1>🎵 Moodo</h1>
-            <p>음악 커뮤니티</p>
+            <h1>MOODO</h1>
+            <p>My Sentimental Archive</p>
         </div>
         
         <nav>
@@ -242,13 +259,13 @@
                 <li class="sidebar-menu-item">
                     <a href="{{ url_for('index') }}" class="sidebar-menu-link {% if request.endpoint == 'index' %}active{% endif %}">
                         <span class="sidebar-menu-icon">💬</span>
-                        <span>커뮤니티</span>
+                        <span>DIARY COMMUNITY</span>
                     </a>
                 </li>
                 <li class="sidebar-menu-item">
                     <a href="{{ url_for('community_write') }}" class="sidebar-menu-link {% if request.endpoint == 'community_write' %}active{% endif %}">
                         <span class="sidebar-menu-icon">✏️</span>
-                        <span>글쓰기</span>
+                        <span>WRITE ENTRY</span>
                     </a>
                 </li>
                 <!-- 스튜디오 메뉴 숨김 처리 (기능은 유지) -->
@@ -267,11 +284,15 @@
                 <li class="sidebar-menu-item" style="display: none;">
                     <a href="{{ url_for('music_analysis') }}" class="sidebar-menu-link {% if request.endpoint == 'music_analysis' %}active{% endif %}">
                         <span class="sidebar-menu-icon">📊</span>
-                        <span>분석 스튜디오</span>
+                        <span>감정 분석</span>
                     </a>
                 </li>
             </ul>
         </nav>
+        
+        <div class="sidebar-footer">
+            <p>© 2025 MOODO CORP.<br/>PIXEL DIARY ver 1.0</p>
+        </div>
     </aside>
     
     <!-- 모바일 메뉴 토글 버튼 -->
@@ -289,17 +310,28 @@
     <script>
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('mobileOverlay');
             sidebar.classList.toggle('open');
+            
+            if (window.innerWidth <= 768) {
+                if (sidebar.classList.contains('open')) {
+                    overlay.style.display = 'block';
+                } else {
+                    overlay.style.display = 'none';
+                }
+            }
         }
         
         // 모바일에서 사이드바 외부 클릭 시 닫기
         document.addEventListener('click', function(event) {
             const sidebar = document.getElementById('sidebar');
             const toggle = document.querySelector('.mobile-menu-toggle');
+            const overlay = document.getElementById('mobileOverlay');
             
             if (window.innerWidth <= 768) {
                 if (!sidebar.contains(event.target) && !toggle.contains(event.target)) {
                     sidebar.classList.remove('open');
+                    overlay.style.display = 'none';
                 }
             }
         });
