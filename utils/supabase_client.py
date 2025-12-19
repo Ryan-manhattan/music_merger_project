@@ -261,6 +261,7 @@ class SupabaseClient:
         duration_seconds: int = None,
         thumbnail_url: str = None,
         source_id: str = None,
+        metadata: Dict = None,
     ) -> Optional[str]:
         """곡 생성"""
         try:
@@ -272,6 +273,7 @@ class SupabaseClient:
                 "artist": artist,
                 "duration_seconds": duration_seconds,
                 "thumbnail_url": thumbnail_url,
+                "metadata": metadata or {},
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat(),
             }

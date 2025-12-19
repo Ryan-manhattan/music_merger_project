@@ -556,6 +556,22 @@ def create_track_api():
         artist = (artist or "").strip()[:TRACK_ARTIST_MAX_LEN] or None
         duration_seconds = int(duration) if isinstance(duration, (int, float)) else None
 
+        # 확장 가능한 메타데이터(JSON) 저장: 지금은 기본 메타만 넣고, 추후 지표/통계(stats) 추가 여지를 남김
+        fetched_at = datetime.now().isoformat()
+        metadata = {
+            "source": source,
+            "source_id": source_id,
+            "original_url": url,
+            "fetched_at": fetched_at,
+            "provider": {
+                "title": title,
+                "uploader": artist,
+                "duration_seconds": duration_seconds,
+                "thumbnail_url": thumbnail,
+            },
+            "stats": {},  # future: views/likes/plays/etc
+        }
+
         track_id = supabase.create_track(
             url=url,
             source=source,
@@ -564,6 +580,7 @@ def create_track_api():
             artist=artist,
             duration_seconds=duration_seconds,
             thumbnail_url=thumbnail,
+            metadata=metadata,
         )
 
         if not track_id:

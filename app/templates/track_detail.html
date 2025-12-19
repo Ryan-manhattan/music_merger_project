@@ -72,6 +72,43 @@
     </section>
 
     <section class="pixel-card p-6 md:p-10 mb-10">
+        <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6">Track_Data</h3>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 text-sm">
+            <div class="space-y-3">
+                <div class="flex items-center justify-between gap-4">
+                    <span class="text-[10px] uppercase tracking-widest opacity-40">Source</span>
+                    <span class="uppercase tracking-widest text-[11px] opacity-70">{{ track.source }}</span>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                    <span class="text-[10px] uppercase tracking-widest opacity-40">Source_ID</span>
+                    <span class="text-[11px] opacity-70 break-all">{{ track.source_id or '-' }}</span>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                    <span class="text-[10px] uppercase tracking-widest opacity-40">Uploader</span>
+                    <span class="text-[11px] opacity-70 break-all">{{ track.artist or '-' }}</span>
+                </div>
+            </div>
+            <div class="space-y-3">
+                <div class="flex items-center justify-between gap-4">
+                    <span class="text-[10px] uppercase tracking-widest opacity-40">Duration</span>
+                    <span class="text-[11px] opacity-70">{{ track.duration_str or '-' }}</span>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                    <span class="text-[10px] uppercase tracking-widest opacity-40">Added_At</span>
+                    <span class="text-[11px] opacity-70">{{ track.created_at[:19] if track.created_at else '-' }}</span>
+                </div>
+                <div class="flex items-center justify-between gap-4">
+                    <span class="text-[10px] uppercase tracking-widest opacity-40">Raw_Metadata</span>
+                    <span class="text-[11px] opacity-70">{{ 'ON' if track.metadata else 'OFF' }}</span>
+                </div>
+            </div>
+        </div>
+        <p class="text-[10px] mt-6 opacity-30 uppercase tracking-widest">
+            Future: stats/metrics will be attached under Track_Data without breaking schema.
+        </p>
+    </section>
+
+    <section class="pixel-card p-6 md:p-10 mb-10">
         <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6">Leave a Comment (Diary Style)</h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
