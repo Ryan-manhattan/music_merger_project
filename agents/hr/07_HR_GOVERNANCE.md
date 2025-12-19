@@ -7,17 +7,17 @@
 ## 0) 적용 범위
 - 이 문서는 **모든 에이전트(PM/DEV/기타)** 공통 규정이다.
 - 상세 역할 문서는 다음을 우선 참조한다.
-  - PM: `docs/planning/01_PM_ROLE_AND_SCOPE.md`
-  - DEV: `docs/planning/dev/00_DEV_AGENT_PLAYBOOK.md`
-  - 협업 플로우: `docs/planning/06_COLLAB_FLOW.md`
-  - 보고 템플릿: `docs/planning/00_REPORT_TEMPLATE.md`
+  - PM: `agents/planning/01_PM_ROLE_AND_SCOPE.md`
+  - DEV: `agents/dev/00_DEV_AGENT_PLAYBOOK.md`
+  - 협업 플로우: `agents/planning/06_COLLAB_FLOW.md`
+  - 보고 템플릿: `agents/planning/00_REPORT_TEMPLATE.md`
 
 ---
 
 ## 1) 단일 진실 소스(SSOT)
-- **기획/결정(결재 반영 포함)**: `docs/planning/`
-- **최종 보고(누적 저장, 삭제/덮어쓰기 금지)**: `docs/planning/reports/`
-- **회의록(결정/합의 기록)**: `docs/planning/meetings/`
+- **기획/결정(결재 반영 포함)**: `agents/planning/`
+- **최종 보고(누적 저장, 삭제/덮어쓰기 금지)**: `agents/planning/reports/`
+- **회의록(결정/합의 기록)**: `agents/planning/meetings/`
 
 원칙: 코드/구현이 문서와 충돌하면, **문서(결재 반영된 범위)가 우선**이다.
 
@@ -76,17 +76,17 @@
 
 ## 5) 산출물/기록 규칙
 ### 5-1) 최종 보고(필수)
-- 저장 위치: `docs/planning/reports/`
+- 저장 위치: `agents/planning/reports/`
 - 파일명: `YYYY-MM-DD_HH-MM-SS__REPORT.md`
-- 포맷: `docs/planning/00_REPORT_TEMPLATE.md`
+- 포맷: `agents/planning/00_REPORT_TEMPLATE.md`
 - 원칙: **누적 저장(삭제/덮어쓰기 금지)**
 
 ### 5-2) 회의록(필요 시)
-- 저장 위치: `docs/planning/meetings/`
+- 저장 위치: `agents/planning/meetings/`
 - 파일명: `YYYY-MM-DD_HH-MM-SS__MEETING.md`
 
 ### 5-3) 작업 로그(권장)
-- 기획 작업 로그: `docs/planning/05_WORK_LOG.md`에 append
+- 기획 작업 로그: `agents/planning/05_WORK_LOG.md`에 append
 
 ---
 
@@ -137,18 +137,22 @@
 ---
 
 ## 10) 참고 문서(링크)
-- `docs/planning/06_COLLAB_FLOW.md`
-- `docs/planning/00_REPORT_TEMPLATE.md`
-- `docs/planning/01_PM_ROLE_AND_SCOPE.md`
-- `docs/planning/02_PRODUCT_CONCEPT.md`
-- `docs/planning/03_IA_AND_USER_FLOWS.md`
-- `docs/planning/04_BACKLOG.md`
-- `docs/planning/05_WORK_LOG.md`
-- `docs/planning/dev/00_DEV_AGENT_PLAYBOOK.md`
+- `agents/planning/06_COLLAB_FLOW.md`
+- `agents/planning/00_REPORT_TEMPLATE.md`
+- `agents/planning/01_PM_ROLE_AND_SCOPE.md`
+- `agents/planning/02_PRODUCT_CONCEPT.md`
+- `agents/planning/03_IA_AND_USER_FLOWS.md`
+- `agents/planning/04_BACKLOG.md`
+- `agents/planning/05_WORK_LOG.md`
+- `agents/dev/00_DEV_AGENT_PLAYBOOK.md`
 
 ---
 
-## (공지) planning 문서 SSOT 변경
-- 이 문서는 `docs/planning/`에 **참고용으로 유지**됩니다(삭제/덮어쓰기 금지 원칙 유지).
-- planning 문서의 **최신(SSOT)** 은 `agents/planning/`에서 관리합니다.
-  - HR 감리 기준(최신): `agents/hr/07_HR_GOVERNANCE.md`
+## (공지) 문서 경로 변경(에이전트 문서)
+- 에이전트 문서는 `docs/`가 아니라 `agents/`에서 관리합니다.
+  - DEV 플레이북(최신): `agents/dev/00_DEV_AGENT_PLAYBOOK.md`
+
+---
+
+## (공지) planning 문서 경로 변경
+- planning 문서(기획/결정/보고/회의)는 `agents/planning/`에서 관리합니다.

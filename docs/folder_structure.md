@@ -68,3 +68,13 @@
 
 ## ⚠️ 주의사항
 파일 경로가 변경되었으므로 import 구문 수정이 필요할 수 있습니다.
+
+---
+
+## ✅ 추가: `/agents/` - 에이전트 문서(관리 위치)
+- `agents/`는 **에이전트(모델/역할)별 지침과 HR 감리 기준**을 관리하는 폴더입니다.
+- `docs/`에는 제품/기획/운영의 SSOT를 두고, 에이전트 문서는 `agents/`에서 관리합니다.
+  - `agents/CLAUDE.md`
+  - `agents/GEMINI.md`
+  - `agents/dev/00_DEV_AGENT_PLAYBOOK.md`
+  - `agents/hr/07_HR_GOVERNANCE.md`

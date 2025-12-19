@@ -21,10 +21,3 @@
 
 ## 5) 다음 회의
 - **예정**: 
-
----
-
-## (공지) planning 문서 SSOT 변경
-- 이 문서는 `docs/planning/`에 **참고용으로 유지**됩니다(삭제/덮어쓰기 금지 원칙 유지).
-- planning 문서의 **최신(SSOT)** 은 `agents/planning/`에서 관리합니다.
-  - 최신 템플릿: `agents/planning/meetings/00_MEETING_TEMPLATE.md`

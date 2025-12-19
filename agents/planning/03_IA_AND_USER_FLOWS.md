@@ -25,7 +25,15 @@
 
 ---
 
-## (공지) planning 문서 SSOT 변경
-- 이 문서는 `docs/planning/`에 **참고용으로 유지**됩니다(삭제/덮어쓰기 금지 원칙 유지).
-- planning 문서의 **최신(SSOT)** 은 `agents/planning/`에서 관리합니다.
-  - 최신 문서: `agents/planning/03_IA_AND_USER_FLOWS.md`
+## (업데이트) 2025-12-19: Song Archive 중심 IA/플로우(현재 구현 반영)
+
+## 1) IA(현재)
+- **Home**: Song Archive(곡 목록/추가) — `/`
+- **Track Detail**: 곡 상세 + 코멘트(일기처럼) — `/track/<track_id>`
+- **Diary Feed(기존 일기)**: `/diary`
+- **Diary Write**: `/diary/write` (기존 `/community/write`도 호환)
+
+## 2) 핵심 유저 플로우(현재)
+- **곡 추가 플로우**: Home(Song Archive) → YouTube/SoundCloud URL 입력 → 메타 수집 → Track Detail
+- **감상 기록 플로우**: Track Detail → 코멘트 작성(일기처럼) → 저장 → 댓글 목록 갱신
+- **일기 플로우(보조)**: Diary Feed → Write Diary → Diary Detail

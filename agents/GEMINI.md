@@ -81,10 +81,3 @@ A music merger application that combines and processes audio files.
    - 브라우저 상에서 직접 클릭 → 결과 확인
 3. 디버깅 시 **콘솔 로그 필수 확인**
 4. 에러 발생시 디버깅 가능한 코드 추가
-
----
-
-## (공지) 에이전트 문서 관리 위치 변경
-- 이 문서는 **참고용으로 유지**합니다.
-- 에이전트 관련 최신 규정/지침의 **관리(SSOT) 위치**는 `agents/` 입니다.
-  - 최신: `agents/GEMINI.md`

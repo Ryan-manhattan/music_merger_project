@@ -19,12 +19,5 @@
 - 서비스의 목적은 **"특정 컨텐츠를 중심으로 생각과 감정을 기록"**하는 것에 집중합니다.
 
 ## 4) 커뮤니케이션 원칙(보고)
-- 사장님께는 `docs/planning/00_REPORT_TEMPLATE.md` 형식을 기준으로 보고합니다.
+- 사장님께는 `agents/planning/00_REPORT_TEMPLATE.md` 형식을 기준으로 보고합니다.
 - 결정이 필요한 사항은 **옵션을 숫자로 제시 + 추천 1개 포함**합니다.
-
----
-
-## (공지) planning 문서 SSOT 변경
-- 이 문서는 `docs/planning/`에 **참고용으로 유지**됩니다(삭제/덮어쓰기 금지 원칙 유지).
-- planning 문서의 **최신(SSOT)** 은 `agents/planning/`에서 관리합니다.
-  - 최신 문서: `agents/planning/01_PM_ROLE_AND_SCOPE.md`

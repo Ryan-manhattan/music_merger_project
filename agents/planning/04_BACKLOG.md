@@ -16,10 +16,3 @@
 
 ### Won't (현재 범위 제외)
 - 사장님 지시: 테마 비정합 기능은 유지하되, 현재 기획 우선순위에서 제외
-
----
-
-## (공지) planning 문서 SSOT 변경
-- 이 문서는 `docs/planning/`에 **참고용으로 유지**됩니다(삭제/덮어쓰기 금지 원칙 유지).
-- planning 문서의 **최신(SSOT)** 은 `agents/planning/`에서 관리합니다.
-  - 최신 문서: `agents/planning/04_BACKLOG.md`

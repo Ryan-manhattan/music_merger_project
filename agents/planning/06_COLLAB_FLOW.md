@@ -1,10 +1,10 @@
 ## 최신 내용 공유/진행 플로우(기획 ↔ 개발)
 
 ## 1) 단일 진실 소스(SSOT)
-- 기획/결정: `docs/planning/`
-- 최종 보고 누적: `docs/planning/reports/`
-- 회의 기록/결정: `docs/planning/meetings/`
-- 개발자 에이전트 행동 지침: `docs/planning/dev/`
+- 기획/결정: `agents/planning/`
+- 최종 보고 누적: `agents/planning/reports/`
+- 회의 기록/결정: `agents/planning/meetings/`
+- (참고) 개발자 에이전트 행동 지침: `agents/dev/`
 
 ## 2) 진행 사이클
 - **(A) 결재 필요 사항 발생** → 기획자가 보고서(옵션/추천 포함) 작성 → 사장님 결재
@@ -29,13 +29,4 @@
 ---
 
 ## (공지) planning 문서 관리 위치 변경
-- planning 문서(기획/결정/보고/회의)는 `docs/planning/`이 아니라 `agents/planning/`에서 관리합니다.
-  - SSOT: `agents/planning/README.md`
-  - 협업 플로우(최신): `agents/planning/06_COLLAB_FLOW.md`
-
----
-
-## (공지) planning 문서 SSOT 변경
-- 이 문서는 `docs/planning/`에 **참고용으로 유지**됩니다(삭제/덮어쓰기 금지 원칙 유지).
-- planning 문서의 **최신(SSOT)** 은 `agents/planning/`에서 관리합니다.
-  - 최신 문서: `agents/planning/06_COLLAB_FLOW.md`
+- `planning` 문서(기획/결정/보고/회의)는 `docs/planning/`이 아니라 `agents/planning/`에서 관리합니다.

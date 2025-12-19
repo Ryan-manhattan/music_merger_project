@@ -17,6 +17,12 @@
 - **핵심 플로우**: 목록 → 기록하기 → 상세 보기
 - **보류(테마 비정합 기능)**: 구현 상태는 유지, 기획 판단에서 우선순위 제외(사장님 지시)
 
+### (최신 기준 메모)
+- 2025-12-19 이후 현재 구현 기준으로는:
+  - **메인(Home)**: `/` = Song Archive(곡 목록/추가)
+  - **보조 피드**: `/diary` = Diary Community(기존 기록)
+  - **핵심 플로우(업데이트)**: YouTube/SoundCloud URL 추가 → 메타 수집 → 곡 상세에서 코멘트(일기처럼) 작성
+
 ## 4) 이슈/리스크
 - 
 
@@ -35,13 +41,6 @@
 ---
 
 ## 저장 규칙(최종 보고)
-- **저장 위치**: `docs/planning/reports/`
+- **저장 위치**: `agents/planning/reports/`
 - **파일명 규칙(초 단위)**: `YYYY-MM-DD_HH-MM-SS__REPORT.md`
 - **원칙**: 최종 보고 파일은 누적 저장(삭제/덮어쓰기 금지)
-
----
-
-## (공지) planning 문서 SSOT 변경
-- 이 문서는 `docs/planning/`에 **참고용으로 유지**됩니다(삭제/덮어쓰기 금지 원칙 유지).
-- planning 문서의 **최신(SSOT)** 은 `agents/planning/`에서 관리합니다.
-  - 최신 문서: `agents/planning/00_REPORT_TEMPLATE.md`

@@ -120,3 +120,12 @@ MIT License
 ## 📞 문의
 
 프로젝트 관련 문의사항은 이슈를 등록해주세요.
+
+---
+
+## 🤖 에이전트 문서 위치 안내
+- 에이전트(모델/역할)별 지침 및 HR 감리 기준은 `docs/`가 아니라 `agents/`에서 관리합니다.
+  - `agents/CLAUDE.md`
+  - `agents/GEMINI.md`
+  - `agents/dev/00_DEV_AGENT_PLAYBOOK.md`
+  - `agents/hr/07_HR_GOVERNANCE.md`
