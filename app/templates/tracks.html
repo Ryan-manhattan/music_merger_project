@@ -1,0 +1,128 @@
+{% extends "base.html" %}
+
+{% block title %}곡 아카이브 - OFF THE COMMUNITY{% endblock %}
+
+{% block content %}
+<div class="main-content-container">
+    <header class="community-header">
+        <div class="inline-flex items-center gap-4 mb-6">
+            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: Tracks</span>
+            <div class="w-12 h-[1px] bg-white/20"></div>
+        </div>
+        <h2 class="serif-font">SONG ARCHIVE_</h2>
+        <p class="text-sm opacity-50 italic serif-font">원하는 곡을 추가하고, 그 곡에 대한 감상을 일기처럼 남겨요.</p>
+    </header>
+
+    {% if error %}
+        <div class="pixel-card p-6 border border-red-500/40 text-red-200 text-sm">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <section class="pixel-card p-6 md:p-10 mb-10">
+        <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6">Add a Track URL</h3>
+        <div class="flex flex-col md:flex-row gap-4">
+            <input
+                type="url"
+                id="trackUrl"
+                placeholder="https://soundcloud.com/...  또는  https://www.youtube.com/watch?v=..."
+                class="flex-1 bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel"
+            >
+            <button class="btn-pixel md:px-8 text-xs tracking-widest" id="addTrackBtn" onclick="addTrack()">ADD_TRACK</button>
+        </div>
+        <p class="text-[10px] mt-4 opacity-30 uppercase tracking-widest">Supported: SoundCloud / YouTube</p>
+        <div id="addTrackMsg" class="text-xs mt-4 opacity-70"></div>
+    </section>
+
+    {% if tracks %}
+        <section class="space-y-6">
+            {% for track in tracks %}
+                <article class="pixel-card p-6 cursor-pointer hover:border-white/40 transition-all"
+                         onclick="window.location.href='{{ url_for('track_detail', track_id=track.id) }}'">
+                    <div class="flex gap-5">
+                        <div class="w-16 h-16 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+                            {% if track.thumbnail_url %}
+                                <img src="{{ track.thumbnail_url }}" alt="cover" class="w-full h-full object-cover">
+                            {% else %}
+                                <span class="text-[10px] opacity-30">NO_ART</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="flex items-start justify-between gap-4">
+                                <h3 class="text-lg serif-font leading-tight truncate">{{ track.title }}</h3>
+                                <span class="text-[10px] opacity-40 uppercase tracking-widest">{{ (track.source or '') }}</span>
+                            </div>
+                            <div class="mt-2 text-[11px] opacity-50 uppercase tracking-widest">
+                                {% if track.artist %}{{ track.artist }}{% endif %}
+                                {% if track.duration_str %} · {{ track.duration_str }}{% endif %}
+                            </div>
+                            <div class="mt-3 text-[10px] opacity-30 truncate">
+                                {{ track.url }}
+                            </div>
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+
+        <div class="flex justify-between items-center mt-10 pt-8 border-t border-white/10 text-[10px] uppercase tracking-widest opacity-60">
+            <div>
+                {% if page and page > 1 %}
+                    <a class="btn-outline text-[10px] tracking-widest" href="{{ url_for('index') }}?page={{ page - 1 }}">PREV</a>
+                {% endif %}
+            </div>
+            <div>PAGE {{ page if page else 1 }}</div>
+            <div>
+                {% if has_next %}
+                    <a class="btn-outline text-[10px] tracking-widest" href="{{ url_for('index') }}?page={{ (page if page else 1) + 1 }}">NEXT</a>
+                {% endif %}
+            </div>
+        </div>
+    {% else %}
+        <section class="pixel-card p-10 text-center">
+            <h3 class="text-xl serif-font mb-2">아직 등록된 곡이 없어요</h3>
+            <p class="text-sm opacity-50 italic serif-font">SoundCloud/YouTube 링크를 추가해 첫 번째 기록을 시작해보자.</p>
+        </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+async function addTrack() {
+    const input = document.getElementById('trackUrl');
+    const btn = document.getElementById('addTrackBtn');
+    const msg = document.getElementById('addTrackMsg');
+
+    const url = (input.value || '').trim();
+    if (!url) {
+        msg.textContent = 'URL을 입력해주세요.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'ADDING...';
+    msg.textContent = '';
+
+    try {
+        const res = await fetch('/api/tracks', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url})
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.href = `/track/${data.track_id}`;
+            return;
+        }
+        msg.textContent = data.error || '추가 실패';
+    } catch (e) {
+        msg.textContent = '오류가 발생했어요.';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'ADD_TRACK';
+    }
+}
+</script>
+{% endblock %}
+

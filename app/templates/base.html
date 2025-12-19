@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Moodo - Community{% endblock %}</title>
+    <title>{% block title %}OFF THE COMMUNITY{% endblock %}</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -13,579 +13,255 @@
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Nanum+Gothic+Coding:wght@400;700&family=Nanum+Myeongjo:wght@400;700;800&display=swap" rel="stylesheet">
     
-    <!-- CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+    <!-- Core CSS -->
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}?v={{ range(1000, 9999) | random }}">
     
-    <!-- Tailwind Config -->
-    <script>
-      tailwind.config = {
-        theme: {
-          extend: {
-            fontFamily: {
-              'pixel': ['"Nanum Gothic Coding"', 'monospace'],
-              'diary': ['"Nanum Myeongjo"', 'serif'],
-            },
-            colors: {
-              'pixel-black': '#0a0a0a',
-              'pixel-dark': '#1a1a1a',
-              'pixel-gray': '#4a4a4a',
-              'pixel-light': '#d4d4d4',
-              'pixel-white': '#ffffff',
-              'pixel-accent': '#667eea', 
-            },
-            backgroundImage: {
-              'dot-pattern': 'radial-gradient(#333 1px, transparent 1px)',
-            },
-            boxShadow: {
-              'retro': '4px 4px 0px 0px rgba(255,255,255,0.2)',
-              'retro-hover': '2px 2px 0px 0px rgba(255,255,255,0.4)',
-              'retro-card': '8px 8px 0px 0px #1a1a1a',
-            }
-          }
-        }
-      }
-    </script>
-    
-    <!-- Custom Styles -->
-    <style>
-      body {
-        background-color: #050505;
-        background-image: radial-gradient(#2a2a2a 1px, transparent 1px);
-        background-size: 24px 24px;
-        color: #e5e5e5;
-      }
-      
-      /* Custom Scrollbar for Webkit */
-      ::-webkit-scrollbar {
-        width: 12px;
-        background: #000;
-        border-left: 2px solid #333;
-      }
-      ::-webkit-scrollbar-thumb {
-        background: #444;
-        border: 2px solid #000;
-      }
-      ::-webkit-scrollbar-thumb:hover {
-        background: #666;
-      }
-      
-      .pixel-border {
-        box-shadow: 
-          -2px 0 0 0 white,
-          2px 0 0 0 white,
-          0 -2px 0 0 white,
-          0 2px 0 0 white;
-        margin: 2px;
-      }
-      
-      .blink-cursor::after {
-        content: '_';
-        animation: blink 1s infinite;
-      }
-      
-      @keyframes blink {
-        0%, 50% { opacity: 1; }
-        51%, 100% { opacity: 0; }
-      }
-    </style>
     {% block extra_css %}{% endblock %}
+    
     <style>
-        /* 사이드바 스타일 - Pixel Art */
+        /* Sidebar layout override */
         .sidebar {
             position: fixed;
             left: 0;
             top: 0;
-            width: 288px;
+            width: 280px;
             height: 100vh;
-            background: #000000;
-            border-right: 4px solid white;
-            color: white;
             z-index: 1000;
             overflow-y: auto;
             transform: translateX(0);
             transition: transform 0.3s ease-in-out;
         }
         
-        .sidebar-header {
-            padding: 24px;
-            border-bottom: 4px dashed #333;
-        }
-        
-        .sidebar-header h1 {
-            margin: 0;
-            font-size: 2rem;
-            font-family: 'Nanum Gothic Coding', monospace;
-            color: white;
-            letter-spacing: 0.1em;
-            margin-bottom: 8px;
-            font-weight: 700;
-        }
-        
-        .sidebar-header p {
-            margin: 0;
-            font-size: 1.25rem;
-            font-family: 'Nanum Myeongjo', serif;
-            color: #999;
-        }
-        
-        .sidebar-menu {
-            list-style: none;
-            padding: 16px;
-            margin: 0;
-        }
-        
-        .sidebar-menu-item {
-            margin-bottom: 16px;
-        }
-        
-        .sidebar-menu-link {
-            display: flex;
-            align-items: center;
-            padding: 12px;
-            color: #ccc;
-            text-decoration: none;
-            font-family: 'Nanum Gothic Coding', monospace;
-            font-size: 1.125rem;
-            border: 2px solid transparent;
-            transition: all 0.2s ease;
-            width: 100%;
-            background: transparent;
-            cursor: pointer;
-        }
-        
-        .sidebar-menu-link:hover {
-            border-color: #666;
-            color: white;
-            background: #1a1a1a;
-        }
-        
-        .sidebar-menu-link.active {
-            background: white;
-            color: black;
-            border-color: white;
-            transform: translateX(8px);
-            box-shadow: -4px 4px 0 0 #444;
-        }
-        
-        .sidebar-menu-icon {
-            font-size: 1.25rem;
-            margin-right: 12px;
-            width: 20px;
-            text-align: center;
-        }
-        
-        .sidebar-footer {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            padding: 24px;
-            border-top: 4px dashed #333;
-            text-align: center;
-        }
-        
-        .sidebar-footer p {
-            font-family: 'Nanum Gothic Coding', monospace;
-            font-size: 0.875rem;
-            color: #666;
-            margin: 0;
-        }
-        
-        /* 메인 컨텐츠 영역 */
         .main-wrapper {
-            margin-left: 288px;
+            margin-left: 280px;
             min-height: 100vh;
-            background: transparent;
+            padding-bottom: 60px; /* Status bar space */
         }
-        
-        .main-content {
-            padding: 0;
+
+        @media (max-width: 768px) {
+            .sidebar { transform: translateX(-100%); }
+            .sidebar.open { transform: translateX(0); }
+            .main-wrapper { margin-left: 0; }
         }
-        
-        /* 모바일 메뉴 토글 */
+
         .mobile-menu-toggle {
             display: none;
             position: fixed;
-            top: 16px;
-            left: 16px;
+            top: 20px;
+            left: 20px;
             z-index: 1001;
             background: black;
+            border: 2px solid white;
             color: white;
-            border: 4px solid white;
-            padding: 10px 12px;
-            font-size: 1.25rem;
+            padding: 8px 12px;
             cursor: pointer;
-            font-family: 'Nanum Gothic Coding', monospace;
         }
-        
-        /* 반응형 */
+
         @media (max-width: 768px) {
-            body {
-                overflow-x: hidden; /* 가로 스크롤 방지 */
-            }
-            
-            .sidebar {
-                transform: translateX(-100%);
-            }
-            
-            .sidebar.open {
-                transform: translateX(0);
-            }
-            
-            .sidebar.open ~ .mobile-menu-toggle {
-                left: 304px; /* 사이드바 너비(288px) + 여백(16px) */
-            }
-            
-            .main-wrapper {
-                margin-left: 0;
-                width: 100%;
-                overflow-x: hidden;
-            }
-            
-            .main-content {
-                width: 100%;
-                overflow-x: hidden;
-            }
-            
-            .mobile-menu-toggle {
-                display: block;
-                transition: left 0.3s ease-in-out;
-                top: 12px;
-                left: 12px;
-                padding: 8px 10px;
-                font-size: 1.125rem;
-            }
-            
-            .sidebar-header {
-                padding-top: 70px; /* 메뉴 버튼 공간 확보 */
-            }
-        }
-        
-        @media (min-width: 769px) {
-            .mobile-menu-toggle {
-                display: none;
-            }
-        }
-        
-        /* SoundCloud 플레이어 스타일 (전역) */
-        .soundcloud-player-section {
-            background: rgba(0, 0, 0, 0.6);
-            border: 2px solid rgba(255, 255, 255, 0.2);
-            padding: 0.75rem 1rem;
-            border-radius: 8px;
-            backdrop-filter: blur(10px);
-            position: fixed;
-            bottom: 20px;
-            right: 20px;
-            z-index: 1000;
-            opacity: 0.25;
-            transition: opacity 0.3s ease;
-        }
-        
-        @media (max-width: 768px) {
-            .soundcloud-player-section {
-                bottom: 16px;
-                right: 16px;
-                padding: 0.5rem 0.75rem;
-            }
-            
-            .soundcloud-play-btn,
-            .soundcloud-stop-btn {
-                padding: 0.5rem 1rem;
-                font-size: 0.875rem;
-                min-width: 45px;
-            }
-        }
-        
-        .soundcloud-player-section:hover {
-            opacity: 0.9 !important;
-            border-color: rgba(255, 255, 255, 0.4);
-        }
-        
-        .soundcloud-input-container {
-            display: flex;
-            align-items: center;
-            gap: 0.75rem;
-        }
-        
-        .soundcloud-input {
-            display: none;
-        }
-        
-        .soundcloud-controls {
-            display: flex;
-            gap: 0.5rem;
-            align-items: center;
-        }
-        
-        .soundcloud-play-btn,
-        .soundcloud-stop-btn {
-            background: rgba(255, 255, 255, 0.15);
-            color: white;
-            border: 2px solid rgba(255, 255, 255, 0.3);
-            font-family: 'Nanum Gothic Coding', monospace;
-            cursor: pointer;
-            transition: all 0.3s ease;
-            font-weight: 700;
-            padding: 0.625rem 1.25rem;
-            font-size: 1rem;
-            border-radius: 4px;
-            min-width: 50px;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
-        }
-        
-        .soundcloud-play-btn:hover,
-        .soundcloud-stop-btn:hover {
-            background: rgba(255, 255, 255, 0.25);
-            border-color: rgba(255, 255, 255, 0.5);
-            transform: translateY(-1px);
-            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.4);
-        }
-        
-        .soundcloud-play-btn:active,
-        .soundcloud-stop-btn:active {
-            transform: translateY(0);
-            box-shadow: 0 1px 2px rgba(0, 0, 0, 0.3);
-        }
-        
-        #soundcloudPlayer {
-            display: none;
+            .mobile-menu-toggle { display: block; }
         }
     </style>
 </head>
 <body>
-    <!-- 모바일 오버레이 -->
+    <!-- Mobile Overlay -->
     <div id="mobileOverlay" class="fixed inset-0 bg-black/80 z-40 md:hidden backdrop-blur-sm" style="display: none;" onclick="toggleSidebar()"></div>
     
-    <!-- 사이드바 -->
-    <aside class="sidebar" id="sidebar">
-        <div class="sidebar-header">
-            <h1>MOODO</h1>
-            <p>My Sentimental Archive</p>
+    <!-- Sidebar -->
+    <aside class="sidebar flex flex-col" id="sidebar">
+        <div class="p-8 border-b-4 border-dashed border-[#111]">
+            <h1 class="text-2xl font-bold tracking-tighter leading-tight mb-2">
+                OFF THE<br>COMMUNITY
+            </h1>
+            <p class="text-[10px] opacity-40 serif-font uppercase tracking-widest">Sentimental Archive</p>
+            
+            <div class="flex gap-1 mt-4">
+                <div class="w-2 h-2 bg-white"></div>
+                <div class="w-2 h-2 bg-white"></div>
+                <div class="w-2 h-2 bg-white/20"></div>
+                <div class="w-2 h-2 bg-white/20"></div>
+                <div class="w-2 h-2 bg-white/20"></div>
+            </div>
         </div>
         
-        <nav>
-            <ul class="sidebar-menu">
-                <li class="sidebar-menu-item">
-                    <a href="{{ url_for('index') }}" class="sidebar-menu-link {% if request.endpoint == 'index' %}active{% endif %}">
-                        <span class="sidebar-menu-icon">💬</span>
-                        <span>DIARY COMMUNITY</span>
-                    </a>
-                </li>
-                <li class="sidebar-menu-item">
-                    <a href="{{ url_for('community_write') }}" class="sidebar-menu-link {% if request.endpoint == 'community_write' %}active{% endif %}">
-                        <span class="sidebar-menu-icon">✏️</span>
-                        <span>WRITE ENTRY</span>
-                    </a>
-                </li>
-                <!-- 스튜디오 메뉴 숨김 처리 (기능은 유지) -->
-                <li class="sidebar-menu-item" style="display: none;">
-                    <a href="{{ url_for('music_studio') }}" class="sidebar-menu-link {% if request.endpoint == 'music_studio' %}active{% endif %}">
-                        <span class="sidebar-menu-icon">🎵</span>
-                        <span>음악 스튜디오</span>
-                    </a>
-                </li>
-                <li class="sidebar-menu-item" style="display: none;">
-                    <a href="{{ url_for('music_video') }}" class="sidebar-menu-link {% if request.endpoint == 'music_video' %}active{% endif %}">
-                        <span class="sidebar-menu-icon">🎬</span>
-                        <span>영상 스튜디오</span>
-                    </a>
-                </li>
-                <li class="sidebar-menu-item" style="display: none;">
-                    <a href="{{ url_for('music_analysis') }}" class="sidebar-menu-link {% if request.endpoint == 'music_analysis' %}active{% endif %}">
-                        <span class="sidebar-menu-icon">📊</span>
-                        <span>감정 분석</span>
-                    </a>
-                </li>
-            </ul>
+        <nav class="flex-1 p-4 space-y-2 mt-4">
+            <a href="{{ url_for('index') }}" class="sidebar-item {% if request.endpoint == 'index' %}active{% endif %}">
+                <div class="dot"></div>
+                <span>SONG ARCHIVE</span>
+            </a>
+            <a href="{{ url_for('diary') }}" class="sidebar-item {% if request.endpoint == 'diary' %}active{% endif %}">
+                <div class="dot"></div>
+                <span>DIARY COMMUNITY</span>
+            </a>
+            <a href="{{ url_for('community_write') }}" class="sidebar-item {% if request.endpoint == 'community_write' %}active{% endif %}">
+                <div class="dot"></div>
+                <span>WRITE DIARY</span>
+            </a>
+            <a href="{{ url_for('music_studio') }}" class="sidebar-item {% if request.endpoint == 'music_studio' %}active{% endif %}" style="display: none;">
+                <div class="dot"></div>
+                <span>음악 스튜디오</span>
+            </a>
+            <a href="{{ url_for('music_video') }}" class="sidebar-item {% if request.endpoint == 'music_video' %}active{% endif %}" style="display: none;">
+                <div class="dot"></div>
+                <span>영상 스튜디오</span>
+            </a>
         </nav>
         
-        <div class="sidebar-footer">
-            <p>© 2025 MOODO CORP.<br/>PIXEL DIARY ver 1.0</p>
+        <div class="p-8 border-t-4 border-dashed border-[#111]">
+            <p class="text-[9px] opacity-30 leading-loose uppercase tracking-[0.2em]">
+                © 2025 PIXEL DIARY<br/>VER 1.0.4 ARCHIVE
+            </p>
         </div>
     </aside>
     
-    <!-- 모바일 메뉴 토글 버튼 -->
+    <!-- Mobile Menu Toggle -->
     <button class="mobile-menu-toggle" onclick="toggleSidebar()">☰</button>
     
-    <!-- 메인 컨텐츠 래퍼 -->
+    <!-- Main Content Wrapper -->
     <div class="main-wrapper">
         <main class="main-content">
             {% block content %}{% endblock %}
         </main>
     </div>
 
-    <!-- SoundCloud 플레이어 (전역 - 모든 페이지에서 작동) -->
-    <div class="soundcloud-player-section">
-        <div class="soundcloud-input-container">
-            <input type="url" id="soundcloudUrlInput" class="soundcloud-input" style="display: none;" placeholder="Enter SoundCloud URL">
-            <div class="soundcloud-controls">
-                <button class="soundcloud-play-btn" id="playBtn" onclick="playSoundCloud()">▶</button>
-                <button class="soundcloud-stop-btn" id="stopBtn" onclick="stopSoundCloud()" style="display: none;">⏸</button>
+    <!-- Status Bar (Bottom) -->
+    <footer class="status-bar">
+        <div class="status-indicator">
+            <div class="status-dot animate-pulse"></div>
+            <span class="hidden sm:inline opacity-60">System Synchronized</span>
+            <span class="sm:hidden opacity-60">SYNCED</span>
+        </div>
+        
+        <!-- Integrated SoundCloud Player -->
+        <div class="flex items-center gap-4 md:gap-6">
+            <div id="playerInfo" class="hidden lg:flex items-center gap-3 opacity-40">
+                <span class="text-[9px]">NOW PLAYING:</span>
+                <span id="trackName" class="text-[9px] tracking-tighter">OFF_COMMUNITY_BGM.MP3</span>
             </div>
-            <div id="soundcloudPlayerContainer" style="display: none;">
-                <audio id="soundcloudPlayer" style="display: none;"></audio>
+            <div class="flex items-center gap-2">
+                <input type="url" id="soundcloudUrlInput" class="hidden" value="https://soundcloud.com/rrrjunkim/off-2">
+                <button class="px-3 md:px-4 py-1 border border-white/20 hover:bg-white hover:text-black transition-all text-[10px] md:text-xs" id="playBtn" onclick="playSoundCloud()">▶ PLAY</button>
+                <button class="px-3 md:px-4 py-1 border border-white/20 hover:bg-white hover:text-black transition-all text-[10px] md:text-xs" id="stopBtn" onclick="stopSoundCloud()" style="display: none;">⏸ STOP</button>
             </div>
         </div>
-    </div>
 
-    <!-- JavaScript -->
-    <script src="{{ url_for('static', filename='js/main.js') }}?v=20250714"></script>
+        <div class="hidden sm:block opacity-30">
+            NODE_ID: ARCHIVE-01
+        </div>
+
+        <!-- SoundCloud 공식 위젯 (HLS/m3u8 직접 재생 문제 회피) -->
+        <div id="soundcloudWidgetContainer" style="display: none; width: 320px; max-width: 45vw;">
+            <iframe
+                id="soundcloudWidget"
+                title="SoundCloud player"
+                width="100%"
+                height="80"
+                scrolling="no"
+                frameborder="no"
+                allow="autoplay"
+                src="">
+            </iframe>
+        </div>
+    </footer>
+
+    <!-- Scripts -->
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+    <script src="https://w.soundcloud.com/player/api.js"></script>
     <script>
-        // 전역 SoundCloud 플레이어 (모든 페이지에서 작동)
-        let currentPlayer = null;
-        let playerInitialized = false;
+        let scWidget = null;
+        let scWidgetReady = false;
+        let scWidgetContainerVisible = false;
         
         async function playSoundCloud() {
-            const urlInput = document.getElementById('soundcloudUrlInput');
-            const player = document.getElementById('soundcloudPlayer');
             const playBtn = document.getElementById('playBtn');
             const stopBtn = document.getElementById('stopBtn');
+            const urlInput = document.getElementById('soundcloudUrlInput');
+            const widgetContainer = document.getElementById('soundcloudWidgetContainer');
+            const widgetFrame = document.getElementById('soundcloudWidget');
+            const trackName = document.getElementById('trackName');
             
-            if (!urlInput || !player || !playBtn || !stopBtn) {
-                return Promise.reject('Player elements not found');
+            if (!urlInput || !playBtn || !stopBtn || !widgetContainer || !widgetFrame) {
+                console.error('SoundCloud widget elements missing');
+                return;
             }
-            
-            // 이미 재생 중이면 정지
-            if (currentPlayer && !currentPlayer.paused) {
-                stopSoundCloud();
-                return Promise.resolve();
-            }
-            
-            const url = urlInput.value.trim();
-            
-            if (!url) {
-                return Promise.reject('No URL');
-            }
-            
-            // SoundCloud URL인지 확인
-            if (!url.includes('soundcloud.com')) {
-                return Promise.reject('Invalid URL');
-            }
-            
+
             try {
-                const response = await fetch('/api/get_stream_url', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({
-                        url: url
-                    })
-                });
-                
-                const data = await response.json();
-                
-                if (data.success) {
-                    // 플레이어에 스트리밍 URL 설정
-                    player.src = data.stream_url;
-                    currentPlayer = player;
-                    
-                    // 버튼 클릭으로만 재생 시도
-                    return player.play().then(() => {
+                const url = (urlInput.value || '').trim();
+                if (!url) return;
+
+                // 위젯을 한 번이라도 보여줘야 사용자 입장에서 “재생 중”이 명확함
+                if (!scWidgetContainerVisible) {
+                    widgetContainer.style.display = 'block';
+                    scWidgetContainerVisible = true;
+                }
+
+                // 최초 src 세팅 (auto_play는 위젯 load에서 처리)
+                if (!widgetFrame.src) {
+                    widgetFrame.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=false`;
+                }
+
+                // Widget API 연결
+                if (!scWidget && window.SC && window.SC.Widget) {
+                    scWidget = window.SC.Widget(widgetFrame);
+                    scWidgetReady = true;
+
+                    // 버튼 UI 동기화
+                    scWidget.bind(window.SC.Widget.Events.PLAY, function() {
                         playBtn.style.display = 'none';
                         stopBtn.style.display = 'block';
-                        return Promise.resolve();
                     });
-                } else {
-                    return Promise.reject(data.error || 'Failed to get stream URL');
+                    scWidget.bind(window.SC.Widget.Events.PAUSE, function() {
+                        playBtn.style.display = 'block';
+                        stopBtn.style.display = 'none';
+                    });
+                    scWidget.bind(window.SC.Widget.Events.FINISH, function() {
+                        playBtn.style.display = 'block';
+                        stopBtn.style.display = 'none';
+                    });
                 }
+
+                // 트랙 로드 + 재생(사용자 클릭 이벤트이므로 autoplay 차단 가능성 낮음)
+                if (scWidgetReady && scWidget) {
+                    scWidget.load(url, {
+                        auto_play: true,
+                        visual: false,
+                        show_artwork: false,
+                        show_comments: false,
+                        show_user: true,
+                        show_reposts: false,
+                        show_teaser: false
+                    });
+                }
+
+                // 표시 텍스트는 최소한으로 업데이트
+                if (trackName) trackName.textContent = 'SoundCloud';
+
+                // UI는 즉시 토글(위젯 이벤트가 늦을 수 있음)
+                playBtn.style.display = 'none';
+                stopBtn.style.display = 'block';
             } catch (error) {
-                console.error('Error:', error);
-                return Promise.reject(error);
+                console.error('Playback error:', error);
             }
         }
         
         function stopSoundCloud() {
-            const player = document.getElementById('soundcloudPlayer');
             const playBtn = document.getElementById('playBtn');
             const stopBtn = document.getElementById('stopBtn');
-            
-            if (player) {
-                player.pause();
-                player.currentTime = 0;
-            }
-            
-            if (playBtn) playBtn.style.display = 'block';
-            if (stopBtn) stopBtn.style.display = 'none';
-            currentPlayer = null;
-        }
-        
-        // 페이지 로드 시 플레이어만 초기화 (자동 재생 없음)
-        function initSoundCloudPlayer() {
-            if (playerInitialized) return;
-            
-            const defaultUrl = 'https://soundcloud.com/rrrjunkim/off-2?si=32b788376bea4bd5b44d8c685a2b57f8&utm_source=clipboard&utm_medium=text&utm_campaign=social_sharing';
-            const urlInput = document.getElementById('soundcloudUrlInput');
-            const player = document.getElementById('soundcloudPlayer');
-            const playBtn = document.getElementById('playBtn');
-            const stopBtn = document.getElementById('stopBtn');
-            
-            if (!urlInput || !player || !playBtn || !stopBtn) {
-                return;
-            }
-            
-            playerInitialized = true;
 
-            // 기본 URL만 설정 (자동 재생 X)
-            if (!urlInput.value) {
-                urlInput.value = defaultUrl;
+            if (scWidgetReady && scWidget) {
+                try { scWidget.pause(); } catch (e) { /* ignore */ }
             }
-            
-            // 플레이어 이벤트 리스너
-            player.addEventListener('play', () => {
-                if (playBtn) playBtn.style.display = 'none';
-                if (stopBtn) stopBtn.style.display = 'block';
-            });
-            
-            player.addEventListener('pause', () => {
-                if (playBtn) playBtn.style.display = 'block';
-                if (stopBtn) stopBtn.style.display = 'none';
-            });
-            
-            player.addEventListener('ended', () => {
-                if (playBtn) playBtn.style.display = 'block';
-                if (stopBtn) stopBtn.style.display = 'none';
-            });
+            playBtn.style.display = 'block';
+            stopBtn.style.display = 'none';
         }
-        
-        // DOM 로드 시 초기화
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', initSoundCloudPlayer);
-        } else {
-            initSoundCloudPlayer();
-        }
-    </script>
-    <script>
+
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobileOverlay');
             sidebar.classList.toggle('open');
-            
             if (window.innerWidth <= 768) {
-                if (sidebar.classList.contains('open')) {
-                    overlay.style.display = 'block';
-                } else {
-                    overlay.style.display = 'none';
-                }
+                overlay.style.display = sidebar.classList.contains('open') ? 'block' : 'none';
             }
         }
-        
-        // 모바일에서 사이드바 외부 클릭 시 닫기
-        document.addEventListener('click', function(event) {
-            const sidebar = document.getElementById('sidebar');
-            const toggle = document.querySelector('.mobile-menu-toggle');
-            const overlay = document.getElementById('mobileOverlay');
-            
-            if (window.innerWidth <= 768) {
-                if (!sidebar.contains(event.target) && !toggle.contains(event.target)) {
-                    sidebar.classList.remove('open');
-                    overlay.style.display = 'none';
-                }
-            }
-        });
     </script>
     {% block extra_js %}{% endblock %}
 </body>

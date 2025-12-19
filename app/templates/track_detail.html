@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block title %}{{ track.title }} - OFF THE COMMUNITY{% endblock %}
+
+{% block content %}
+<div class="main-content-container">
+    <header class="mb-12">
+        <a href="{{ url_for('index') }}" class="text-[10px] uppercase tracking-[0.2em] opacity-40 hover:opacity-80 inline-flex items-center gap-2">
+            <span>←</span><span>BACK_TO_SONGS</span>
+        </a>
+
+        <div class="inline-flex items-center gap-4 mt-8 mb-6">
+            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">Track_ID: {{ track.id[:8] if track.id else 'NULL' }}</span>
+            <div class="w-12 h-[1px] bg-white/20"></div>
+        </div>
+
+        <h2 class="text-4xl md:text-5xl font-bold serif-font leading-tight mb-3">{{ track.title }}</h2>
+        <div class="text-[11px] uppercase tracking-widest opacity-50">
+            {% if track.artist %}{{ track.artist }}{% endif %}
+            {% if track.duration_str %} · {{ track.duration_str }}{% endif %}
+            · {{ track.source }}
+        </div>
+    </header>
+
+    <section class="pixel-card p-6 md:p-10 mb-10">
+        <div class="flex flex-col md:flex-row gap-6">
+            <div class="w-full md:w-48">
+                <div class="aspect-square bg-white/5 border border-white/10 overflow-hidden flex items-center justify-center">
+                    {% if track.thumbnail_url %}
+                        <img src="{{ track.thumbnail_url }}" alt="cover" class="w-full h-full object-cover">
+                    {% else %}
+                        <span class="text-[10px] opacity-30">NO_ART</span>
+                    {% endif %}
+                </div>
+                <div class="mt-4 text-[10px] opacity-30 break-words">
+                    <a href="{{ track.url }}" target="_blank" rel="noreferrer" class="underline underline-offset-4">OPEN_SOURCE</a>
+                </div>
+            </div>
+
+            <div class="flex-1">
+                <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-4">Player</h3>
+
+                {% if embed.type == 'soundcloud' %}
+                    <iframe
+                        title="SoundCloud player"
+                        width="100%"
+                        height="120"
+                        scrolling="no"
+                        frameborder="no"
+                        allow="autoplay"
+                        src="https://w.soundcloud.com/player/?url={{ track.url|urlencode }}&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=false">
+                    </iframe>
+                {% elif embed.type == 'youtube' and embed.source_id %}
+                    <div class="aspect-video bg-black border border-white/10">
+                        <iframe
+                            title="YouTube player"
+                            width="100%"
+                            height="100%"
+                            frameborder="0"
+                            allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                            allowfullscreen
+                            src="https://www.youtube.com/embed/{{ embed.source_id }}">
+                        </iframe>
+                    </div>
+                {% else %}
+                    <div class="text-sm opacity-60">
+                        플레이어를 표시할 수 없어요. 링크로 열어주세요: <a class="underline" href="{{ track.url }}" target="_blank" rel="noreferrer">{{ track.url }}</a>
+                    </div>
+                {% endif %}
+            </div>
+        </div>
+    </section>
+
+    <section class="pixel-card p-6 md:p-10 mb-10">
+        <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6">Leave a Comment (Diary Style)</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            <input
+                type="text"
+                id="commentAuthor"
+                maxlength="50"
+                placeholder="닉네임(선택)"
+                class="bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel"
+            >
+            <div class="md:col-span-2">
+                <textarea
+                    id="commentContent"
+                    maxlength="4000"
+                    placeholder="이 곡을 들으며 떠오른 생각을 일기처럼 남겨주세요."
+                    class="w-full bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-serif min-h-40"
+                ></textarea>
+                <div class="text-[10px] mt-2 opacity-40 uppercase tracking-widest text-right">
+                    <span id="commentCount">0</span> / 4000
+                </div>
+            </div>
+        </div>
+        <div class="flex justify-end mt-6">
+            <button class="btn-pixel text-xs tracking-widest" id="commentSubmitBtn" onclick="submitComment()">SAVE_COMMENT</button>
+        </div>
+        <div id="commentMsg" class="text-xs mt-4 opacity-70"></div>
+    </section>
+
+    <section class="space-y-6">
+        <div class="flex items-end justify-between">
+            <h3 class="text-xs uppercase tracking-[0.3em] opacity-40">Comments</h3>
+            <div class="text-[10px] opacity-40 uppercase tracking-widest">{{ comments|length }} items</div>
+        </div>
+
+        {% if comments %}
+            {% for c in comments %}
+                <article class="pixel-card p-6">
+                    <div class="flex justify-between items-start gap-4">
+                        <div class="text-[10px] uppercase tracking-widest opacity-40">
+                            {{ c.author }} · {{ c.created_at[:10] if c.created_at else '' }}
+                        </div>
+                        <button class="btn-outline text-[10px] tracking-widest" onclick="deleteComment('{{ c.id }}')">DELETE</button>
+                    </div>
+                    <div class="mt-4 text-base serif-font leading-relaxed whitespace-pre-wrap">
+                        {{ c.content }}
+                    </div>
+                </article>
+            {% endfor %}
+        {% else %}
+            <div class="pixel-card p-10 text-center">
+                <h3 class="text-xl serif-font mb-2">아직 코멘트가 없어요</h3>
+                <p class="text-sm opacity-50 italic serif-font">첫 번째 감상을 남겨주세요.</p>
+            </div>
+        {% endif %}
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+const contentEl = document.getElementById('commentContent');
+const countEl = document.getElementById('commentCount');
+contentEl.addEventListener('input', () => { countEl.textContent = (contentEl.value || '').length; });
+
+async function submitComment() {
+    const btn = document.getElementById('commentSubmitBtn');
+    const msg = document.getElementById('commentMsg');
+    const author = (document.getElementById('commentAuthor').value || '').trim() || 'Anonymous';
+    const content = (document.getElementById('commentContent').value || '').trim();
+
+    if (!content) {
+        msg.textContent = '내용을 입력해주세요.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'SAVING...';
+    msg.textContent = '';
+
+    try {
+        const res = await fetch('/api/tracks/{{ track.id }}/comments', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({author, content})
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+            return;
+        }
+        msg.textContent = data.error || '저장 실패';
+    } catch (e) {
+        msg.textContent = '오류가 발생했어요.';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'SAVE_COMMENT';
+    }
+}
+
+async function deleteComment(commentId) {
+    const pw = prompt('관리자 비밀번호(1225)를 입력하세요');
+    if (!pw) return;
+    try {
+        const res = await fetch(`/api/track_comments/${commentId}`, {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({password: pw})
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+            return;
+        }
+        alert(data.error || '삭제 실패');
+    } catch (e) {
+        alert('오류가 발생했어요.');
+    }
+}
+</script>
+{% endblock %}
+

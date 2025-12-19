@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Moodo - 음악 파일 처리 웹 서비스
+off the community - 음악 파일 처리 웹 서비스
 메인 Flask 애플리케이션 파일
 """
 
@@ -18,6 +18,7 @@ from flask import Flask, render_template, request, jsonify, send_file, redirect,
 from flask_cors import CORS
 from werkzeug.utils import secure_filename
 from datetime import datetime
+from typing import Optional
 import json
 import threading
 import uuid
@@ -176,6 +177,75 @@ trend_analyzer_v2 = trends_analyzer
 music_analysis_jobs = {}
 
 
+# =========================
+# 커뮤니티 기본 설정
+# =========================
+# - “노래 들으면서 생각 남기기”에 맞는 최소 UX/방어 로직
+COMMUNITY_TITLE_MAX_LEN = 200
+COMMUNITY_CONTENT_MAX_LEN = 10000
+COMMUNITY_AUTHOR_MAX_LEN = 50
+
+COMMUNITY_PER_PAGE_DEFAULT = 20
+COMMUNITY_PER_PAGE_MAX = 50
+
+# 간단한 스팸 방지(서버 메모리 기반): 같은 IP에서 너무 빠른 연속 작성 제한
+COMMUNITY_POST_MIN_INTERVAL_SECONDS = 10
+_community_last_post_at_by_ip = {}
+
+TRACKS_PER_PAGE_DEFAULT = 20
+TRACKS_PER_PAGE_MAX = 50
+TRACK_URL_MAX_LEN = 500
+TRACK_TITLE_MAX_LEN = 200
+TRACK_ARTIST_MAX_LEN = 200
+
+TRACK_COMMENT_MAX_LEN = 4000
+TRACK_COMMENT_AUTHOR_MAX_LEN = 50
+TRACK_COMMENT_MIN_INTERVAL_SECONDS = 5
+_track_last_comment_at_by_ip = {}
+
+
+def _get_client_ip() -> str:
+    """프록시 환경(X-Forwarded-For) 고려한 클라이언트 IP 추출"""
+    ip_address = request.headers.get('X-Forwarded-For', request.remote_addr)
+    if ip_address:
+        return ip_address.split(',')[0].strip()
+    return request.remote_addr or 'Unknown'
+
+
+def _validate_post_payload(title: str, content: str, author: str) -> Optional[str]:
+    """게시글 입력값 검증. 문제 있으면 에러 메시지 반환, 아니면 None."""
+    if not title or not content:
+        return "제목과 내용을 입력해주세요."
+
+    if len(title) > COMMUNITY_TITLE_MAX_LEN:
+        return f"제목은 {COMMUNITY_TITLE_MAX_LEN}자 이하로 입력해주세요."
+    if len(content) > COMMUNITY_CONTENT_MAX_LEN:
+        return f"내용은 {COMMUNITY_CONTENT_MAX_LEN}자 이하로 입력해주세요."
+    if author and len(author) > COMMUNITY_AUTHOR_MAX_LEN:
+        return f"닉네임은 {COMMUNITY_AUTHOR_MAX_LEN}자 이하로 입력해주세요."
+
+    return None
+
+
+def _format_duration(seconds: Optional[int]) -> str:
+    """초를 mm:ss 형식으로 변환 (간단 표기)"""
+    if not seconds or seconds <= 0:
+        return ""
+    m = int(seconds // 60)
+    s = int(seconds % 60)
+    return f"{m:02d}:{s:02d}"
+
+
+def _guess_track_source(url: str) -> str:
+    """URL로 소스 추정 (SoundCloud/YouTube만 MVP 지원)"""
+    u = (url or "").lower()
+    if "soundcloud.com" in u:
+        return "soundcloud"
+    if "youtube.com" in u or "youtu.be" in u:
+        return "youtube"
+    return "unknown"
+
+
 def allowed_file(filename):
     """파일 확장자 검증"""
     return '.' in filename and \
@@ -248,19 +318,109 @@ def log_visitor():
 
 @app.route('/')
 def index():
-    """메인 페이지 - 커뮤니티"""
-    console.log("[Route] / - 커뮤니티 메인 페이지 요청")
+    """메인 페이지 - 곡 목록/추가"""
+    console.log("[Route] / - 트랙 목록 페이지 요청")
+    error_message = None
+
+    # 페이지네이션
+    try:
+        page = int(request.args.get('page', '1'))
+    except Exception:
+        page = 1
+
+    if page < 1:
+        page = 1
+
+    try:
+        per_page = int(request.args.get('per_page', str(TRACKS_PER_PAGE_DEFAULT)))
+    except Exception:
+        per_page = TRACKS_PER_PAGE_DEFAULT
+
+    if per_page < 1:
+        per_page = TRACKS_PER_PAGE_DEFAULT
+    if per_page > TRACKS_PER_PAGE_MAX:
+        per_page = TRACKS_PER_PAGE_MAX
+
+    offset = (page - 1) * per_page
+
     try:
         if supabase_available:
             supabase = SupabaseClient()
-            posts = supabase.get_posts(limit=50)
+            tracks = supabase.get_tracks(limit=per_page, offset=offset)
+        else:
+            tracks = []
+    except Exception as e:
+        print(f"[ERROR] 트랙 조회 실패: {e}")
+        error_message = "곡 목록을 불러오지 못했어요. 잠시 후 다시 시도해주세요."
+        tracks = []
+    
+    # 다음 페이지 유무는 “가득 찼는지”로만 판단(정확한 total count 없이도 최소 UX 제공)
+    has_next = len(tracks) == per_page
+
+    # duration_str 생성
+    for t in tracks:
+        try:
+            t["duration_str"] = _format_duration(t.get("duration_seconds"))
+        except Exception:
+            t["duration_str"] = ""
+
+    return render_template(
+        'tracks.html',
+        tracks=tracks,
+        error=error_message,
+        page=page,
+        per_page=per_page,
+        has_next=has_next
+    )
+
+
+@app.route('/diary')
+def diary():
+    """일기(기존 커뮤니티) 피드"""
+    console.log("[Route] /diary - 일기 피드 페이지 요청")
+    error_message = None
+
+    # 페이지네이션
+    try:
+        page = int(request.args.get('page', '1'))
+    except Exception:
+        page = 1
+
+    if page < 1:
+        page = 1
+
+    try:
+        per_page = int(request.args.get('per_page', str(COMMUNITY_PER_PAGE_DEFAULT)))
+    except Exception:
+        per_page = COMMUNITY_PER_PAGE_DEFAULT
+
+    if per_page < 1:
+        per_page = COMMUNITY_PER_PAGE_DEFAULT
+    if per_page > COMMUNITY_PER_PAGE_MAX:
+        per_page = COMMUNITY_PER_PAGE_MAX
+
+    offset = (page - 1) * per_page
+
+    try:
+        if supabase_available:
+            supabase = SupabaseClient()
+            posts = supabase.get_posts(limit=per_page, offset=offset)
         else:
             posts = []
     except Exception as e:
         print(f"[ERROR] 커뮤니티 게시글 조회 실패: {e}")
+        error_message = "게시글을 불러오지 못했어요. 잠시 후 다시 시도해주세요."
         posts = []
-    
-    return render_template('community.html', posts=posts)
+
+    has_next = len(posts) == per_page
+    return render_template(
+        'community.html',
+        posts=posts,
+        error=error_message,
+        page=page,
+        per_page=per_page,
+        has_next=has_next
+    )
 
 
 @app.route('/studio')
@@ -290,10 +450,11 @@ def music_video():
 @app.route('/community')
 def community():
     """커뮤니티 페이지 (리다이렉트)"""
-    return redirect(url_for('index'))
+    return redirect(url_for('diary'))
 
 
 @app.route('/community/post/<post_id>')
+@app.route('/diary/post/<post_id>')
 def community_post(post_id):
     """커뮤니티 게시글 상세 페이지"""
     console.log(f"[Route] /community/post/{post_id} - 게시글 상세 페이지 요청")
@@ -314,10 +475,164 @@ def community_post(post_id):
 
 
 @app.route('/community/write')
+@app.route('/diary/write')
 def community_write():
     """글쓰기 페이지"""
     console.log("[Route] /community/write - 글쓰기 페이지 요청")
     return render_template('community_write.html')
+
+
+@app.route('/track/<track_id>')
+def track_detail(track_id):
+    """곡 상세 + 코멘트"""
+    console.log(f"[Route] /track/{track_id} - 트랙 상세 페이지 요청")
+    if not supabase_available:
+        return render_template('tracks.html', error="Supabase 연결이 불가능합니다.", tracks=[]), 503
+
+    supabase = SupabaseClient()
+    track = supabase.get_track(track_id)
+    if not track:
+        return render_template('tracks.html', error="곡을 찾을 수 없습니다.", tracks=[]), 404
+
+    track["duration_str"] = _format_duration(track.get("duration_seconds"))
+
+    source = track.get("source")
+    embed = {"type": source, "url": track.get("url"), "source_id": track.get("source_id")}
+
+    comments = supabase.get_track_comments(track_id, limit=50, offset=0)
+    return render_template('track_detail.html', track=track, embed=embed, comments=comments)
+
+
+@app.route('/api/tracks', methods=['POST'])
+def create_track_api():
+    """참여형 곡 추가 (URL → 메타데이터 자동 수집)"""
+    try:
+        data = request.get_json() or {}
+        url = str(data.get("url", "")).strip()
+        if not url:
+            return jsonify({"success": False, "error": "URL이 필요합니다."}), 400
+        if len(url) > TRACK_URL_MAX_LEN:
+            return jsonify({"success": False, "error": "URL이 너무 깁니다."}), 400
+
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+
+        source = _guess_track_source(url)
+        if source == "unknown":
+            return jsonify({"success": False, "error": "현재는 SoundCloud/YouTube 링크만 지원합니다."}), 400
+
+        supabase = SupabaseClient()
+        existing = supabase.get_track_by_url(url)
+        if existing:
+            return jsonify({"success": True, "track_id": existing.get("id"), "existing": True}), 200
+
+        extractor = LinkExtractor(console_log=console.log)
+
+        title = None
+        artist = None
+        duration = None
+        thumbnail = None
+        source_id = None
+
+        if source == "youtube":
+            source_id = extractor.extract_video_id(url)
+            info = extractor.get_video_info(url)
+            if info and info.get("success"):
+                title = info.get("title")
+                artist = info.get("uploader")
+                duration = info.get("duration")
+                thumbnail = info.get("thumbnail")
+
+        if not title:
+            # fallback: yt-dlp 기반 메타 (soundcloud 포함)
+            meta = extractor.get_stream_url(url)
+            if meta.get("success"):
+                title = meta.get("title")
+                artist = meta.get("uploader")
+                duration = meta.get("duration")
+                thumbnail = meta.get("thumbnail")
+
+        title = (title or "Unknown").strip()[:TRACK_TITLE_MAX_LEN]
+        artist = (artist or "").strip()[:TRACK_ARTIST_MAX_LEN] or None
+        duration_seconds = int(duration) if isinstance(duration, (int, float)) else None
+
+        track_id = supabase.create_track(
+            url=url,
+            source=source,
+            source_id=source_id,
+            title=title,
+            artist=artist,
+            duration_seconds=duration_seconds,
+            thumbnail_url=thumbnail,
+        )
+
+        if not track_id:
+            return jsonify({"success": False, "error": "곡 등록에 실패했습니다."}), 500
+
+        return jsonify({"success": True, "track_id": track_id, "existing": False}), 201
+    except Exception as e:
+        print(f"[ERROR] 트랙 생성 실패: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/tracks/<track_id>/comments', methods=['POST'])
+def create_track_comment_api(track_id):
+    """곡 코멘트 작성 API"""
+    try:
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+
+        data = request.get_json() or {}
+        content = str(data.get("content", "")).strip()
+        author = str(data.get("author", "Anonymous")).strip() or "Anonymous"
+
+        if not content:
+            return jsonify({"success": False, "error": "내용을 입력해주세요."}), 400
+        if len(content) > TRACK_COMMENT_MAX_LEN:
+            return jsonify({"success": False, "error": f"내용은 {TRACK_COMMENT_MAX_LEN}자 이하로 입력해주세요."}), 400
+        if len(author) > TRACK_COMMENT_AUTHOR_MAX_LEN:
+            return jsonify({"success": False, "error": f"닉네임은 {TRACK_COMMENT_AUTHOR_MAX_LEN}자 이하로 입력해주세요."}), 400
+
+        ip_address = _get_client_ip()
+        now = datetime.now()
+        last_at = _track_last_comment_at_by_ip.get(ip_address)
+        if last_at and (now - last_at).total_seconds() < TRACK_COMMENT_MIN_INTERVAL_SECONDS:
+            return jsonify({"success": False, "error": "너무 빠르게 작성하고 있어요. 잠시 후 다시 시도해주세요."}), 429
+
+        supabase = SupabaseClient()
+        comment_id = supabase.create_track_comment(track_id, content=content, author=author)
+        if not comment_id:
+            return jsonify({"success": False, "error": "코멘트 저장에 실패했습니다."}), 500
+
+        _track_last_comment_at_by_ip[ip_address] = now
+        return jsonify({"success": True, "comment_id": comment_id}), 201
+    except Exception as e:
+        print(f"[ERROR] track_comments 생성 실패: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/track_comments/<comment_id>', methods=['DELETE'])
+def delete_track_comment_api(comment_id):
+    """곡 코멘트 삭제 API (관리자만 가능)"""
+    try:
+        data = request.get_json() or {}
+        admin_password = data.get('password', '')
+        required_password = os.environ.get('ADMIN_PASSWORD', '') or '1225'
+
+        if admin_password != required_password:
+            return jsonify({'success': False, 'error': '관리자 비밀번호가 일치하지 않습니다.'}), 403
+
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+
+        supabase = SupabaseClient()
+        ok = supabase.delete_track_comment(comment_id)
+        if not ok:
+            return jsonify({"success": False, "error": "삭제에 실패했습니다."}), 500
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[ERROR] track_comment 삭제 실패: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
 
 
 @app.route('/api/community/posts', methods=['POST'])
@@ -325,18 +640,29 @@ def create_post():
     """게시글 생성 API"""
     try:
         data = request.get_json()
-        title = data.get('title', '').strip()
-        content = data.get('content', '').strip()
-        author = data.get('author', 'Anonymous').strip() or 'Anonymous'
-        
-        if not title or not content:
-            return jsonify({'success': False, 'error': '제목과 내용을 입력해주세요.'}), 400
+        data = data or {}
+
+        title = str(data.get('title', '')).strip()
+        content = str(data.get('content', '')).strip()
+        author = str(data.get('author', 'Anonymous')).strip() or 'Anonymous'
+
+        # 기본 스팸 방지(연속 작성 제한)
+        ip_address = _get_client_ip()
+        now = datetime.now()
+        last_at = _community_last_post_at_by_ip.get(ip_address)
+        if last_at and (now - last_at).total_seconds() < COMMUNITY_POST_MIN_INTERVAL_SECONDS:
+            return jsonify({'success': False, 'error': '너무 빠르게 작성하고 있어요. 잠시 후 다시 시도해주세요.'}), 429
+
+        validation_error = _validate_post_payload(title, content, author)
+        if validation_error:
+            return jsonify({'success': False, 'error': validation_error}), 400
         
         if supabase_available:
             supabase = SupabaseClient()
             post_id = supabase.create_post(title, content, author)
             
             if post_id:
+                _community_last_post_at_by_ip[ip_address] = now
                 return jsonify({'success': True, 'post_id': post_id}), 201
             else:
                 return jsonify({'success': False, 'error': '게시글 생성에 실패했습니다.'}), 500
@@ -352,12 +678,14 @@ def create_post():
 def update_post_api(post_id):
     """게시글 수정 API"""
     try:
-        data = request.get_json()
-        title = data.get('title', '').strip()
-        content = data.get('content', '').strip()
-        
-        if not title or not content:
-            return jsonify({'success': False, 'error': '제목과 내용을 입력해주세요.'}), 400
+        data = request.get_json() or {}
+        title = str(data.get('title', '')).strip()
+        content = str(data.get('content', '')).strip()
+
+        # 수정은 닉네임 변경을 받지 않지만(현재 스키마/UX 기준), 검증은 동일하게 적용
+        validation_error = _validate_post_payload(title, content, author="")
+        if validation_error:
+            return jsonify({'success': False, 'error': validation_error}), 400
         
         if supabase_available:
             supabase = SupabaseClient()
@@ -382,10 +710,10 @@ def delete_post_api(post_id):
         # 관리자 비밀번호 확인
         data = request.get_json() or {}
         admin_password = data.get('password', '')
-        required_password = os.environ.get('ADMIN_PASSWORD', '')
+        # .env 미설정/누락 시 로컬 기본값 사용
+        required_password = os.environ.get('ADMIN_PASSWORD', '') or '1225'
         
-        if not required_password:
-            return jsonify({'success': False, 'error': '관리자 비밀번호가 설정되지 않았습니다.'}), 500
+        # required_password는 기본값이 존재하므로 일반적으로 비어있지 않음
         
         if admin_password != required_password:
             return jsonify({'success': False, 'error': '관리자 비밀번호가 일치하지 않습니다.'}), 403
