@@ -2,6 +2,7 @@
 # Web Framework
 Flask==3.0.0
 werkzeug==3.0.1
+Flask-Login==0.6.3
 
 # Audio Processing
 pydub==0.25.1
@@ -57,7 +58,7 @@ schedule>=1.2.0
 
 # Data Analysis (Required - for chart visualization features)
 pandas>=2.3.0
-matplotlib>=3.10.0
+matplotlib>=3.7.0
 seaborn>=0.13.0
 
 # Korean Text Processing (Optional - for advanced text analysis)

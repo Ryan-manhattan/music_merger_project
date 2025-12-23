@@ -14,8 +14,9 @@ if os.name == 'nt':  # Windows에서만 실행
         if ffmpeg_path not in current_path:
             os.environ['PATH'] = ffmpeg_path + os.pathsep + current_path
 
-from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for
+from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, session
 from flask_cors import CORS
+from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from typing import Optional
@@ -89,12 +90,20 @@ app = Flask(__name__,
            static_folder='app/static')
 CORS(app)
 
+# Flask-Login 초기화
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = '로그인이 필요합니다.'
+login_manager.login_message_category = 'info'
+
 # 설정
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB 제한
 app.config['UPLOAD_FOLDER'] = os.path.join(os.path.dirname(__file__), 'app', 'uploads')
 app.config['PROCESSED_FOLDER'] = os.path.join(os.path.dirname(__file__), 'app', 'processed')
 app.config['ALLOWED_EXTENSIONS'] = {'mp3', 'wav', 'm4a', 'flac', 'mp4', 'webm'}
 app.config['ALLOWED_IMAGE_EXTENSIONS'] = {'jpg', 'jpeg', 'png', 'bmp', 'gif'}
+app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-1225-change-in-production')
 
 # 폴더 생성 확인
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -314,6 +323,124 @@ def log_visitor():
             console.log(f"[WARN] 방문자 로그 초기화 실패: {e}")
     
     return None
+
+
+# User 클래스 (Flask-Login용)
+class User(UserMixin):
+    """사용자 클래스"""
+    def __init__(self, user_id, username, email):
+        self.id = user_id
+        self.username = username
+        self.email = email
+    
+    @staticmethod
+    def get(user_id):
+        """사용자 ID로 사용자 객체 반환"""
+        try:
+            from utils.auth import AuthManager
+            auth_manager = AuthManager()
+            user_data = auth_manager.get_user_by_id(user_id)
+            if user_data:
+                return User(
+                    user_id=user_data['id'],
+                    username=user_data['username'],
+                    email=user_data['email']
+                )
+        except Exception as e:
+            console.log(f"[ERROR] 사용자 조회 실패: {e}")
+        return None
+
+
+@login_manager.user_loader
+def load_user(user_id):
+    """Flask-Login용 사용자 로더"""
+    return User.get(user_id)
+
+
+@app.route('/login')
+def login():
+    """로그인 페이지"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('login.html')
+
+
+@app.route('/register')
+def register():
+    """회원가입 페이지"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('register.html')
+
+
+@app.route('/logout')
+@login_required
+def logout():
+    """로그아웃"""
+    logout_user()
+    return redirect(url_for('index'))
+
+
+@app.route('/api/auth/register', methods=['POST'])
+def api_register():
+    """회원가입 API"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        
+        from utils.auth import AuthManager
+        auth_manager = AuthManager()
+        result = auth_manager.register_user(username, email, password)
+        
+        return jsonify(result)
+    except Exception as e:
+        console.log(f"[ERROR] 회원가입 API 오류: {e}")
+        return jsonify({'success': False, 'message': '오류가 발생했습니다.'}), 500
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def api_login():
+    """로그인 API"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        
+        from utils.auth import AuthManager
+        auth_manager = AuthManager()
+        result = auth_manager.login_user(username, password)
+        
+        if result['success']:
+            # Flask-Login으로 사용자 로그인
+            user = User(
+                user_id=result['user']['id'],
+                username=result['user']['username'],
+                email=result['user']['email']
+            )
+            login_user(user, remember=True)
+            result['redirect'] = request.args.get('next') or '/'
+        
+        return jsonify(result)
+    except Exception as e:
+        console.log(f"[ERROR] 로그인 API 오류: {e}")
+        return jsonify({'success': False, 'message': '오류가 발생했습니다.'}), 500
+
+
+@app.route('/api/auth/me')
+def api_me():
+    """현재 로그인한 사용자 정보"""
+    if current_user.is_authenticated:
+        return jsonify({
+            'success': True,
+            'user': {
+                'id': current_user.id,
+                'username': current_user.username,
+                'email': current_user.email
+            }
+        })
+    return jsonify({'success': False, 'message': '로그인되지 않았습니다.'}), 401
 
 
 @app.route('/')

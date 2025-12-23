@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}로그인 - OFF THE COMMUNITY{% endblock %}
+
+{% block content %}
+<div class="main-content-container">
+    <header class="mb-12">
+        <a href="{{ url_for('index') }}" class="text-[10px] uppercase tracking-[0.2em] opacity-40 hover:opacity-80 inline-flex items-center gap-2">
+            <span>←</span><span>BACK_TO_HOME</span>
+        </a>
+        <h2 class="text-4xl md:text-5xl font-bold serif-font leading-tight mb-3 mt-8">로그인</h2>
+        <p class="text-[11px] uppercase tracking-widest opacity-50">LOGIN_TO_ARCHIVE</p>
+    </header>
+
+    <section class="pixel-card p-6 md:p-10 mb-10 max-w-md mx-auto">
+        <form id="loginForm" class="space-y-6">
+            <div>
+                <label class="text-[10px] uppercase tracking-widest opacity-50 mb-2 block">사용자명 또는 이메일</label>
+                <input
+                    type="text"
+                    id="username"
+                    name="username"
+                    required
+                    class="w-full bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel"
+                    placeholder="username or email@example.com"
+                >
+            </div>
+
+            <div>
+                <label class="text-[10px] uppercase tracking-widest opacity-50 mb-2 block">비밀번호</label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    required
+                    class="w-full bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel"
+                    placeholder="password"
+                >
+            </div>
+
+            <div id="loginMsg" class="text-xs opacity-70"></div>
+
+            <div class="flex gap-3">
+                <button type="submit" class="btn-pixel text-xs tracking-widest flex-1" id="loginBtn">LOGIN</button>
+                <a href="{{ url_for('register') }}" class="btn-outline text-xs tracking-widest flex-1 text-center">회원가입</a>
+            </div>
+        </form>
+    </section>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.getElementById('loginForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const btn = document.getElementById('loginBtn');
+    const msg = document.getElementById('loginMsg');
+    const username = document.getElementById('username').value.trim();
+    const password = document.getElementById('password').value;
+
+    if (!username || !password) {
+        msg.textContent = '사용자명과 비밀번호를 입력해주세요.';
+        msg.classList.add('text-red-400');
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'LOGGING_IN...';
+    msg.textContent = '';
+    msg.classList.remove('text-red-400', 'text-green-400');
+
+    try {
+        const res = await fetch('/api/auth/login', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({username, password})
+        });
+        const data = await res.json();
+        
+        if (data.success) {
+            msg.textContent = '로그인 성공! 리다이렉트 중...';
+            msg.classList.add('text-green-400');
+            setTimeout(() => {
+                window.location.href = data.redirect || '/';
+            }, 500);
+        } else {
+            msg.textContent = data.message || '로그인 실패';
+            msg.classList.add('text-red-400');
+        }
+    } catch (e) {
+        msg.textContent = '오류가 발생했어요.';
+        msg.classList.add('text-red-400');
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'LOGIN';
+    }
+});
+</script>
+{% endblock %}

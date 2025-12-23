@@ -106,6 +106,19 @@
             </a>
         </nav>
         
+        <!-- 로그인 상태 표시 -->
+        <div class="p-4 border-t-2 border-[#111]">
+            {% if current_user.is_authenticated %}
+                <div class="mb-3">
+                    <div class="text-[9px] uppercase tracking-widest opacity-40 mb-1">LOGGED_IN_AS</div>
+                    <div class="text-xs font-bold">{{ current_user.username }}</div>
+                </div>
+                <a href="{{ url_for('logout') }}" class="btn-outline text-[10px] tracking-widest w-full text-center block">LOGOUT</a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn-pixel text-[10px] tracking-widest w-full text-center block">LOGIN</a>
+            {% endif %}
+        </div>
+        
         <div class="p-8 border-t-4 border-dashed border-[#111]">
             <p class="text-[9px] opacity-30 leading-loose uppercase tracking-[0.2em]">
                 © 2025 PIXEL DIARY<br/>VER 1.0.4 ARCHIVE
