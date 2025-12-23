@@ -43,14 +43,11 @@
 6. **Authorized redirect URIs** 추가:
    ```
    http://localhost:5000/login/google/authorized
-   https://your-app-name.onrender.com/login/google/authorized
+   https://music-merger-project.onrender.com/login/google/authorized
    ```
    (로컬 개발용과 Render 배포용 URL 모두 추가)
    
-   **중요**: Render 서비스 URL 확인 방법:
-   - Render 대시보드: https://dashboard.render.com
-   - 서비스 선택 → Settings → Service URL 확인
-   - 예: `https://off-community.onrender.com` 또는 `https://music-merger.onrender.com`
+   **⚠️ 중요**: 두 URL 모두 정확히 입력해야 합니다!
 7. **CREATE** 클릭
 
 ### 5. 클라이언트 ID와 시크릿 복사
@@ -107,9 +104,10 @@ python3 app.py
 Google Cloud Console의 OAuth 클라이언트 설정에서:
 - **Authorized redirect URIs**에 다음 추가:
   ```
-  https://your-service-name.onrender.com/login/google/authorized
+  http://localhost:5000/login/google/authorized
+  https://music-merger-project.onrender.com/login/google/authorized
   ```
-  (your-service-name을 실제 Render 서비스 이름으로 변경)
+  **두 URL 모두 추가해야 합니다!**
 
 ### Render 환경변수 설정
 1. Render 대시보드 → 서비스 → **Environment** 탭
@@ -120,10 +118,10 @@ Google Cloud Console의 OAuth 클라이언트 설정에서:
 4. 서비스가 자동으로 재배포됨
 
 ### 배포 후 확인
-1. 배포된 사이트 접속: `https://your-service-name.onrender.com/login`
+1. 배포된 사이트 접속: https://music-merger-project.onrender.com/login
 2. "GOOGLE로 로그인" 버튼 클릭
 3. Google 로그인 후 정상적으로 리다이렉트되는지 확인
 
 ## 📝 참고
 - 로컬 개발: `http://localhost:5000/login/google/authorized`
-- Render 배포: `https://your-service-name.onrender.com/login/google/authorized`
+- Render 배포: `https://music-merger-project.onrender.com/login/google/authorized`
