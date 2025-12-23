@@ -37,6 +37,10 @@ GOOGLE_CLOUD_PROJECT_ID=pelagic-sorter-457711-n6
 GOOGLE_CLOUD_LOCATION=us-central1
 GOOGLE_APPLICATION_CREDENTIALS_JSON={...}
 
+# Google OAuth (로그인 기능)
+GOOGLE_CLIENT_ID=your_google_client_id
+GOOGLE_CLIENT_SECRET=your_google_client_secret
+
 # OpenAI
 OPENAI_API_KEY=...
 
