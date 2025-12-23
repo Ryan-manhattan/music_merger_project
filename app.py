@@ -390,20 +390,25 @@ def login():
 def google_login_callback():
     """Google OAuth 콜백 처리"""
     if not google.authorized:
+        console.log("[ERROR] Google OAuth 인증되지 않음")
         return redirect(url_for('login'))
     
     try:
         # Google 사용자 정보 가져오기
         resp = google.get("/oauth2/v2/userinfo")
         if not resp.ok:
-            console.log(f"[ERROR] Google 사용자 정보 조회 실패: {resp.text}")
+            console.log(f"[ERROR] Google 사용자 정보 조회 실패: {resp.status_code} - {resp.text}")
             return redirect(url_for('login'))
         
         user_info = resp.json()
         google_id = user_info.get('id')
         email = user_info.get('email')
-        name = user_info.get('name', email.split('@')[0])
+        name = user_info.get('name', email.split('@')[0] if email else 'User')
         picture = user_info.get('picture')
+        
+        if not email:
+            console.log("[ERROR] Google 이메일 정보 없음")
+            return redirect(url_for('login'))
         
         # Supabase에 사용자 저장 또는 조회
         from utils.auth import AuthManager
@@ -415,9 +420,9 @@ def google_login_callback():
         if existing_user:
             # 기존 사용자 로그인
             user = User(
-                user_id=existing_user['id'],
-                username=existing_user['username'],
-                email=existing_user['email']
+                user_id=str(existing_user['id']),
+                username=existing_user.get('username', name),
+                email=existing_user.get('email', email)
             )
         else:
             # 새 사용자 생성 (Google OAuth 사용자)
@@ -428,18 +433,26 @@ def google_login_callback():
                 picture=picture
             )
             
-            if result['success']:
+            if result.get('success'):
+                user_id = result.get('user_id')
+                if not user_id:
+                    console.log(f"[ERROR] Google 사용자 생성 후 user_id 없음: {result}")
+                    return redirect(url_for('login'))
+                
+                # 생성된 사용자 정보로 User 객체 생성
                 user = User(
-                    user_id=result['user_id'],
+                    user_id=str(user_id),
                     username=name,
                     email=email
                 )
             else:
-                console.log(f"[ERROR] Google 사용자 생성 실패: {result.get('message')}")
+                error_msg = result.get('message', '알 수 없는 오류')
+                console.log(f"[ERROR] Google 사용자 생성 실패: {error_msg}")
                 return redirect(url_for('login'))
         
         # Flask-Login으로 로그인
         login_user(user, remember=True)
+        console.log(f"[INFO] Google 로그인 성공: {user.username} ({user.email})")
         
         # 리다이렉트
         next_url = request.args.get('next') or '/'
@@ -448,6 +461,8 @@ def google_login_callback():
     except Exception as e:
         console.log(f"[ERROR] Google OAuth 콜백 처리 실패: {e}")
         import traceback
+        error_trace = traceback.format_exc()
+        console.log(f"[ERROR] 상세 오류:\n{error_trace}")
         traceback.print_exc()
         return redirect(url_for('login'))
 
@@ -567,7 +582,13 @@ def index():
     try:
         if supabase_available:
             supabase = SupabaseClient()
-            tracks = supabase.get_tracks(limit=per_page, offset=offset)
+            
+            # 현재 로그인한 사용자 ID로 필터링
+            user_id = None
+            if current_user.is_authenticated:
+                user_id = str(current_user.id)
+            
+            tracks = supabase.get_tracks(limit=per_page, offset=offset, user_id=user_id)
         else:
             tracks = []
     except Exception as e:
@@ -743,7 +764,14 @@ def create_track_api():
             return jsonify({"success": False, "error": "현재는 SoundCloud/YouTube 링크만 지원합니다."}), 400
 
         supabase = SupabaseClient()
-        existing = supabase.get_track_by_url(url)
+        
+        # 현재 로그인한 사용자 ID 가져오기
+        user_id = None
+        if current_user.is_authenticated:
+            user_id = str(current_user.id)
+        
+        # 같은 URL의 같은 사용자 트랙이 있는지 확인
+        existing = supabase.get_track_by_url(url, user_id=user_id)
         existing_id = existing.get("id") if existing else None
 
         extractor = LinkExtractor(console_log=console.log)
@@ -822,6 +850,7 @@ def create_track_api():
             duration_seconds=duration_seconds,
             thumbnail_url=thumbnail,
             metadata=metadata,
+            user_id=user_id,
         )
 
         if not track_id:

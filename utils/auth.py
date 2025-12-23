@@ -220,7 +220,7 @@ class AuthManager:
                 return {
                     'success': True,
                     'message': '기존 사용자 로그인',
-                    'user_id': existing_user['id']
+                    'user_id': str(existing_user['id'])
                 }
             
             # 새 사용자 생성

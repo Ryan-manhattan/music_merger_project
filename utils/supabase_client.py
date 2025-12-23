@@ -204,12 +204,17 @@ class SupabaseClient:
     # =========================
     # Tracks (곡) + Comments (감상 코멘트)
     # =========================
-    def get_tracks(self, limit: int = 50, offset: int = 0) -> List[Dict]:
-        """곡 목록 조회 (최신 등록 순)"""
+    def get_tracks(self, limit: int = 50, offset: int = 0, user_id: str = None) -> List[Dict]:
+        """곡 목록 조회 (최신 등록 순, user_id로 필터링)"""
         try:
+            query = self.client.table("tracks").select("*")
+            
+            # user_id가 제공되면 필터링
+            if user_id:
+                query = query.eq("user_id", user_id)
+            
             response = (
-                self.client.table("tracks")
-                .select("*")
+                query
                 .order("created_at", desc=True)
                 .limit(limit)
                 .offset(offset)
@@ -235,16 +240,16 @@ class SupabaseClient:
             print(f"[ERROR] Supabase track 조회 실패: {e}")
             return None
 
-    def get_track_by_url(self, url: str) -> Optional[Dict]:
-        """URL로 곡 조회 (중복 등록 방지)"""
+    def get_track_by_url(self, url: str, user_id: str = None) -> Optional[Dict]:
+        """URL로 곡 조회 (user_id로 필터링, 중복 등록 방지)"""
         try:
-            response = (
-                self.client.table("tracks")
-                .select("*")
-                .eq("url", url)
-                .limit(1)
-                .execute()
-            )
+            query = self.client.table("tracks").select("*").eq("url", url)
+            
+            # user_id가 제공되면 해당 사용자의 것만 조회
+            if user_id:
+                query = query.eq("user_id", user_id)
+            
+            response = query.limit(1).execute()
             if response.data:
                 return response.data[0]
             return None
@@ -262,8 +267,9 @@ class SupabaseClient:
         thumbnail_url: str = None,
         source_id: str = None,
         metadata: Dict = None,
+        user_id: str = None,
     ) -> Optional[str]:
-        """곡 생성"""
+        """곡 생성 (user_id 포함)"""
         try:
             data = {
                 "url": url,
@@ -277,10 +283,15 @@ class SupabaseClient:
                 "created_at": datetime.now().isoformat(),
                 "updated_at": datetime.now().isoformat(),
             }
+            
+            # user_id가 제공되면 추가
+            if user_id:
+                data["user_id"] = user_id
+            
             response = self.client.table("tracks").insert(data).execute()
             if response.data:
                 record_id = response.data[0].get("id")
-                print(f"[INFO] Supabase tracks 생성 성공: {record_id}")
+                print(f"[INFO] Supabase tracks 생성 성공: {record_id} (user_id: {user_id})")
                 return str(record_id)
             print("[ERROR] Supabase tracks 생성 실패: 응답 데이터 없음")
             return None
