@@ -51,3 +51,6 @@ DROP POLICY IF EXISTS "Users can update own data" ON users;
 CREATE POLICY "Users can update own data" ON users
     FOR UPDATE
     USING (true);
+
+
+

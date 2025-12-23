@@ -5,9 +5,15 @@
 {% block content %}
 <div class="main-content-container">
     <header class="mb-12">
-        <a href="{{ url_for('index') }}" class="text-[10px] uppercase tracking-[0.2em] opacity-40 hover:opacity-80 inline-flex items-center gap-2">
-            <span>←</span><span>BACK_TO_SONGS</span>
+        {% if track.playlist_id %}
+        <a href="{{ url_for('playlist_detail', playlist_id=track.playlist_id) }}" class="text-[10px] uppercase tracking-[0.2em] opacity-40 hover:opacity-80 inline-flex items-center gap-2">
+            <span>←</span><span>BACK_TO_PLAYLIST</span>
         </a>
+        {% else %}
+        <a href="{{ url_for('playlists') }}" class="text-[10px] uppercase tracking-[0.2em] opacity-40 hover:opacity-80 inline-flex items-center gap-2">
+            <span>←</span><span>BACK_TO_PLAYLISTS</span>
+        </a>
+        {% endif %}
 
         <div class="inline-flex items-center gap-4 mt-8 mb-6">
             <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">Track_ID: {{ track.id[:8] if track.id else 'NULL' }}</span>
@@ -42,7 +48,26 @@
             </div>
 
             <!-- Track Meta Data -->
-            <div class="flex-1 p-8 md:p-12 flex flex-col justify-center">
+            <div class="flex-1 p-8 md:p-12 flex flex-col justify-center relative">
+                <!-- 간단한 메타데이터 (오른쪽 상단) -->
+                <div class="absolute top-8 right-8 flex flex-col gap-2 items-end">
+                    <div class="text-[9px] border border-white/5 px-3 py-1.5 uppercase opacity-30">
+                        Source: {{ track.source }}
+                    </div>
+                    <div class="text-[9px] border border-white/5 px-3 py-1.5 uppercase opacity-30">
+                        Node_ID: {{ track.id[:8] }}
+                    </div>
+                    {% if track.duration_str %}
+                    <div class="text-[9px] border border-white/5 px-3 py-1.5 uppercase opacity-30">
+                        Duration: {{ track.duration_str }}
+                    </div>
+                    {% endif %}
+                    {% if track.artist %}
+                    <div class="text-[9px] border border-white/5 px-3 py-1.5 uppercase opacity-30">
+                        Artist: {{ track.artist }}
+                    </div>
+                    {% endif %}
+                </div>
                 <div class="inline-flex items-center gap-4 mb-6">
                     <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">Playback_Node</span>
                     <div class="w-12 h-[1px] bg-white/20"></div>
@@ -56,26 +81,26 @@
 
                 <!-- Playback Action -->
                 <div class="mb-10">
+                    {% if embed.type == 'soundcloud' %}
                     <button class="btn-pixel !px-8 flex items-center gap-4 group" 
-                            onclick="{% if embed.type == 'soundcloud' %}playInGlobalPlayer('{{ track.url }}', '{{ track.title }}'){% else %}activateYouTube(){% endif %}">
+                            onclick="showSoundCloudPlayer()">
                         <span class="group-hover:translate-x-1 transition-transform">▶</span>
                         <span class="text-[10px] tracking-[0.3em]">INITIALIZE_SYSTEM_PLAYER</span>
                     </button>
+                    {% else %}
+                    <button class="btn-pixel !px-8 flex items-center gap-4 group" 
+                            onclick="activateYouTube()">
+                        <span class="group-hover:translate-x-1 transition-transform">▶</span>
+                        <span class="text-[10px] tracking-[0.3em]">INITIALIZE_SYSTEM_PLAYER</span>
+                    </button>
+                    {% endif %}
                 </div>
 
-                <div class="flex flex-wrap gap-4 mt-auto">
-                    <div class="text-[9px] border border-white/5 px-3 py-1.5 uppercase opacity-30">
-                        Source: {{ track.source }}
-                    </div>
-                    <div class="text-[9px] border border-white/5 px-3 py-1.5 uppercase opacity-30">
-                        Node_ID: {{ track.id[:8] }}
-                    </div>
-                </div>
             </div>
         </div>
     </section>
 
-    <!-- Hidden YouTube Player Container -->
+    <!-- YouTube Player Container -->
     <div id="youtubePlayer" class="aspect-video bg-black border-4 border-white mb-10 hidden">
         <iframe
             id="ytIframe"
@@ -89,10 +114,41 @@
         </iframe>
     </div>
 
+    <!-- SoundCloud Player Container -->
+    {% if embed.type == 'soundcloud' %}
+    <section class="pixel-card p-6 md:p-10 mb-10" id="soundcloudPlayerSection">
+        <div class="inline-flex items-center gap-4 mb-6">
+            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">SoundCloud_Player</span>
+            <div class="w-12 h-[1px] bg-white/20"></div>
+        </div>
+        <iframe
+            id="soundcloudPlayer"
+            width="100%"
+            height="166"
+            scrolling="no"
+            frameborder="no"
+            allow="autoplay"
+            src="">
+        </iframe>
+    </section>
+    {% endif %}
+
 
     <section class="pixel-card p-6 md:p-10 mb-10">
         <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6">Leave a Comment</h3>
         <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {% if current_user.is_authenticated %}
+            <input
+                type="text"
+                id="commentAuthor"
+                maxlength="50"
+                value="{{ current_user.username }}"
+                placeholder="{{ current_user.username }}"
+                class="bg-black border-2 border-[#333] p-4 text-sm focus:border-white outline-none font-pixel"
+                readonly
+                style="opacity: 0.7; cursor: not-allowed;"
+            >
+            {% else %}
             <input
                 type="text"
                 id="commentAuthor"
@@ -100,6 +156,7 @@
                 placeholder="닉네임(선택)"
                 class="bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel"
             >
+            {% endif %}
             <div class="md:col-span-2">
                 <textarea
                     id="commentContent"
@@ -131,7 +188,9 @@
                         <div class="text-[10px] uppercase tracking-widest opacity-40">
                             {{ c.author }} · {{ c.created_at[:10] if c.created_at else '' }}
                         </div>
-                        <button class="btn-outline text-[10px] tracking-widest" onclick="openDeleteModal('{{ c.id }}')">DELETE</button>
+                        {% if current_user.is_authenticated and (c.user_id|string == current_user.id|string or (not c.user_id and c.author == current_user.username)) %}
+                        <button class="btn-outline text-[10px] tracking-widest" onclick="confirmDeleteComment('{{ c.id }}')">DELETE</button>
+                        {% endif %}
                     </div>
                     <div class="mt-4 text-base serif-font leading-relaxed whitespace-pre-wrap">
                         {{ c.content }}
@@ -149,88 +208,27 @@
 {% endblock %}
 
 {% block extra_js %}
-<!-- 삭제 비밀번호 모달 -->
-<div id="deleteModal" class="fixed inset-0 bg-black/80 flex items-center justify-center z-50 hidden">
-    <div class="pixel-card p-6 md:p-8 max-w-sm w-full mx-4">
-        <h3 class="text-sm uppercase tracking-[0.3em] mb-6">관리자 인증</h3>
-        <input
-            type="password"
-            id="deletePasswordInput"
-            placeholder="비밀번호 입력"
-            class="w-full bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel mb-4"
-        >
-        <div id="deleteModalError" class="text-xs text-red-400 mb-4 hidden"></div>
-        <div class="flex gap-3">
-            <button class="btn-outline text-xs tracking-widest flex-1" onclick="closeDeleteModal()">CANCEL</button>
-            <button class="btn-pixel text-xs tracking-widest flex-1" id="deleteConfirmBtn" onclick="confirmDelete()">DELETE</button>
-        </div>
-    </div>
-</div>
-
 <script>
-let pendingDeleteCommentId = null;
-
-function openDeleteModal(commentId) {
-    pendingDeleteCommentId = commentId;
-    document.getElementById('deletePasswordInput').value = '';
-    document.getElementById('deleteModalError').classList.add('hidden');
-    document.getElementById('deleteModal').classList.remove('hidden');
-    document.getElementById('deletePasswordInput').focus();
-}
-
-function closeDeleteModal() {
-    pendingDeleteCommentId = null;
-    document.getElementById('deleteModal').classList.add('hidden');
-}
-
-async function confirmDelete() {
-    const pw = document.getElementById('deletePasswordInput').value.trim();
-    const errorEl = document.getElementById('deleteModalError');
-    const btn = document.getElementById('deleteConfirmBtn');
-    
-    if (!pw) {
-        errorEl.textContent = '비밀번호를 입력해주세요.';
-        errorEl.classList.remove('hidden');
+async function confirmDeleteComment(commentId) {
+    if (!confirm('정말 이 코멘트를 삭제하시겠습니까?')) {
         return;
     }
     
-    btn.disabled = true;
-    btn.textContent = 'DELETING...';
-    errorEl.classList.add('hidden');
-    
     try {
-        const res = await fetch(`/api/track_comments/${pendingDeleteCommentId}`, {
+        const res = await fetch(`/api/track_comments/${commentId}`, {
             method: 'DELETE',
-            headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({password: pw})
+            headers: {'Content-Type': 'application/json'}
         });
         const data = await res.json();
         if (data.success) {
-            closeDeleteModal();
             window.location.reload();
-            return;
+        } else {
+            alert(data.error || '삭제에 실패했습니다.');
         }
-        errorEl.textContent = data.error || '삭제 실패';
-        errorEl.classList.remove('hidden');
     } catch (e) {
-        errorEl.textContent = '오류가 발생했어요.';
-        errorEl.classList.remove('hidden');
-    } finally {
-        btn.disabled = false;
-        btn.textContent = 'DELETE';
+        alert('오류가 발생했습니다.');
     }
 }
-
-// Enter 키로 삭제 확인
-document.getElementById('deletePasswordInput').addEventListener('keydown', (e) => {
-    if (e.key === 'Enter') confirmDelete();
-    if (e.key === 'Escape') closeDeleteModal();
-});
-
-// 모달 외부 클릭 시 닫기
-document.getElementById('deleteModal').addEventListener('click', (e) => {
-    if (e.target.id === 'deleteModal') closeDeleteModal();
-});
 
 function renderAddedAtLocal() {
     const el = document.getElementById('addedAtLocal');
@@ -257,6 +255,32 @@ function activateYouTube() {
     }
 }
 
+function showSoundCloudPlayer() {
+    const playerSection = document.getElementById('soundcloudPlayerSection');
+    const iframe = document.getElementById('soundcloudPlayer');
+    
+    if (playerSection && iframe) {
+        // SoundCloud 플레이어 URL 설정
+        const trackUrl = '{{ track.url }}';
+        if (!iframe.src) {
+            iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=true&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`;
+        }
+        // 플레이어 섹션으로 스크롤
+        playerSection.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+}
+
+// 페이지 로드 시 SoundCloud 플레이어 초기화
+{% if embed.type == 'soundcloud' %}
+document.addEventListener('DOMContentLoaded', function() {
+    const iframe = document.getElementById('soundcloudPlayer');
+    if (iframe) {
+        const trackUrl = '{{ track.url }}';
+        iframe.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(trackUrl)}&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=true`;
+    }
+});
+{% endif %}
+
 const contentEl = document.getElementById('commentContent');
 const countEl = document.getElementById('commentCount');
 contentEl.addEventListener('input', () => { countEl.textContent = (contentEl.value || '').length; });
@@ -265,7 +289,9 @@ renderAddedAtLocal();
 async function submitComment() {
     const btn = document.getElementById('commentSubmitBtn');
     const msg = document.getElementById('commentMsg');
-    const author = (document.getElementById('commentAuthor').value || '').trim() || 'Anonymous';
+    const authorInput = document.getElementById('commentAuthor');
+    // 로그인한 경우 readonly이므로 value 사용, 아니면 입력값 또는 Anonymous
+    const author = authorInput ? (authorInput.value || '').trim() || 'Anonymous' : 'Anonymous';
     const content = (document.getElementById('commentContent').value || '').trim();
 
     if (!content) {

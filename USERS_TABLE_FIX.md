@@ -28,3 +28,6 @@ users 테이블을 생성했는데도 "Could not find the table 'public.users' i
 ```bash
 python3 -c "from utils.supabase_client import SupabaseClient; c = SupabaseClient(); c.client.table('users').select('*').limit(1).execute(); print('✅ 성공!')"
 ```
+
+
+

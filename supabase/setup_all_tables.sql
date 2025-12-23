@@ -239,3 +239,6 @@ BEGIN
     RAISE NOTICE '✅ 모든 테이블 생성 완료!';
     RAISE NOTICE '생성된 테이블: posts, tracks, track_comments, users, visitor_logs';
 END $$;
+
+
+

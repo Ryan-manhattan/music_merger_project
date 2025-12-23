@@ -58,3 +58,6 @@ SELECT user_id, COUNT(*) as count
 FROM tracks 
 GROUP BY user_id;
 ```
+
+
+

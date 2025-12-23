@@ -106,3 +106,6 @@ if __name__ == "__main__":
     else:
         print("❌ 설정 실패")
     print("=" * 50)
+
+
+

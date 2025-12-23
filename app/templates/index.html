@@ -1,209 +1,71 @@
 {% extends "base.html" %}
 
+{% block title %}OFF THE COMMUNITY{% endblock %}
+
 {% block content %}
-<div class="main-content-container studio-container">
-    <!-- Header -->
-    <header class="mb-20">
+<div class="main-content-container">
+    <!-- Hero Section -->
+    <header class="mb-16 text-center">
         <div class="inline-flex items-center gap-4 mb-6">
-            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: Studio</span>
+            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">Welcome</span>
             <div class="w-12 h-[1px] bg-white/20"></div>
         </div>
-        <h2 class="text-4xl md:text-5xl font-bold serif-font leading-tight mb-4">음악 스튜디오_</h2>
+        <h1 class="serif-font text-5xl md:text-6xl mb-4">OFF THE COMMUNITY</h1>
+        <p class="text-sm opacity-60 max-w-2xl mx-auto leading-relaxed">
+            음악을 수집하고, 공유하고, 아카이브하는 커뮤니티 공간
+        </p>
     </header>
 
-    <div id="studioMode" class="space-y-12">
-        <!-- File Manager Section -->
-        <section class="pixel-card p-6 md:p-12" id="fileManager">
-            <div class="text-center">
-                <div class="upload-zone border-4 border-dashed border-[#222] p-6 md:p-12 hover:border-white transition-all cursor-pointer" id="uploadArea" onclick="document.getElementById('fileInput').click()">
-                    <div class="text-4xl mb-6">📁</div>
-                    <h2 class="text-xl md:text-2xl font-bold uppercase tracking-widest mb-4">Upload_Files</h2>
-                    <p class="text-xs opacity-40 mb-8 uppercase tracking-widest">MP3, WAV, M4A, FLAC or YouTube Link</p>
-                    
-                    <input type="file" id="fileInput" multiple accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" hidden>
-                    <button class="btn-pixel">Select Files</button>
-                </div>
+    <!-- Features Grid -->
+    <section class="grid md:grid-cols-3 gap-6 mb-16">
+        <div class="pixel-card p-6 hover:border-white/40 transition-all cursor-pointer"
+             onclick="window.location.href='{{ url_for('playlists') }}'">
+            <div class="text-2xl mb-3">🎵</div>
+            <h3 class="text-sm font-bold mb-2 uppercase tracking-widest">SONG ARCHIVE</h3>
+            <p class="text-xs opacity-60 leading-relaxed">
+                좋아하는 음악을 수집하고 아카이브하세요
+            </p>
+        </div>
 
-                <div class="mt-12 max-w-xl mx-auto">
-                    <div class="flex items-center gap-4 mb-8">
-                        <div class="h-[1px] bg-[#222] flex-1"></div>
-                        <span class="text-[10px] opacity-20 uppercase tracking-[0.5em]">OR_LINK</span>
-                        <div class="h-[1px] bg-[#222] flex-1"></div>
-                    </div>
-                    
-                    <div class="flex flex-col md:flex-row gap-4">
-                        <input type="url" id="urlInput" placeholder="https://youtube.com/watch?v=..." 
-                               class="flex-1 bg-black border-2 border-[#222] p-3 text-sm focus:border-white outline-none font-pixel">
-                        <button class="btn-outline text-xs tracking-widest md:px-8" id="extractBtn" onclick="extractFromUrl()">EXTRACT</button>
-                    </div>
-                    
-                    <!-- Progress Bar -->
-                    <div class="mt-8 hidden" id="extractProgress">
-                        <div class="progress-container">
-                            <div class="progress-fill" id="extractProgressFill" style="width: 0%"></div>
-                        </div>
-                        <p class="text-[9px] mt-2 opacity-40 text-left uppercase tracking-widest" id="extractProgressText">Processing...</p>
-                    </div>
-                </div>
-            </div>
-            
-            <!-- Uploaded Files List -->
-            <div class="mt-16 hidden" id="filesList">
-                <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6 pb-2 border-b border-[#222]">Loaded_Assets</h3>
-                <div class="space-y-4" id="filesContainer"></div>
-            </div>
-        </section>
+        <div class="pixel-card p-6 hover:border-white/40 transition-all cursor-pointer"
+             onclick="window.location.href='{{ url_for('community') }}'">
+            <div class="text-2xl mb-3">💬</div>
+            <h3 class="text-sm font-bold mb-2 uppercase tracking-widest">COMMUNITY</h3>
+            <p class="text-xs opacity-60 leading-relaxed">
+                음악에 대한 생각과 감상을 나누세요
+            </p>
+        </div>
 
-        <!-- Work Selector -->
-        <section class="hidden" id="workSelector">
-            <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-8">Select_Module</h3>
-            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                <div class="pixel-card group cursor-pointer" onclick="selectWork('playlist')">
-                    <div class="text-3xl mb-4">🎵</div>
-                    <h4 class="text-xl font-bold serif-font mb-2">플레이리스트 생성</h4>
-                    <p class="text-sm opacity-40">여러 음원을 하나로 결합합니다.</p>
-                </div>
-                <div class="pixel-card group cursor-pointer" onclick="selectWork('extract')">
-                    <div class="text-3xl mb-4">🎧</div>
-                    <h4 class="text-xl font-bold serif-font mb-2">음원 추출 & 편집</h4>
-                    <p class="text-sm opacity-40">키 변경, 자르기 등 세부 편집을 수행합니다.</p>
-                </div>
-            </div>
-        </section>
+        <div class="pixel-card p-6 hover:border-white/40 transition-all cursor-pointer"
+             onclick="window.location.href='{{ url_for('charts_page') }}'">
+            <div class="text-2xl mb-3">📊</div>
+            <h3 class="text-sm font-bold mb-2 uppercase tracking-widest">CHARTS</h3>
+            <p class="text-xs opacity-60 leading-relaxed">
+                실시간 음악 차트와 트렌드를 확인하세요
+            </p>
+        </div>
+    </section>
 
-        <!-- Work Settings -->
-        <section class="hidden" id="workSettings">
-            <div class="pixel-card p-12">
-                <!-- Playlist Settings -->
-                <div id="playlistSettings" class="hidden">
-                    <h3 class="text-xl font-bold serif-font mb-8 uppercase tracking-widest">Playlist_Config</h3>
-                    <div class="flex gap-8">
-                        <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" id="normalizeVolume" checked class="hidden">
-                            <div class="w-5 h-5 border-2 border-[#333] group-hover:border-white flex items-center justify-center">
-                                <div class="w-3 h-3 bg-white hidden checked-indicator"></div>
-                            </div>
-                            <span class="text-xs uppercase tracking-widest opacity-60 group-hover:opacity-100">Normalize_Volume</span>
-                        </label>
-                        <label class="flex items-center gap-3 cursor-pointer group">
-                            <input type="checkbox" id="crossfade" class="hidden">
-                            <div class="w-5 h-5 border-2 border-[#333] group-hover:border-white flex items-center justify-center">
-                                <div class="w-3 h-3 bg-white hidden checked-indicator"></div>
-                            </div>
-                            <span class="text-xs uppercase tracking-widest opacity-60 group-hover:opacity-100">Crossfade</span>
-                        </label>
-                    </div>
-                </div>
-
-                <!-- Extract Settings -->
-                <div id="extractSettings" class="hidden">
-                    <h3 class="text-xl font-bold serif-font mb-8 uppercase tracking-widest">Edit_Config</h3>
-                    <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
-                        <div>
-                            <label class="text-[10px] uppercase tracking-widest opacity-40 block mb-4">Output_Format</label>
-                            <select id="outputFormat" class="w-full bg-black border-2 border-[#222] p-3 text-xs focus:border-white outline-none appearance-none">
-                                <option value="mp3">MP3 (RECOMMENDED)</option>
-                                <option value="wav">WAV (LOSSLESS)</option>
-                                <option value="original">ORIGINAL_FORMAT</option>
-                            </select>
-                        </div>
-                        <div>
-                            <label class="text-[10px] uppercase tracking-widest opacity-40 block mb-4">Pitch_Shift (Semitones): <span id="pitchValue" class="text-white ml-2">0</span></label>
-                            <input type="range" id="pitchSlider" min="-12" max="12" value="0" step="1" 
-                                   class="w-full accent-white"
-                                   oninput="document.getElementById('pitchValue').textContent = this.value">
-                        </div>
-                        <div class="flex items-end">
-                            <label class="flex items-center gap-3 cursor-pointer group">
-                                <input type="checkbox" id="trimToThirty" class="hidden">
-                                <div class="w-5 h-5 border-2 border-[#333] group-hover:border-white flex items-center justify-center">
-                                    <div class="w-3 h-3 bg-white hidden checked-indicator"></div>
-                                </div>
-                                <span class="text-xs uppercase tracking-widest opacity-60 group-hover:opacity-100">Trim_to_30s</span>
-                            </label>
-                        </div>
-                    </div>
-                </div>
-
-                <div class="mt-12 pt-8 border-t border-[#111] flex justify-center">
-                    <button class="btn-pixel text-lg px-12" id="executeBtn" onclick="executeWork()">
-                        <span id="executeText">RUN_PROCESS</span>
-                    </button>
-                </div>
-            </div>
-        </section>
-
-        <!-- Progress -->
-        <section class="hidden text-center py-20" id="progressSection">
-            <h3 class="text-xl font-bold serif-font mb-8 uppercase tracking-widest" id="progressTitle">PROCESSING_ARCHIVE</h3>
-            <div class="max-w-xl mx-auto">
-                <div class="progress-container mb-4">
-                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
-                </div>
-                <p class="text-[10px] opacity-40 uppercase tracking-widest" id="progressText">Initializing system...</p>
-            </div>
-        </section>
-
-        <!-- Result -->
-        <section class="hidden" id="resultSection">
-            <div class="pixel-card p-12 text-center">
-                <div class="text-5xl mb-6">✅</div>
-                <h3 class="text-2xl font-bold serif-font mb-8 uppercase tracking-widest">Process_Complete</h3>
-                <div class="result-content mb-12" id="resultContent"></div>
-                <div class="flex justify-center gap-6">
-                    <button class="btn-pixel" id="downloadBtn">DOWNLOAD_FILE</button>
-                    <button class="btn-outline text-xs tracking-widest" onclick="resetStudio()">RESTART_MODULE</button>
-                </div>
-            </div>
-        </section>
-    </div>
+    <!-- CTA Section -->
+    <section class="pixel-card p-8 md:p-12 text-center">
+        <h2 class="serif-font text-3xl mb-4">시작하기</h2>
+        <p class="text-sm opacity-60 mb-8 max-w-xl mx-auto">
+            로그인하여 나만의 음악 아카이브를 만들어보세요
+        </p>
+        <div class="flex gap-4 justify-center">
+            {% if current_user.is_authenticated %}
+                <a href="{{ url_for('playlists') }}" class="btn-pixel text-xs tracking-widest px-8 py-4">
+                    ARCHIVE로 이동
+                </a>
+            {% else %}
+                <a href="{{ url_for('login') }}" class="btn-pixel text-xs tracking-widest px-8 py-4">
+                    로그인
+                </a>
+                <a href="{{ url_for('register') }}" class="btn-outline text-xs tracking-widest px-8 py-4">
+                    회원가입
+                </a>
+            {% endif %}
+        </div>
+    </section>
 </div>
-
-<!-- File Item Template -->
-<template id="fileItemTemplate">
-    <div class="pixel-card !p-4 flex flex-col gap-4 group" data-filename="">
-        <div class="flex items-center justify-between">
-            <div class="flex items-center gap-4">
-                <span class="text-xl">🎵</span>
-                <span class="file-name text-sm font-bold tracking-tight"></span>
-            </div>
-            <div class="flex gap-2 opacity-20 group-hover:opacity-100 transition-opacity">
-                <button class="w-8 h-8 flex items-center justify-center border border-white/20 hover:border-white" onclick="audioStudio.fileManager.toggleFileSettings(this)">⚙️</button>
-                <button class="w-8 h-8 flex items-center justify-center border border-white/20 hover:border-white" onclick="audioStudio.fileManager.moveFileUp(this)">↑</button>
-                <button class="w-8 h-8 flex items-center justify-center border border-white/20 hover:border-white" onclick="audioStudio.fileManager.moveFileDown(this)">↓</button>
-                <button class="w-8 h-8 flex items-center justify-center border border-red-900/50 hover:bg-red-900/20 text-red-500" onclick="audioStudio.fileManager.removeFileByButton(this)">×</button>
-            </div>
-        </div>
-        
-        <div class="file-settings hidden grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-white/5 border-t border-white/5 mt-2">
-            <div class="space-y-2">
-                <label class="text-[9px] uppercase tracking-widest opacity-40 block">Fade_In: <span class="value-display text-white">2</span>s</label>
-                <input type="range" class="w-full accent-white" name="fadeIn" min="0" max="10" value="2" step="0.5">
-            </div>
-            <div class="space-y-2">
-                <label class="text-[9px] uppercase tracking-widest opacity-40 block">Fade_Out: <span class="value-display text-white">3</span>s</label>
-                <input type="range" class="w-full accent-white" name="fadeOut" min="0" max="10" value="3" step="0.5">
-            </div>
-            <div class="space-y-2">
-                <label class="text-[9px] uppercase tracking-widest opacity-40 block">Volume: <span class="value-display text-white">0</span>dB</label>
-                <input type="range" class="w-full accent-white" name="volume" min="-20" max="20" value="0" step="1">
-            </div>
-            <div class="space-y-2">
-                <label class="text-[9px] uppercase tracking-widest opacity-40 block">Gap: <span class="value-display text-white">1</span>s</label>
-                <input type="range" class="w-full accent-white" name="gap" min="0" max="5" value="1" step="0.5">
-            </div>
-        </div>
-    </div>
-</template>
-
-<style>
-    /* UI Specific Helper */
-    input[type="checkbox"]:checked + div .checked-indicator {
-        display: block !important;
-    }
-</style>
-{% endblock %}
-
-{% block extra_js %}
-<script src="{{ url_for('static', filename='js/audio_studio.js') }}"></script>
 {% endblock %}

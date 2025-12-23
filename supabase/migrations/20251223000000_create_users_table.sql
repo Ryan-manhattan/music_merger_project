@@ -20,6 +20,7 @@ CREATE INDEX IF NOT EXISTS idx_users_email ON users(email);
 CREATE INDEX IF NOT EXISTS idx_users_google_id ON users(google_id);
 
 -- updated_at 자동 업데이트 트리거
+DROP TRIGGER IF EXISTS update_users_updated_at ON users;
 CREATE TRIGGER update_users_updated_at 
     BEFORE UPDATE ON users 
     FOR EACH ROW 
@@ -44,3 +45,6 @@ CREATE POLICY "Anyone can insert users" ON users
 CREATE POLICY "Users can update own data" ON users
     FOR UPDATE
     USING (true);
+
+
+

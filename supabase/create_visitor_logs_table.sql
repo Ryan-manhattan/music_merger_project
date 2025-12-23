@@ -26,3 +26,6 @@ DROP POLICY IF EXISTS "Anyone can insert visitor_logs" ON visitor_logs;
 CREATE POLICY "Anyone can insert visitor_logs" ON visitor_logs
     FOR INSERT
     WITH CHECK (true);
+
+
+

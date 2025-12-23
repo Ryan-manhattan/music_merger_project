@@ -52,3 +52,6 @@ Google Cloud Console에서 리다이렉트 URI를 다음으로 수정해야 합�
 1. https://music-merger-project.onrender.com/login 접속
 2. "GOOGLE로 로그인" 버튼 확인
 3. 클릭 → Google 로그인 → 정상 작동 확인
+
+
+

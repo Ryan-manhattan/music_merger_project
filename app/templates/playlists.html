@@ -1,0 +1,281 @@
+{% extends "base.html" %}
+
+{% block title %}플레이리스트 - OFF THE COMMUNITY{% endblock %}
+
+{% block content %}
+<div class="main-content-container">
+    <header class="community-header">
+        <div class="flex items-center justify-between mb-6">
+            <div class="inline-flex items-center gap-4">
+                <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: Playlists</span>
+                <div class="w-12 h-[1px] bg-white/20"></div>
+            </div>
+            <button class="btn-outline text-[10px] tracking-widest" id="globalEditBtn" onclick="toggleGlobalEditMode()">EDIT</button>
+        </div>
+        <h2 class="serif-font">SONG ARCHIVE_</h2>
+    </header>
+
+    {% if error %}
+        <div class="pixel-card p-6 border border-red-500/40 text-red-200 text-sm mb-10">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <!-- URL 추가 섹션 -->
+    <section class="pixel-card p-6 md:p-10 mb-10">
+        <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6">Add a Track URL</h3>
+        <div class="flex flex-col md:flex-row gap-4">
+            <input
+                type="url"
+                id="trackUrl"
+                placeholder="https://soundcloud.com/...  또는  https://www.youtube.com/watch?v=..."
+                class="flex-1 bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel"
+            >
+            <button class="btn-pixel md:px-8 text-xs tracking-widest" id="addTrackBtn" onclick="addTrack()">ADD_TRACK</button>
+        </div>
+        <p class="text-[10px] mt-4 opacity-30 uppercase tracking-widest">Supported: SoundCloud / YouTube</p>
+        <div id="addTrackMsg" class="text-xs mt-4 opacity-70"></div>
+    </section>
+
+    <!-- 플레이리스트 생성 섹션 -->
+    <section class="pixel-card p-6 md:p-10 mb-10">
+        <div class="flex justify-center">
+            <button class="btn-pixel text-xs tracking-widest px-8 py-4" id="createPlaylistBtn" onclick="createPlaylist()">+ CREATE NEW PLAYLIST</button>
+        </div>
+        <div id="createPlaylistMsg" class="text-xs mt-4 opacity-70 text-center"></div>
+    </section>
+
+    <!-- 플레이리스트에 속하지 않은 곡들 -->
+    {% if unassigned_tracks %}
+        <section class="mb-10">
+            <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6">Unassigned Tracks</h3>
+            <div class="space-y-4" id="unassignedTracksList">
+                {% for track in unassigned_tracks %}
+                    <article class="pixel-card p-4 hover:border-white/40 transition-all track-item" 
+                             data-track-id="{{ track.id }}">
+                        <div class="flex gap-4 items-center">
+                            <div class="w-12 h-12 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer"
+                                 onclick="window.location.href='{{ url_for('track_detail', track_id=track.id) }}'">
+                                {% if track.thumbnail_url %}
+                                    <img src="{{ track.thumbnail_url }}" alt="cover" class="w-full h-full object-cover">
+                                {% else %}
+                                    <span class="text-[9px] opacity-30">NO_ART</span>
+                                {% endif %}
+                            </div>
+                            <div class="flex-1 min-w-0 cursor-pointer"
+                                 onclick="window.location.href='{{ url_for('track_detail', track_id=track.id) }}'">
+                                <div class="flex items-start justify-between gap-4">
+                                    <h4 class="text-sm serif-font leading-tight truncate">{{ track.title }}</h4>
+                                    <span class="text-[9px] opacity-40 uppercase tracking-widest">{{ (track.source or '') }}</span>
+                                </div>
+                                <div class="mt-1 text-[10px] opacity-50 uppercase tracking-widest">
+                                    {% if track.artist %}{{ track.artist }}{% endif %}
+                                    {% if track.duration_str %} · {{ track.duration_str }}{% endif %}
+                                </div>
+                            </div>
+                            <div class="flex items-center gap-2">
+                                <select class="bg-black border-2 border-[#222] p-2 text-xs focus:border-white outline-none font-pixel" 
+                                        onchange="addTrackToPlaylist('{{ track.id }}', this.value)">
+                                    <option value="">Add to Playlist...</option>
+                                    {% for playlist in playlists %}
+                                        <option value="{{ playlist.id }}">{{ playlist.name }}</option>
+                                    {% endfor %}
+                                </select>
+                                <button class="btn-outline text-[9px] tracking-widest bg-red-600/20 border-red-600/40 text-red-300 hover:bg-red-600/40 px-2 py-1" 
+                                        onclick="event.stopPropagation(); deleteTrack('{{ track.id }}')" 
+                                        title="삭제">DELETE</button>
+                            </div>
+                        </div>
+                    </article>
+                {% endfor %}
+            </div>
+        </section>
+    {% endif %}
+
+    {% if playlists %}
+        <section class="space-y-6" id="playlistsList">
+            {% for playlist in playlists %}
+                <article class="pixel-card p-6 hover:border-white/40 transition-all playlist-item" 
+                         data-playlist-id="{{ playlist.id }}">
+                    <div class="flex gap-5 items-center">
+                        <div class="w-20 h-20 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+                            {% if playlist.icon_url %}
+                                <img src="{{ playlist.icon_url }}" alt="icon" class="w-full h-full object-cover">
+                            {% else %}
+                                <span class="text-2xl opacity-30">📀</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0 cursor-pointer"
+                             onclick="window.location.href='{{ url_for('playlist_detail', playlist_id=playlist.id) }}'">
+                            <h3 class="text-xl serif-font mb-2">{{ playlist.name }}</h3>
+                            {% if playlist.description %}
+                            <p class="text-sm opacity-50 mb-2">{{ playlist.description }}</p>
+                            {% endif %}
+                            <p class="text-[10px] opacity-30">{{ playlist.created_at[:10] if playlist.created_at else '' }}</p>
+                        </div>
+                        <div class="flex items-center gap-2 edit-mode-actions" style="display: none;">
+                            <button class="btn-outline text-[10px] tracking-widest bg-red-600/20 border-red-600/40 text-red-300 hover:bg-red-600/40" 
+                                    onclick="event.stopPropagation(); deletePlaylist('{{ playlist.id }}')" 
+                                    title="삭제">DELETE</button>
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+    {% else %}
+        <section class="pixel-card p-10 text-center">
+            <h3 class="text-xl serif-font mb-2">플레이리스트가 없습니다</h3>
+            <p class="text-sm opacity-50 italic serif-font">새 플레이리스트를 생성해보세요.</p>
+        </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let globalEditModeActive = false;
+
+function toggleGlobalEditMode() {
+    globalEditModeActive = !globalEditModeActive;
+    const editBtn = document.getElementById('globalEditBtn');
+    const allEditActions = document.querySelectorAll('.edit-mode-actions');
+    
+    if (globalEditModeActive) {
+        editBtn.textContent = 'DONE';
+        editBtn.classList.add('bg-green-600/20', 'border-green-600/40', 'text-green-300');
+        allEditActions.forEach(actions => actions.style.display = 'flex');
+    } else {
+        editBtn.textContent = 'EDIT';
+        editBtn.classList.remove('bg-green-600/20', 'border-green-600/40', 'text-green-300');
+        allEditActions.forEach(actions => actions.style.display = 'none');
+    }
+}
+
+async function createPlaylist() {
+    const btn = document.getElementById('createPlaylistBtn');
+    const msg = document.getElementById('createPlaylistMsg');
+
+    btn.disabled = true;
+    btn.textContent = 'CREATING...';
+    msg.textContent = '';
+
+    try {
+        const res = await fetch('/api/playlists', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({})  // 기본 이름으로 자동 생성
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.href = `/playlist/${data.playlist_id}`;
+            return;
+        }
+        msg.textContent = data.error || '생성 실패';
+    } catch (e) {
+        msg.textContent = '오류가 발생했어요.';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = '+ CREATE NEW PLAYLIST';
+    }
+}
+
+async function addTrack() {
+    const input = document.getElementById('trackUrl');
+    const btn = document.getElementById('addTrackBtn');
+    const msg = document.getElementById('addTrackMsg');
+
+    const url = (input.value || '').trim();
+    if (!url) {
+        msg.textContent = 'URL을 입력해주세요.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'ADDING...';
+    msg.textContent = '';
+
+    try {
+        const res = await fetch('/api/tracks', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url})  // playlist_id 없이 추가
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+            return;
+        }
+        msg.textContent = data.error || '추가 실패';
+    } catch (e) {
+        msg.textContent = '오류가 발생했어요.';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'ADD_TRACK';
+    }
+}
+
+async function addTrackToPlaylist(trackId, playlistId) {
+    if (!playlistId) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/tracks/${trackId}/playlist`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({playlist_id: playlistId})
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || '플레이리스트에 추가에 실패했습니다.');
+        }
+    } catch (e) {
+        alert('오류가 발생했습니다.');
+    }
+}
+
+async function deleteTrack(trackId) {
+    if (!confirm('정말 이 곡을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/tracks/${trackId}`, {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || '삭제에 실패했습니다.');
+        }
+    } catch (e) {
+        alert('오류가 발생했습니다.');
+    }
+}
+
+async function deletePlaylist(playlistId) {
+    if (!confirm('정말 이 플레이리스트를 삭제하시겠습니까? 플레이리스트의 모든 곡도 함께 삭제됩니다.')) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/playlists/${playlistId}`, {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || '삭제에 실패했습니다.');
+        }
+    } catch (e) {
+        alert('오류가 발생했습니다.');
+    }
+}
+</script>
+{% endblock %}

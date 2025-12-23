@@ -122,7 +122,19 @@
         <form id="write-form">
             <div class="form-group">
                 <label for="author">Author_ID (Optional)</label>
-                <input type="text" id="author" name="author" placeholder="Enter pseudonym or leave anonymous" maxlength="50">
+                {% if current_user.is_authenticated %}
+                <input type="text" id="author" name="author" 
+                       value="{{ current_user.username }}"
+                       placeholder="{{ current_user.username }}" 
+                       maxlength="50"
+                       readonly
+                       style="background: #111; border-color: #333; opacity: 0.7; cursor: not-allowed;">
+                <p class="text-[10px] opacity-40 mt-2">로그인한 사용자명으로 자동 설정됩니다.</p>
+                {% else %}
+                <input type="text" id="author" name="author" 
+                       placeholder="Enter pseudonym or leave anonymous" 
+                       maxlength="50">
+                {% endif %}
             </div>
             
             <div class="form-group">
@@ -161,7 +173,9 @@
         const submitBtn = document.getElementById('submit-btn');
         const title = titleInput.value.trim();
         const content = contentInput.value.trim();
-        const author = document.getElementById('author').value.trim() || 'Anonymous';
+        const authorInput = document.getElementById('author');
+        // 로그인한 경우 readonly이므로 value 사용, 아니면 입력값 또는 Anonymous
+        const author = authorInput ? (authorInput.value || '').trim() || 'Anonymous' : 'Anonymous';
         
         if (!title || !content) return;
         

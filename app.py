@@ -15,9 +15,11 @@ if os.name == 'nt':  # Windows에서만 실행
             os.environ['PATH'] = ffmpeg_path + os.pathsep + current_path
 
 from flask import Flask, render_template, request, jsonify, send_file, redirect, url_for, session
+from flask_login import login_required
 from flask_cors import CORS
 from flask_login import LoginManager, UserMixin, login_user, logout_user, login_required, current_user
-from flask_dance.contrib.google import make_google_blueprint, google
+# Flask-Dance 제거, Supabase Auth 사용
+# from flask_dance.contrib.google import make_google_blueprint, google
 from werkzeug.utils import secure_filename
 from datetime import datetime
 from typing import Optional
@@ -128,23 +130,14 @@ login_manager.login_view = 'login'
 login_manager.login_message = '로그인이 필요합니다.'
 login_manager.login_message_category = 'info'
 
-# Google OAuth 설정
-GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-
-# Google OAuth Blueprint (Flask-Dance)
-if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
-    google_bp = make_google_blueprint(
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        scope=["profile", "email"],
-        redirect_to="google_login_callback"
-    )
-    app.register_blueprint(google_bp, url_prefix="/login")
-    console.log("[Auth] Google OAuth 설정 완료")
-else:
-    console.log("[WARN] Google OAuth 클라이언트 ID/시크릿이 설정되지 않았습니다.")
-    google_bp = None
+# Supabase Auth 초기화
+try:
+    from utils.supabase_auth import SupabaseAuth
+    supabase_auth = SupabaseAuth()
+    console.log("[Auth] Supabase Auth 초기화 완료")
+except Exception as e:
+    console.log(f"[WARN] Supabase Auth 초기화 실패: {e}")
+    supabase_auth = None
 
 # 서비스 초기화 (환경 변수 설정 후)
 music_service = None
@@ -382,35 +375,72 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
-    # Google OAuth 활성화 여부를 템플릿에 전달
-    return render_template('login.html', google_oauth_enabled=google_bp is not None)
+    # Supabase Auth 활성화 여부를 템플릿에 전달
+    google_oauth_enabled = supabase_auth is not None
+    return render_template('login.html', google_oauth_enabled=google_oauth_enabled)
+
+
+@app.route('/login/google')
+def google_login():
+    """Google OAuth 로그인 시작 (Supabase Auth)"""
+    if not supabase_auth:
+        console.log("[ERROR] Supabase Auth가 초기화되지 않았습니다.")
+        return redirect(url_for('login'))
+    
+    try:
+        # Supabase Auth Google OAuth URL로 리다이렉트
+        # redirect_to는 Supabase 대시보드의 Redirect URLs에 등록된 URL이어야 함
+        redirect_to = url_for('google_login_callback', _external=True)
+        result = supabase_auth.sign_in_with_oauth(provider="google", redirect_to=redirect_to)
+        
+        if result.get('success'):
+            return redirect(result['url'])
+        else:
+            console.log(f"[ERROR] Google OAuth URL 생성 실패: {result.get('error')}")
+            return redirect(url_for('login'))
+    except Exception as e:
+        console.log(f"[ERROR] Google 로그인 시작 실패: {e}")
+        import traceback
+        traceback.print_exc()
+        return redirect(url_for('login'))
 
 
 @app.route('/login/google/authorized')
 def google_login_callback():
-    """Google OAuth 콜백 처리"""
-    if not google.authorized:
-        console.log("[ERROR] Google OAuth 인증되지 않음")
-        return redirect(url_for('login'))
+    """Supabase Auth Google OAuth 콜백 처리 (클라이언트 사이드에서 토큰 처리)"""
+    # Supabase Auth는 URL fragment(#)에 토큰을 전달하므로
+    # 클라이언트 사이드 JavaScript로 처리하는 페이지 렌더링
+    return render_template('oauth_callback.html')
+
+
+@app.route('/api/auth/supabase/callback', methods=['POST'])
+def supabase_auth_callback_api():
+    """Supabase Auth 콜백 API (클라이언트에서 토큰 전달)"""
+    if not supabase_auth:
+        return jsonify({'success': False, 'error': 'Supabase Auth가 초기화되지 않았습니다.'}), 500
     
     try:
-        # Google 사용자 정보 가져오기
-        resp = google.get("/oauth2/v2/userinfo")
-        if not resp.ok:
-            console.log(f"[ERROR] Google 사용자 정보 조회 실패: {resp.status_code} - {resp.text}")
-            return redirect(url_for('login'))
+        data = request.get_json()
+        access_token = data.get('access_token')
         
-        user_info = resp.json()
-        google_id = user_info.get('id')
+        if not access_token:
+            return jsonify({'success': False, 'error': '토큰이 없습니다.'}), 400
+        
+        # Supabase Auth로 사용자 정보 가져오기
+        user_info = supabase_auth.get_user_from_session(access_token)
+        
+        if not user_info:
+            return jsonify({'success': False, 'error': '사용자 정보 조회 실패'}), 401
+        
         email = user_info.get('email')
-        name = user_info.get('name', email.split('@')[0] if email else 'User')
-        picture = user_info.get('picture')
+        user_metadata = user_info.get('user_metadata', {})
+        name = user_metadata.get('full_name') or user_metadata.get('name') or (email.split('@')[0] if email else 'User')
+        picture = user_metadata.get('avatar_url') or user_metadata.get('picture')
         
         if not email:
-            console.log("[ERROR] Google 이메일 정보 없음")
-            return redirect(url_for('login'))
+            return jsonify({'success': False, 'error': '이메일 정보 없음'}), 400
         
-        # Supabase에 사용자 저장 또는 조회
+        # Supabase users 테이블에 사용자 저장 또는 조회
         from utils.auth import AuthManager
         auth_manager = AuthManager()
         
@@ -426,6 +456,7 @@ def google_login_callback():
             )
         else:
             # 새 사용자 생성 (Google OAuth 사용자)
+            google_id = user_info.get('id')
             result = auth_manager.create_google_user(
                 google_id=google_id,
                 email=email,
@@ -436,10 +467,8 @@ def google_login_callback():
             if result.get('success'):
                 user_id = result.get('user_id')
                 if not user_id:
-                    console.log(f"[ERROR] Google 사용자 생성 후 user_id 없음: {result}")
-                    return redirect(url_for('login'))
+                    return jsonify({'success': False, 'error': '사용자 생성 실패'}), 500
                 
-                # 생성된 사용자 정보로 User 객체 생성
                 user = User(
                     user_id=str(user_id),
                     username=name,
@@ -447,24 +476,22 @@ def google_login_callback():
                 )
             else:
                 error_msg = result.get('message', '알 수 없는 오류')
-                console.log(f"[ERROR] Google 사용자 생성 실패: {error_msg}")
-                return redirect(url_for('login'))
+                return jsonify({'success': False, 'error': error_msg}), 500
         
         # Flask-Login으로 로그인
         login_user(user, remember=True)
         console.log(f"[INFO] Google 로그인 성공: {user.username} ({user.email})")
         
-        # 리다이렉트
-        next_url = request.args.get('next') or '/'
-        return redirect(next_url)
+        return jsonify({
+            'success': True,
+            'redirect': request.args.get('next') or '/'
+        })
         
     except Exception as e:
-        console.log(f"[ERROR] Google OAuth 콜백 처리 실패: {e}")
+        console.log(f"[ERROR] Supabase Auth 콜백 API 처리 실패: {e}")
         import traceback
-        error_trace = traceback.format_exc()
-        console.log(f"[ERROR] 상세 오류:\n{error_trace}")
         traceback.print_exc()
-        return redirect(url_for('login'))
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/register')
@@ -480,13 +507,7 @@ def register():
 def logout():
     """로그아웃"""
     logout_user()
-    # Google OAuth 토큰도 제거
-    try:
-        if google_bp and google.authorized:
-            token = google.token
-            # 토큰 무효화 (선택사항)
-    except:
-        pass
+    # Supabase Auth 세션은 클라이언트 사이드에서 관리
     return redirect(url_for('index'))
 
 
@@ -554,66 +575,140 @@ def api_me():
 
 @app.route('/')
 def index():
-    """메인 페이지 - 곡 목록/추가"""
-    console.log("[Route] / - 트랙 목록 페이지 요청")
+    """랜딩 페이지"""
+    console.log("[Route] / - 랜딩 페이지 요청")
+    return render_template('index.html')
+
+
+@app.route('/tracks')
+@app.route('/archive')
+def playlists():
+    """플레이리스트 목록 페이지"""
+    console.log("[Route] /tracks - 플레이리스트 목록 페이지 요청")
+    
+    # 로그인 체크
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    
     error_message = None
-
-    # 페이지네이션
-    try:
-        page = int(request.args.get('page', '1'))
-    except Exception:
-        page = 1
-
-    if page < 1:
-        page = 1
-
-    try:
-        per_page = int(request.args.get('per_page', str(TRACKS_PER_PAGE_DEFAULT)))
-    except Exception:
-        per_page = TRACKS_PER_PAGE_DEFAULT
-
-    if per_page < 1:
-        per_page = TRACKS_PER_PAGE_DEFAULT
-    if per_page > TRACKS_PER_PAGE_MAX:
-        per_page = TRACKS_PER_PAGE_MAX
-
-    offset = (page - 1) * per_page
 
     try:
         if supabase_available:
             supabase = SupabaseClient()
+            current_user_id = str(current_user.id)
             
-            # 현재 로그인한 사용자 ID로 필터링
-            user_id = None
-            if current_user.is_authenticated:
-                user_id = str(current_user.id)
+            # 현재 로그인한 사용자의 플레이리스트 조회
+            playlists = supabase.get_playlists(user_id=current_user_id, limit=100, offset=0)
             
-            tracks = supabase.get_tracks(limit=per_page, offset=offset, user_id=user_id)
+            # 플레이리스트에 속하지 않은 곡들 조회
+            unassigned_tracks = supabase.get_tracks(limit=100, offset=0, user_id=current_user_id, playlist_id="")
+            
+            # duration_str 생성
+            for t in unassigned_tracks:
+                try:
+                    t["duration_str"] = _format_duration(t.get("duration_seconds"))
+                except Exception:
+                    t["duration_str"] = ""
         else:
-            tracks = []
+            playlists = []
+            unassigned_tracks = []
     except Exception as e:
-        print(f"[ERROR] 트랙 조회 실패: {e}")
-        error_message = "곡 목록을 불러오지 못했어요. 잠시 후 다시 시도해주세요."
-        tracks = []
+        print(f"[ERROR] 플레이리스트 조회 실패: {e}")
+        error_message = "플레이리스트 목록을 불러오지 못했어요. 잠시 후 다시 시도해주세요."
+        playlists = []
     
     # 다음 페이지 유무는 “가득 찼는지”로만 판단(정확한 total count 없이도 최소 UX 제공)
-    has_next = len(tracks) == per_page
-
-    # duration_str 생성
-    for t in tracks:
-        try:
-            t["duration_str"] = _format_duration(t.get("duration_seconds"))
-        except Exception:
-            t["duration_str"] = ""
 
     return render_template(
-        'tracks.html',
-        tracks=tracks,
-        error=error_message,
-        page=page,
-        per_page=per_page,
-        has_next=has_next
+        'playlists.html',
+        playlists=playlists,
+        unassigned_tracks=unassigned_tracks,
+        error=error_message
     )
+
+
+@app.route('/worldcup')
+def worldcup():
+    """이상형 월드컵 페이지"""
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    
+    return render_template('worldcup.html')
+
+
+@app.route('/api/worldcup/tracks', methods=['GET'])
+def get_worldcup_tracks():
+    """이상형 월드컵용 랜덤 곡 2개 조회 (모든 사용자의 곡, 이미 본 곡 제외)"""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+        
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+        
+        supabase = SupabaseClient()
+        
+        # exclude 파라미터에서 이미 본 곡 ID 목록 가져오기
+        exclude_ids = []
+        exclude_param = request.args.get('exclude', '')
+        if exclude_param:
+            exclude_ids = [tid.strip() for tid in exclude_param.split(',') if tid.strip()]
+        
+        # 모든 사용자의 곡 중에서 랜덤 곡 2개 조회 (이미 본 곡 제외)
+        tracks = supabase.get_random_tracks(count=2, user_id=None, exclude_ids=exclude_ids)
+        
+        if len(tracks) < 2:
+            return jsonify({'success': False, 'error': '더 이상 볼 곡이 없습니다. 모든 곡을 다 보셨습니다.'}), 400
+        
+        # duration_str 추가
+        for t in tracks:
+            t["duration_str"] = _format_duration(t.get("duration_seconds"))
+        
+        return jsonify({'success': True, 'tracks': tracks}), 200
+    except Exception as e:
+        print(f"[ERROR] 월드컵 곡 조회 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/worldcup/vote', methods=['POST'])
+def vote_worldcup():
+    """이상형 월드컵 투표 저장"""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+        
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+        
+        data = request.get_json() or {}
+        track_a_id = data.get('track_a_id')
+        track_b_id = data.get('track_b_id')
+        winner_id = data.get('winner_id')
+        
+        if not track_a_id or not track_b_id or not winner_id:
+            return jsonify({'success': False, 'error': '필수 파라미터가 없습니다.'}), 400
+        
+        if winner_id not in [track_a_id, track_b_id]:
+            return jsonify({'success': False, 'error': '잘못된 선택입니다.'}), 400
+        
+        supabase = SupabaseClient()
+        current_user_id = str(current_user.id)
+        
+        # 투표 저장
+        battle_id = supabase.create_track_battle(
+            user_id=current_user_id,
+            track_a_id=track_a_id,
+            track_b_id=track_b_id,
+            winner_id=winner_id
+        )
+        
+        if battle_id:
+            return jsonify({'success': True, 'battle_id': battle_id}), 201
+        else:
+            return jsonify({'success': False, 'error': '투표 저장에 실패했습니다.'}), 500
+    except Exception as e:
+        print(f"[ERROR] 월드컵 투표 저장 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/diary')
@@ -741,16 +836,168 @@ def track_detail(track_id):
     source = track.get("source")
     embed = {"type": source, "url": track.get("url"), "source_id": track.get("source_id")}
 
-    comments = supabase.get_track_comments(track_id, limit=50, offset=0)
+    # 현재 로그인한 사용자 ID
+    current_user_id = None
+    if current_user.is_authenticated:
+        current_user_id = str(current_user.id)
+    
+    # 트랙을 추가한 사용자 ID
+    track_user_id = track.get('user_id')
+    
+    # 코멘트 조회 (본인이 추가한 곡이면 본인 코멘트만, 아니면 모든 코멘트)
+    comments = supabase.get_track_comments(
+        track_id, 
+        limit=50, 
+        offset=0,
+        track_user_id=track_user_id,
+        current_user_id=current_user_id
+    )
+    
     return render_template('track_detail.html', track=track, embed=embed, comments=comments)
+
+
+@app.route('/playlist/<playlist_id>')
+def playlist_detail(playlist_id):
+    """플레이리스트 상세 페이지 - 곡 목록/추가"""
+    console.log(f"[Route] /playlist/{playlist_id} - 플레이리스트 상세 페이지 요청")
+    
+    # 로그인 체크
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    
+    if not supabase_available:
+        return render_template('playlist_detail.html', error="Supabase 연결이 불가능합니다.", playlist=None, tracks=[]), 503
+
+    supabase = SupabaseClient()
+    playlist = supabase.get_playlist(playlist_id)
+    
+    if not playlist:
+        return render_template('playlist_detail.html', error="플레이리스트를 찾을 수 없습니다.", playlist=None, tracks=[]), 404
+    
+    # 플레이리스트 소유자 확인
+    current_user_id = str(current_user.id)
+    if playlist.get('user_id') != current_user_id:
+        return render_template('playlist_detail.html', error="접근 권한이 없습니다.", playlist=None, tracks=[]), 403
+    
+    # 플레이리스트의 곡 목록 조회
+    tracks = supabase.get_playlist_tracks(playlist_id, limit=100, offset=0)
+    
+    # duration_str 생성
+    for t in tracks:
+        try:
+            t["duration_str"] = _format_duration(t.get("duration_seconds"))
+        except Exception:
+            t["duration_str"] = ""
+
+    return render_template('playlist_detail.html', playlist=playlist, tracks=tracks, error=None)
+
+
+@app.route('/api/playlists', methods=['POST'])
+def create_playlist_api():
+    """플레이리스트 생성 API"""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+        
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+        
+        data = request.get_json() or {}
+        # 기본 이름으로 자동 생성
+        name = "playlist"
+        description = None
+        
+        supabase = SupabaseClient()
+        current_user_id = str(current_user.id)
+        
+        playlist_id = supabase.create_playlist(name, description, current_user_id)
+        
+        if playlist_id:
+            return jsonify({'success': True, 'playlist_id': playlist_id}), 201
+        else:
+            return jsonify({'success': False, 'error': '플레이리스트 생성에 실패했습니다.'}), 500
+    except Exception as e:
+        print(f"[ERROR] 플레이리스트 생성 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/playlists/<playlist_id>', methods=['PUT'])
+def update_playlist_api(playlist_id):
+    """플레이리스트 수정 API"""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+        
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+        
+        supabase = SupabaseClient()
+        playlist = supabase.get_playlist(playlist_id)
+        
+        if not playlist:
+            return jsonify({'success': False, 'error': '플레이리스트를 찾을 수 없습니다.'}), 404
+        
+        # 소유자 확인
+        current_user_id = str(current_user.id)
+        if playlist.get('user_id') != current_user_id:
+            return jsonify({'success': False, 'error': '본인의 플레이리스트만 수정할 수 있습니다.'}), 403
+        
+        data = request.get_json() or {}
+        name = data.get('name')
+        description = data.get('description')
+        icon_url = data.get('icon_url')
+        
+        success = supabase.update_playlist(playlist_id, name=name, description=description, icon_url=icon_url)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': '플레이리스트 수정에 실패했습니다.'}), 500
+    except Exception as e:
+        print(f"[ERROR] 플레이리스트 수정 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/playlists/<playlist_id>', methods=['DELETE'])
+def delete_playlist_api(playlist_id):
+    """플레이리스트 삭제 API"""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+        
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+        
+        supabase = SupabaseClient()
+        playlist = supabase.get_playlist(playlist_id)
+        
+        if not playlist:
+            return jsonify({'success': False, 'error': '플레이리스트를 찾을 수 없습니다.'}), 404
+        
+        # 소유자 확인
+        current_user_id = str(current_user.id)
+        if playlist.get('user_id') != current_user_id:
+            return jsonify({'success': False, 'error': '본인의 플레이리스트만 삭제할 수 있습니다.'}), 403
+        
+        success = supabase.delete_playlist(playlist_id)
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': '플레이리스트 삭제에 실패했습니다.'}), 500
+    except Exception as e:
+        print(f"[ERROR] 플레이리스트 삭제 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
 
 
 @app.route('/api/tracks', methods=['POST'])
 def create_track_api():
-    """참여형 곡 추가 (URL → 메타데이터 자동 수집)"""
+    """참여형 곡 추가 (URL → 메타데이터 자동 수집) - 플레이리스트에 추가"""
     try:
         data = request.get_json() or {}
         url = str(data.get("url", "")).strip()
+        playlist_id = data.get("playlist_id")  # 플레이리스트 ID (optional)
+        
         if not url:
             return jsonify({"success": False, "error": "URL이 필요합니다."}), 400
         if len(url) > TRACK_URL_MAX_LEN:
@@ -769,9 +1016,23 @@ def create_track_api():
         user_id = None
         if current_user.is_authenticated:
             user_id = str(current_user.id)
+        else:
+            return jsonify({"success": False, "error": "로그인이 필요합니다."}), 401
         
-        # 같은 URL의 같은 사용자 트랙이 있는지 확인
-        existing = supabase.get_track_by_url(url, user_id=user_id)
+        # playlist_id가 제공된 경우 소유자 확인
+        if playlist_id:
+            playlist = supabase.get_playlist(playlist_id)
+            if not playlist:
+                return jsonify({"success": False, "error": "플레이리스트를 찾을 수 없습니다."}), 404
+            
+            if playlist.get('user_id') != user_id:
+                return jsonify({"success": False, "error": "본인의 플레이리스트에만 곡을 추가할 수 있습니다."}), 403
+            
+            # 같은 플레이리스트에 같은 URL이 있는지 확인
+            existing = supabase.get_track_by_url(url, user_id=user_id, playlist_id=playlist_id)
+        else:
+            # 플레이리스트 없이 추가하는 경우, 같은 사용자의 같은 URL이 있는지 확인 (플레이리스트 없는 것만)
+            existing = supabase.get_track_by_url(url, user_id=user_id, playlist_id=None)
         existing_id = existing.get("id") if existing else None
 
         extractor = LinkExtractor(console_log=console.log)
@@ -839,7 +1100,7 @@ def create_track_api():
                     "metadata": metadata,
                 })
 
-            return jsonify({"success": True, "track_id": existing_id, "existing": True}), 200
+            return jsonify({"success": True, "track_id": existing_id, "playlist_id": playlist_id, "existing": True}), 200
 
         track_id = supabase.create_track(
             url=url,
@@ -851,14 +1112,147 @@ def create_track_api():
             thumbnail_url=thumbnail,
             metadata=metadata,
             user_id=user_id,
+            playlist_id=playlist_id,
         )
 
         if not track_id:
             return jsonify({"success": False, "error": "곡 등록에 실패했습니다."}), 500
 
-        return jsonify({"success": True, "track_id": track_id, "existing": False}), 201
+        # playlist_id가 있으면 플레이리스트 상세 페이지로, 없으면 플레이리스트 목록 페이지로
+        return jsonify({"success": True, "track_id": track_id, "playlist_id": playlist_id, "existing": False}), 201
     except Exception as e:
         print(f"[ERROR] 트랙 생성 실패: {e}")
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/tracks/<track_id>/playlist', methods=['PUT'])
+def add_track_to_playlist_api(track_id):
+    """곡을 플레이리스트에 추가"""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+        
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+        
+        supabase = SupabaseClient()
+        track = supabase.get_track(track_id)
+        
+        if not track:
+            return jsonify({'success': False, 'error': '곡을 찾을 수 없습니다.'}), 404
+        
+        # 소유자 확인
+        current_user_id = str(current_user.id)
+        if track.get('user_id') != current_user_id:
+            return jsonify({'success': False, 'error': '본인의 곡만 플레이리스트에 추가할 수 있습니다.'}), 403
+        
+        data = request.get_json() or {}
+        playlist_id = data.get('playlist_id')
+        
+        if not playlist_id:
+            return jsonify({'success': False, 'error': '플레이리스트 ID가 필요합니다.'}), 400
+        
+        # 플레이리스트 소유자 확인
+        playlist = supabase.get_playlist(playlist_id)
+        if not playlist:
+            return jsonify({'success': False, 'error': '플레이리스트를 찾을 수 없습니다.'}), 404
+        
+        if playlist.get('user_id') != current_user_id:
+            return jsonify({'success': False, 'error': '본인의 플레이리스트에만 곡을 추가할 수 있습니다.'}), 403
+        
+        # 곡을 플레이리스트에 추가
+        success = supabase.update_track(track_id, {"playlist_id": playlist_id})
+        
+        if success:
+            return jsonify({'success': True}), 200
+        else:
+            return jsonify({'success': False, 'error': '플레이리스트에 추가에 실패했습니다.'}), 500
+    except Exception as e:
+        print(f"[ERROR] 곡을 플레이리스트에 추가 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
+@app.route('/api/tracks/<track_id>', methods=['DELETE'])
+def delete_track_api(track_id):
+    """곡 삭제 API (작성자 본인만 가능)"""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+        
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+
+        supabase = SupabaseClient()
+        
+        # 트랙 조회
+        track = supabase.get_track(track_id)
+        if not track:
+            return jsonify({'success': False, 'error': '곡을 찾을 수 없습니다.'}), 404
+        
+        # 작성자 본인인지 확인
+        track_user_id = track.get('user_id')
+        current_user_id = str(current_user.id)
+        
+        # user_id가 있으면 user_id로 확인
+        if track_user_id:
+            if str(track_user_id) != current_user_id:
+                return jsonify({'success': False, 'error': '본인이 추가한 곡만 삭제할 수 있습니다.'}), 403
+        else:
+            # user_id가 없는 경우 삭제 불가 (비로그인 상태의 곡은 이미 삭제됨)
+            return jsonify({'success': False, 'error': '삭제할 수 없는 곡입니다.'}), 403
+        
+        # 삭제 진행
+        ok = supabase.delete_track(track_id)
+        if not ok:
+            return jsonify({"success": False, "error": "삭제에 실패했습니다."}), 500
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[ERROR] track 삭제 실패: {e}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/tracks/order', methods=['PUT'])
+def update_tracks_order_api():
+    """곡 순서 변경 API"""
+    try:
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+        
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+
+        data = request.get_json() or {}
+        track_orders = data.get('tracks', [])
+        
+        if not track_orders or not isinstance(track_orders, list):
+            return jsonify({'success': False, 'error': '잘못된 요청입니다.'}), 400
+        
+        supabase = SupabaseClient()
+        current_user_id = str(current_user.id)
+        
+        # 모든 트랙이 본인 것인지 확인
+        for item in track_orders:
+            track_id = item.get('id')
+            if not track_id:
+                continue
+            track = supabase.get_track(track_id)
+            if not track:
+                return jsonify({'success': False, 'error': f'곡을 찾을 수 없습니다: {track_id}'}), 404
+            track_user_id = track.get('user_id')
+            if not track_user_id or str(track_user_id) != current_user_id:
+                return jsonify({'success': False, 'error': '본인이 추가한 곡만 순서를 변경할 수 있습니다.'}), 403
+        
+        # 순서 업데이트
+        ok = supabase.update_tracks_order(track_orders)
+        if not ok:
+            return jsonify({"success": False, "error": "순서 변경에 실패했습니다."}), 500
+        return jsonify({"success": True}), 200
+    except Exception as e:
+        print(f"[ERROR] tracks 순서 변경 실패: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -887,7 +1281,15 @@ def create_track_comment_api(track_id):
             return jsonify({"success": False, "error": "너무 빠르게 작성하고 있어요. 잠시 후 다시 시도해주세요."}), 429
 
         supabase = SupabaseClient()
-        comment_id = supabase.create_track_comment(track_id, content=content, author=author)
+        # 현재 로그인한 사용자 ID
+        user_id = None
+        if current_user.is_authenticated:
+            user_id = str(current_user.id)
+            # 로그인한 경우 author를 사용자명으로 설정
+            if author == 'Anonymous' or not author:
+                author = current_user.username
+        
+        comment_id = supabase.create_track_comment(track_id, content=content, author=author, user_id=user_id)
         if not comment_id:
             return jsonify({"success": False, "error": "코멘트 저장에 실패했습니다."}), 500
 
@@ -900,25 +1302,55 @@ def create_track_comment_api(track_id):
 
 @app.route('/api/track_comments/<comment_id>', methods=['DELETE'])
 def delete_track_comment_api(comment_id):
-    """곡 코멘트 삭제 API (관리자만 가능)"""
+    """곡 코멘트 삭제 API (작성자 본인만 가능)"""
     try:
-        data = request.get_json() or {}
-        admin_password = data.get('password', '')
-        required_password = os.environ.get('ADMIN_PASSWORD', '') or '1225'
-
-        if admin_password != required_password:
-            return jsonify({'success': False, 'error': '관리자 비밀번호가 일치하지 않습니다.'}), 403
-
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+        
         if not supabase_available:
             return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
 
         supabase = SupabaseClient()
+        
+        # 코멘트 조회
+        try:
+            comment_response = (
+                supabase.client.table("track_comments")
+                .select("*")
+                .eq("id", comment_id)
+                .single()
+                .execute()
+            )
+            comment = comment_response.data if comment_response.data else None
+        except:
+            comment = None
+        
+        if not comment:
+            return jsonify({'success': False, 'error': '코멘트를 찾을 수 없습니다.'}), 404
+        
+        # 작성자 본인인지 확인
+        comment_user_id = comment.get('user_id')
+        current_user_id = str(current_user.id)
+        
+        # user_id가 있으면 user_id로 확인, 없으면 author로 확인 (기존 데이터 호환)
+        if comment_user_id:
+            # UUID 타입일 수 있으므로 string으로 변환하여 비교
+            if str(comment_user_id) != current_user_id:
+                return jsonify({'success': False, 'error': '본인이 작성한 코멘트만 삭제할 수 있습니다.'}), 403
+        else:
+            # user_id가 없는 경우 author로 확인 (기존 데이터)
+            if comment.get('author') != current_user.username:
+                return jsonify({'success': False, 'error': '본인이 작성한 코멘트만 삭제할 수 있습니다.'}), 403
+        
+        # 삭제 진행
         ok = supabase.delete_track_comment(comment_id)
         if not ok:
             return jsonify({"success": False, "error": "삭제에 실패했습니다."}), 500
         return jsonify({"success": True}), 200
     except Exception as e:
         print(f"[ERROR] track_comment 삭제 실패: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"success": False, "error": str(e)}), 500
 
 
@@ -946,7 +1378,16 @@ def create_post():
         
         if supabase_available:
             supabase = SupabaseClient()
-            post_id = supabase.create_post(title, content, author)
+            
+            # 현재 로그인한 사용자 ID 가져오기
+            user_id = None
+            if current_user.is_authenticated:
+                user_id = str(current_user.id)
+                # 로그인한 경우 author를 사용자명으로 설정
+                if author == 'Anonymous' or not author:
+                    author = current_user.username
+            
+            post_id = supabase.create_post(title, content, author, user_id=user_id)
             
             if post_id:
                 _community_last_post_at_by_ip[ip_address] = now
@@ -992,22 +1433,34 @@ def update_post_api(post_id):
 
 @app.route('/api/community/posts/<post_id>', methods=['DELETE'])
 def delete_post_api(post_id):
-    """게시글 삭제 API (관리자만 가능)"""
+    """게시글 삭제 API (작성자 본인만 가능)"""
     try:
-        # 관리자 비밀번호 확인
-        data = request.get_json() or {}
-        admin_password = data.get('password', '')
-        # .env 미설정/누락 시 로컬 기본값 사용
-        required_password = os.environ.get('ADMIN_PASSWORD', '') or '1225'
+        if not current_user.is_authenticated:
+            return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
         
-        # required_password는 기본값이 존재하므로 일반적으로 비어있지 않음
-        
-        if admin_password != required_password:
-            return jsonify({'success': False, 'error': '관리자 비밀번호가 일치하지 않습니다.'}), 403
-        
-        # 비밀번호 확인 후 삭제 진행
         if supabase_available:
             supabase = SupabaseClient()
+            
+            # 게시글 조회
+            post = supabase.get_post(post_id)
+            if not post:
+                return jsonify({'success': False, 'error': '게시글을 찾을 수 없습니다.'}), 404
+            
+            # 작성자 본인인지 확인
+            post_user_id = post.get('user_id')
+            current_user_id = str(current_user.id)
+            
+            # user_id가 있으면 user_id로 확인, 없으면 author로 확인 (기존 데이터 호환)
+            if post_user_id:
+                # UUID 타입일 수 있으므로 string으로 변환하여 비교
+                if str(post_user_id) != current_user_id:
+                    return jsonify({'success': False, 'error': '본인이 작성한 게시글만 삭제할 수 있습니다.'}), 403
+            else:
+                # user_id가 없는 경우 author로 확인 (기존 데이터)
+                if post.get('author') != current_user.username:
+                    return jsonify({'success': False, 'error': '본인이 작성한 게시글만 삭제할 수 있습니다.'}), 403
+            
+            # 삭제 진행
             success = supabase.delete_post(post_id)
             
             if success:
@@ -1019,6 +1472,8 @@ def delete_post_api(post_id):
             
     except Exception as e:
         print(f"[ERROR] 게시글 삭제 실패: {e}")
+        import traceback
+        traceback.print_exc()
         return jsonify({'success': False, 'error': str(e)}), 500
 
 

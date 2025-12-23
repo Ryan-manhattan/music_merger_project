@@ -153,3 +153,6 @@
 - planning 문서의 **최신(SSOT)** 은 `agents/planning/`에서 관리합니다.
   - HR 감리 기준(최신): `agents/hr/07_HR_GOVERNANCE.md`
 
+
+
+

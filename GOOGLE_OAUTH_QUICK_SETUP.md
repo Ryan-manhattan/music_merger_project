@@ -72,3 +72,6 @@ GOOGLE_CLIENT_SECRET=복사한_클라이언트_시크릿
 ### access_denied 오류
 - OAuth consent screen에서 테스트 사용자로 본인 이메일 추가
 - 또는 앱을 "Published" 상태로 변경
+
+
+

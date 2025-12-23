@@ -125,3 +125,6 @@ Google Cloud Console의 OAuth 클라이언트 설정에서:
 ## 📝 참고
 - 로컬 개발: `http://localhost:5000/login/google/authorized`
 - Render 배포: `https://music-merger-project.onrender.com/login/google/authorized`
+
+
+

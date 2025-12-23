@@ -5,9 +5,12 @@
 {% block content %}
 <div class="main-content-container">
     <header class="community-header">
-        <div class="inline-flex items-center gap-4 mb-6">
-            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: Tracks</span>
-            <div class="w-12 h-[1px] bg-white/20"></div>
+        <div class="flex items-center justify-between mb-6">
+            <div class="inline-flex items-center gap-4">
+                <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: Tracks</span>
+                <div class="w-12 h-[1px] bg-white/20"></div>
+            </div>
+            <button class="btn-outline text-[10px] tracking-widest" id="globalEditBtn" onclick="toggleGlobalEditMode()">EDIT</button>
         </div>
         <h2 class="serif-font">SONG ARCHIVE_</h2>
     </header>
@@ -34,19 +37,30 @@
     </section>
 
     {% if tracks %}
-        <section class="space-y-6">
+        <section class="space-y-6" id="tracksList">
             {% for track in tracks %}
-                <article class="pixel-card p-6 cursor-pointer hover:border-white/40 transition-all"
-                         onclick="window.location.href='{{ url_for('track_detail', track_id=track.id) }}'">
+                <article class="pixel-card p-6 hover:border-white/40 transition-all track-item" 
+                         data-track-id="{{ track.id }}"
+                         data-track-order="{{ track.display_order or loop.index0 }}">
                     <div class="flex gap-5">
-                        <div class="w-16 h-16 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+                        <div class="flex flex-col gap-2 items-center justify-center edit-mode-controls" style="display: none;">
+                            <button class="btn-outline text-[9px] tracking-widest px-2 py-1 move-up-btn" 
+                                    onclick="event.stopPropagation(); moveTrack('{{ track.id }}', 'up')" 
+                                    title="위로 이동">↑</button>
+                            <button class="btn-outline text-[9px] tracking-widest px-2 py-1 move-down-btn" 
+                                    onclick="event.stopPropagation(); moveTrack('{{ track.id }}', 'down')" 
+                                    title="아래로 이동">↓</button>
+                        </div>
+                        <div class="w-16 h-16 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer"
+                             onclick="window.location.href='{{ url_for('track_detail', track_id=track.id) }}'">
                             {% if track.thumbnail_url %}
                                 <img src="{{ track.thumbnail_url }}" alt="cover" class="w-full h-full object-cover">
                             {% else %}
                                 <span class="text-[10px] opacity-30">NO_ART</span>
                             {% endif %}
                         </div>
-                        <div class="flex-1 min-w-0">
+                        <div class="flex-1 min-w-0 cursor-pointer"
+                             onclick="window.location.href='{{ url_for('track_detail', track_id=track.id) }}'">
                             <div class="flex items-start justify-between gap-4">
                                 <h3 class="text-lg serif-font leading-tight truncate">{{ track.title }}</h3>
                                 <span class="text-[10px] opacity-40 uppercase tracking-widest">{{ (track.source or '') }}</span>
@@ -59,6 +73,11 @@
                                 {{ track.url }}
                             </div>
                         </div>
+                        <div class="flex items-center gap-2 edit-mode-actions" style="display: none;">
+                            <button class="btn-outline text-[10px] tracking-widest bg-red-600/20 border-red-600/40 text-red-300 hover:bg-red-600/40" 
+                                    onclick="event.stopPropagation(); deleteTrack('{{ track.id }}')" 
+                                    title="삭제">DELETE</button>
+                        </div>
                     </div>
                 </article>
             {% endfor %}
@@ -67,13 +86,13 @@
         <div class="flex justify-between items-center mt-10 pt-8 border-t border-white/10 text-[10px] uppercase tracking-widest opacity-60">
             <div>
                 {% if page and page > 1 %}
-                    <a class="btn-outline text-[10px] tracking-widest" href="{{ url_for('index') }}?page={{ page - 1 }}">PREV</a>
+                    <a class="btn-outline text-[10px] tracking-widest" href="{{ url_for('tracks') }}?page={{ page - 1 }}">PREV</a>
                 {% endif %}
             </div>
             <div>PAGE {{ page if page else 1 }}</div>
             <div>
                 {% if has_next %}
-                    <a class="btn-outline text-[10px] tracking-widest" href="{{ url_for('index') }}?page={{ (page if page else 1) + 1 }}">NEXT</a>
+                    <a class="btn-outline text-[10px] tracking-widest" href="{{ url_for('tracks') }}?page={{ (page if page else 1) + 1 }}">NEXT</a>
                 {% endif %}
             </div>
         </div>
@@ -122,7 +141,103 @@ async function addTrack() {
         btn.textContent = 'ADD_TRACK';
     }
 }
+
+async function deleteTrack(trackId) {
+    if (!confirm('정말 이 곡을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/tracks/${trackId}`, {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || '삭제에 실패했습니다.');
+        }
+    } catch (e) {
+        alert('오류가 발생했습니다.');
+    }
+}
+
+let globalEditModeActive = false;
+
+function toggleGlobalEditMode() {
+    globalEditModeActive = !globalEditModeActive;
+    const editBtn = document.getElementById('globalEditBtn');
+    const allEditControls = document.querySelectorAll('.edit-mode-controls');
+    const allEditActions = document.querySelectorAll('.edit-mode-actions');
+    
+    if (globalEditModeActive) {
+        // 전체 편집 모드 활성화
+        editBtn.textContent = 'DONE';
+        editBtn.classList.add('bg-green-600/20', 'border-green-600/40', 'text-green-300');
+        allEditControls.forEach(controls => controls.style.display = 'flex');
+        allEditActions.forEach(actions => actions.style.display = 'flex');
+    } else {
+        // 전체 편집 모드 비활성화
+        editBtn.textContent = 'EDIT';
+        editBtn.classList.remove('bg-green-600/20', 'border-green-600/40', 'text-green-300');
+        allEditControls.forEach(controls => controls.style.display = 'none');
+        allEditActions.forEach(actions => actions.style.display = 'none');
+    }
+}
+
+async function moveTrack(trackId, direction) {
+    const tracks = Array.from(document.querySelectorAll('.track-item'));
+    const currentIndex = tracks.findIndex(item => item.dataset.trackId === trackId);
+    
+    if (currentIndex === -1) return;
+    
+    let targetIndex;
+    if (direction === 'up' && currentIndex > 0) {
+        targetIndex = currentIndex - 1;
+    } else if (direction === 'down' && currentIndex < tracks.length - 1) {
+        targetIndex = currentIndex + 1;
+    } else {
+        return; // 이동할 수 없음
+    }
+    
+    // DOM에서 순서 변경
+    const currentItem = tracks[currentIndex];
+    const targetItem = tracks[targetIndex];
+    const parent = currentItem.parentElement;
+    
+    if (direction === 'up') {
+        parent.insertBefore(currentItem, targetItem);
+    } else {
+        parent.insertBefore(targetItem, currentItem);
+    }
+    
+    // 서버에 순서 업데이트
+    const trackOrders = Array.from(document.querySelectorAll('.track-item')).map((item, index) => ({
+        id: item.dataset.trackId,
+        order: index
+    }));
+    
+    try {
+        const res = await fetch('/api/tracks/order', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({tracks: trackOrders})
+        });
+        const data = await res.json();
+        if (!data.success) {
+            // 실패 시 원래대로 복구
+            window.location.reload();
+        }
+    } catch (e) {
+        console.error('순서 변경 실패:', e);
+        window.location.reload();
+    }
+}
 </script>
 {% endblock %}
+
+
+
 
 

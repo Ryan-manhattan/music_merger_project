@@ -25,6 +25,7 @@ END;
 $$ language 'plpgsql';
 
 -- updated_at 자동 업데이트 트리거
+DROP TRIGGER IF EXISTS update_posts_updated_at ON posts;
 CREATE TRIGGER update_posts_updated_at 
     BEFORE UPDATE ON posts 
     FOR EACH ROW 
@@ -39,19 +40,25 @@ CREATE POLICY "Anyone can read posts" ON posts
     USING (true);
 
 -- 모든 사용자가 게시글 작성 가능
+DROP POLICY IF EXISTS "Anyone can insert posts" ON posts;
 CREATE POLICY "Anyone can insert posts" ON posts
     FOR INSERT
     WITH CHECK (true);
 
 -- 모든 사용자가 게시글 수정 가능 (실제 운영 시에는 인증 추가 권장)
+DROP POLICY IF EXISTS "Anyone can update posts" ON posts;
 CREATE POLICY "Anyone can update posts" ON posts
     FOR UPDATE
     USING (true);
 
 -- 모든 사용자가 게시글 삭제 가능 (실제 운영 시에는 인증 추가 권장)
+DROP POLICY IF EXISTS "Anyone can delete posts" ON posts;
 CREATE POLICY "Anyone can delete posts" ON posts
     FOR DELETE
     USING (true);
+
+
+
 
 
 

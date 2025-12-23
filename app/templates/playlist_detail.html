@@ -1,0 +1,379 @@
+{% extends "base.html" %}
+
+{% block title %}{{ playlist.name if playlist else 'Playlist' }} - OFF THE COMMUNITY{% endblock %}
+
+{% block content %}
+<div class="main-content-container">
+    <header class="mb-12">
+        <a href="{{ url_for('playlists') }}" class="text-[10px] uppercase tracking-[0.2em] opacity-40 hover:opacity-80 inline-flex items-center gap-2">
+            <span>←</span><span>BACK_TO_PLAYLISTS</span>
+        </a>
+
+        <div class="flex items-center justify-between mt-8 mb-6">
+            <div class="inline-flex items-center gap-4">
+                <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">Playlist_ID: {{ playlist.id[:8] if playlist else 'NULL' }}</span>
+                <div class="w-12 h-[1px] bg-white/20"></div>
+            </div>
+            <div class="flex gap-2">
+                <button class="btn-outline text-[10px] tracking-widest" id="editPlaylistBtn" onclick="togglePlaylistEditMode()">EDIT PLAYLIST</button>
+                <button class="btn-outline text-[10px] tracking-widest" id="globalEditBtn" onclick="toggleGlobalEditMode()" style="display: none;">EDIT TRACKS</button>
+            </div>
+        </div>
+
+        <!-- 플레이리스트 정보 표시/편집 -->
+        <div class="flex gap-6 items-start mb-6">
+            <div class="w-32 h-32 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden" id="playlistIconContainer">
+                {% if playlist and playlist.icon_url %}
+                    <img src="{{ playlist.icon_url }}" alt="icon" class="w-full h-full object-cover" id="playlistIconImg" onerror="this.style.display='none'; document.getElementById('playlistIconPlaceholder').style.display='block';">
+                    <span class="text-4xl opacity-30" id="playlistIconPlaceholder" style="display: none;">📀</span>
+                {% else %}
+                    <span class="text-4xl opacity-30" id="playlistIconPlaceholder">📀</span>
+                {% endif %}
+            </div>
+            <div class="flex-1">
+                <h2 class="text-4xl md:text-5xl font-bold serif-font leading-tight mb-3" id="playlistNameDisplay">{{ playlist.name if playlist else 'Playlist' }}</h2>
+                <input type="text" id="playlistNameInput" value="{{ playlist.name if playlist else 'playlist' }}" 
+                       class="text-4xl md:text-5xl font-bold serif-font leading-tight mb-3 bg-transparent border-2 border-white/20 p-2 w-full focus:border-white outline-none" 
+                       style="display: none;" maxlength="200">
+                {% if playlist and playlist.description %}
+                <div class="text-[11px] uppercase tracking-widest opacity-50" id="playlistDescDisplay">
+                    {{ playlist.description }}
+                </div>
+                {% endif %}
+                <input type="text" id="playlistDescInput" value="{{ playlist.description if playlist and playlist.description else '' }}" 
+                       class="text-[11px] uppercase tracking-widest opacity-50 bg-transparent border-2 border-white/20 p-2 w-full focus:border-white outline-none mt-2" 
+                       style="display: none;" maxlength="500" placeholder="Description (Optional)">
+                <input type="url" id="playlistIconInput" value="{{ playlist.icon_url if playlist and playlist.icon_url else '' }}" 
+                       class="text-xs bg-transparent border-2 border-white/20 p-2 w-full focus:border-white outline-none mt-2" 
+                       style="display: none;" placeholder="Icon Image URL"
+                       oninput="updateIconPreview(this.value)">
+                <div class="flex gap-2 mt-4" id="playlistEditActions" style="display: none;">
+                    <button class="btn-pixel text-xs tracking-widest px-4 py-2" onclick="savePlaylistInfo()">SAVE</button>
+                    <button class="btn-outline text-xs tracking-widest px-4 py-2" onclick="cancelPlaylistEdit()">CANCEL</button>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    {% if error %}
+        <div class="pixel-card p-6 border border-red-500/40 text-red-200 text-sm mb-10">
+            {{ error }}
+        </div>
+    {% endif %}
+
+    <!-- 곡 추가 섹션 -->
+    <section class="pixel-card p-6 md:p-10 mb-10">
+        <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6">Add a Track URL</h3>
+        <div class="flex flex-col md:flex-row gap-4">
+            <input
+                type="url"
+                id="trackUrl"
+                placeholder="https://soundcloud.com/...  또는  https://www.youtube.com/watch?v=..."
+                class="flex-1 bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel"
+            >
+            <button class="btn-pixel md:px-8 text-xs tracking-widest" id="addTrackBtn" onclick="addTrack()">ADD_TRACK</button>
+        </div>
+        <p class="text-[10px] mt-4 opacity-30 uppercase tracking-widest">Supported: SoundCloud / YouTube</p>
+        <div id="addTrackMsg" class="text-xs mt-4 opacity-70"></div>
+    </section>
+
+    <!-- 곡 목록 -->
+    {% if tracks %}
+        <section class="space-y-6" id="tracksList">
+            {% for track in tracks %}
+                <article class="pixel-card p-6 hover:border-white/40 transition-all track-item" 
+                         data-track-id="{{ track.id }}"
+                         data-track-order="{{ track.display_order or loop.index0 }}">
+                    <div class="flex gap-5">
+                        <div class="flex flex-col gap-2 items-center justify-center edit-mode-controls" style="display: none;">
+                            <button class="btn-outline text-[9px] tracking-widest px-2 py-1 move-up-btn" 
+                                    onclick="event.stopPropagation(); moveTrack('{{ track.id }}', 'up')" 
+                                    title="위로 이동">↑</button>
+                            <button class="btn-outline text-[9px] tracking-widest px-2 py-1 move-down-btn" 
+                                    onclick="event.stopPropagation(); moveTrack('{{ track.id }}', 'down')" 
+                                    title="아래로 이동">↓</button>
+                        </div>
+                        <div class="w-16 h-16 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden cursor-pointer"
+                             onclick="window.location.href='{{ url_for('track_detail', track_id=track.id) }}'">
+                            {% if track.thumbnail_url %}
+                                <img src="{{ track.thumbnail_url }}" alt="cover" class="w-full h-full object-cover">
+                            {% else %}
+                                <span class="text-[10px] opacity-30">NO_ART</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0 cursor-pointer"
+                             onclick="window.location.href='{{ url_for('track_detail', track_id=track.id) }}'">
+                            <div class="flex items-start justify-between gap-4">
+                                <h3 class="text-lg serif-font leading-tight truncate">{{ track.title }}</h3>
+                                <span class="text-[10px] opacity-40 uppercase tracking-widest">{{ (track.source or '') }}</span>
+                            </div>
+                            <div class="mt-2 text-[11px] opacity-50 uppercase tracking-widest">
+                                {% if track.artist %}{{ track.artist }}{% endif %}
+                                {% if track.duration_str %} · {{ track.duration_str }}{% endif %}
+                            </div>
+                            <div class="mt-3 text-[10px] opacity-30 truncate">
+                                {{ track.url }}
+                            </div>
+                        </div>
+                        <div class="flex items-center gap-2 edit-mode-actions" style="display: none;">
+                            <button class="btn-outline text-[10px] tracking-widest bg-red-600/20 border-red-600/40 text-red-300 hover:bg-red-600/40" 
+                                    onclick="event.stopPropagation(); deleteTrack('{{ track.id }}')" 
+                                    title="삭제">DELETE</button>
+                        </div>
+                    </div>
+                </article>
+            {% endfor %}
+        </section>
+    {% else %}
+        <section class="pixel-card p-10 text-center">
+            <h3 class="text-xl serif-font mb-2">아직 등록된 곡이 없어요</h3>
+            <p class="text-sm opacity-50 italic serif-font">SoundCloud/YouTube 링크를 추가해 첫 번째 기록을 시작해보자.</p>
+        </section>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+let globalEditModeActive = false;
+let playlistEditModeActive = false;
+const playlistId = '{{ playlist.id if playlist else "" }}';
+
+function togglePlaylistEditMode() {
+    playlistEditModeActive = !playlistEditModeActive;
+    const editBtn = document.getElementById('editPlaylistBtn');
+    const nameDisplay = document.getElementById('playlistNameDisplay');
+    const nameInput = document.getElementById('playlistNameInput');
+    const descDisplay = document.getElementById('playlistDescDisplay');
+    const descInput = document.getElementById('playlistDescInput');
+    const iconInput = document.getElementById('playlistIconInput');
+    const iconImg = document.getElementById('playlistIconImg');
+    const iconPlaceholder = document.getElementById('playlistIconPlaceholder');
+    const editActions = document.getElementById('playlistEditActions');
+    const globalEditBtn = document.getElementById('globalEditBtn');
+    
+    if (playlistEditModeActive) {
+        editBtn.textContent = 'CANCEL EDIT';
+        editBtn.classList.add('bg-red-600/20', 'border-red-600/40', 'text-red-300');
+        nameDisplay.style.display = 'none';
+        nameInput.style.display = 'block';
+        if (descDisplay) descDisplay.style.display = 'none';
+        descInput.style.display = 'block';
+        iconInput.style.display = 'block';
+        editActions.style.display = 'flex';
+        globalEditBtn.style.display = 'none';
+    } else {
+        editBtn.textContent = 'EDIT PLAYLIST';
+        editBtn.classList.remove('bg-red-600/20', 'border-red-600/40', 'text-red-300');
+        nameDisplay.style.display = 'block';
+        nameInput.style.display = 'none';
+        if (descDisplay) descDisplay.style.display = 'block';
+        descInput.style.display = 'none';
+        iconInput.style.display = 'none';
+        editActions.style.display = 'none';
+        globalEditBtn.style.display = 'block';
+        // 입력값 초기화
+        nameInput.value = nameDisplay.textContent.trim();
+        if (descDisplay) descInput.value = descDisplay.textContent.trim();
+        iconInput.value = iconImg ? iconImg.src : '';
+    }
+}
+
+function cancelPlaylistEdit() {
+    togglePlaylistEditMode();
+}
+
+function updateIconPreview(url) {
+    const iconImg = document.getElementById('playlistIconImg');
+    const iconPlaceholder = document.getElementById('playlistIconPlaceholder');
+    const iconContainer = document.getElementById('playlistIconContainer');
+    
+    if (url && url.trim()) {
+        if (!iconImg) {
+            // 이미지 요소가 없으면 생성
+            const img = document.createElement('img');
+            img.id = 'playlistIconImg';
+            img.className = 'w-full h-full object-cover';
+            img.alt = 'icon';
+            img.onerror = function() {
+                // 이미지 로드 실패 시 placeholder 표시
+                this.style.display = 'none';
+                if (iconPlaceholder) iconPlaceholder.style.display = 'block';
+            };
+            iconContainer.appendChild(img);
+        }
+        const img = document.getElementById('playlistIconImg');
+        if (img) {
+            img.src = url;
+            img.style.display = 'block';
+            if (iconPlaceholder) iconPlaceholder.style.display = 'none';
+        }
+    } else {
+        if (iconImg) iconImg.style.display = 'none';
+        if (iconPlaceholder) iconPlaceholder.style.display = 'block';
+    }
+}
+
+async function savePlaylistInfo() {
+    const nameInput = document.getElementById('playlistNameInput');
+    const descInput = document.getElementById('playlistDescInput');
+    const iconInput = document.getElementById('playlistIconInput');
+    const saveBtn = document.querySelector('#playlistEditActions button');
+    
+    const name = (nameInput.value || '').trim();
+    const description = (descInput.value || '').trim() || null;
+    const iconUrl = (iconInput.value || '').trim() || null;
+    
+    if (!name) {
+        alert('플레이리스트 이름을 입력해주세요.');
+        return;
+    }
+    
+    const originalText = saveBtn.textContent;
+    saveBtn.disabled = true;
+    saveBtn.textContent = 'SAVING...';
+    
+    try {
+        const res = await fetch(`/api/playlists/${playlistId}`, {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({name, description, icon_url: iconUrl})
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || '수정에 실패했습니다.');
+            saveBtn.disabled = false;
+            saveBtn.textContent = originalText;
+        }
+    } catch (e) {
+        alert('오류가 발생했습니다.');
+        saveBtn.disabled = false;
+        saveBtn.textContent = originalText;
+    }
+}
+
+function toggleGlobalEditMode() {
+    globalEditModeActive = !globalEditModeActive;
+    const editBtn = document.getElementById('globalEditBtn');
+    const allEditControls = document.querySelectorAll('.edit-mode-controls');
+    const allEditActions = document.querySelectorAll('.edit-mode-actions');
+    
+    if (globalEditModeActive) {
+        editBtn.textContent = 'DONE';
+        editBtn.classList.add('bg-green-600/20', 'border-green-600/40', 'text-green-300');
+        allEditControls.forEach(controls => controls.style.display = 'flex');
+        allEditActions.forEach(actions => actions.style.display = 'flex');
+    } else {
+        editBtn.textContent = 'EDIT';
+        editBtn.classList.remove('bg-green-600/20', 'border-green-600/40', 'text-green-300');
+        allEditControls.forEach(controls => controls.style.display = 'none');
+        allEditActions.forEach(actions => actions.style.display = 'none');
+    }
+}
+
+async function addTrack() {
+    const input = document.getElementById('trackUrl');
+    const btn = document.getElementById('addTrackBtn');
+    const msg = document.getElementById('addTrackMsg');
+
+    const url = (input.value || '').trim();
+    if (!url) {
+        msg.textContent = 'URL을 입력해주세요.';
+        return;
+    }
+
+    btn.disabled = true;
+    btn.textContent = 'ADDING...';
+    msg.textContent = '';
+
+    try {
+        const res = await fetch('/api/tracks', {
+            method: 'POST',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({url, playlist_id: playlistId})
+        });
+        const data = await res.json();
+        if (data.success) {
+            // 플레이리스트 상세 페이지에서 곡 추가 후 새로고침
+            window.location.reload();
+            return;
+        }
+        msg.textContent = data.error || '추가 실패';
+    } catch (e) {
+        msg.textContent = '오류가 발생했어요.';
+    } finally {
+        btn.disabled = false;
+        btn.textContent = 'ADD_TRACK';
+    }
+}
+
+async function deleteTrack(trackId) {
+    if (!confirm('정말 이 곡을 삭제하시겠습니까?')) {
+        return;
+    }
+    
+    try {
+        const res = await fetch(`/api/tracks/${trackId}`, {
+            method: 'DELETE',
+            headers: {'Content-Type': 'application/json'}
+        });
+        const data = await res.json();
+        if (data.success) {
+            window.location.reload();
+        } else {
+            alert(data.error || '삭제에 실패했습니다.');
+        }
+    } catch (e) {
+        alert('오류가 발생했습니다.');
+    }
+}
+
+async function moveTrack(trackId, direction) {
+    const tracks = Array.from(document.querySelectorAll('.track-item'));
+    const currentIndex = tracks.findIndex(item => item.dataset.trackId === trackId);
+    
+    if (currentIndex === -1) return;
+    
+    let targetIndex;
+    if (direction === 'up' && currentIndex > 0) {
+        targetIndex = currentIndex - 1;
+    } else if (direction === 'down' && currentIndex < tracks.length - 1) {
+        targetIndex = currentIndex + 1;
+    } else {
+        return;
+    }
+    
+    const currentItem = tracks[currentIndex];
+    const targetItem = tracks[targetIndex];
+    const parent = currentItem.parentElement;
+    
+    if (direction === 'up') {
+        parent.insertBefore(currentItem, targetItem);
+    } else {
+        parent.insertBefore(targetItem, currentItem);
+    }
+    
+    const trackOrders = Array.from(document.querySelectorAll('.track-item')).map((item, index) => ({
+        id: item.dataset.trackId,
+        order: index
+    }));
+    
+    try {
+        const res = await fetch('/api/tracks/order', {
+            method: 'PUT',
+            headers: {'Content-Type': 'application/json'},
+            body: JSON.stringify({tracks: trackOrders})
+        });
+        const data = await res.json();
+        if (!data.success) {
+            window.location.reload();
+        }
+    } catch (e) {
+        console.error('순서 변경 실패:', e);
+        window.location.reload();
+    }
+}
+</script>
+{% endblock %}

@@ -69,10 +69,12 @@
     <!-- Sidebar -->
     <aside class="sidebar flex flex-col" id="sidebar">
         <div class="p-8 border-b-4 border-dashed border-[#111]">
-            <h1 class="text-2xl font-bold tracking-tighter leading-tight mb-2">
-                OFF THE<br>COMMUNITY
-            </h1>
-            <p class="text-[10px] opacity-40 serif-font uppercase tracking-widest">Sentimental Archive</p>
+            <a href="{{ url_for('index') }}" class="block cursor-pointer hover:opacity-80 transition-opacity">
+                <h1 class="text-2xl font-bold tracking-tighter leading-tight mb-2">
+                    OFF THE<br>COMMUNITY
+                </h1>
+                <p class="text-[10px] opacity-40 serif-font uppercase tracking-widest">Sentimental Archive</p>
+            </a>
             
             <div class="flex gap-1 mt-4">
                 <div class="w-2 h-2 bg-white"></div>
@@ -84,7 +86,7 @@
         </div>
         
         <nav class="flex-1 p-4 space-y-2 mt-4">
-            <a href="{{ url_for('index') }}" class="sidebar-item {% if request.endpoint == 'index' %}active{% endif %}">
+            <a href="{{ url_for('playlists') }}" class="sidebar-item {% if request.endpoint == 'playlists' or request.endpoint == 'playlist_detail' %}active{% endif %}">
                 <div class="dot"></div>
                 <span>SONG ARCHIVE</span>
             </a>
@@ -92,9 +94,9 @@
                 <div class="dot"></div>
                 <span>DIARY COMMUNITY</span>
             </a>
-            <a href="{{ url_for('community_write') }}" class="sidebar-item {% if request.endpoint == 'community_write' %}active{% endif %}">
+            <a href="{{ url_for('worldcup') }}" class="sidebar-item {% if request.endpoint == 'worldcup' %}active{% endif %}">
                 <div class="dot"></div>
-                <span>WRITE DIARY</span>
+                <span>WORLD CUP</span>
             </a>
             <a href="{{ url_for('music_studio') }}" class="sidebar-item {% if request.endpoint == 'music_studio' %}active{% endif %}" style="display: none;">
                 <div class="dot"></div>
@@ -144,164 +146,14 @@
             <span class="sm:hidden opacity-60">SYNC</span>
         </div>
         
-        <!-- Custom Pixel Player -->
-        <div class="pixel-progress-player">
-            <div class="hidden md:block opacity-40 text-[9px] min-w-[80px] truncate" id="trackName">STANDBY_</div>
-            
-            <div class="pixel-progress-track">
-                <div class="pixel-progress-fill" id="progressFill">
-                    <!-- Progress units will be dynamically generated if needed, but width-based fill is simpler for now -->
-                    <div class="pixel-unit" style="width: 100%"></div>
-                </div>
-            </div>
-
-            <div class="player-controls">
-                <button class="player-btn" id="playBtn" onclick="playSoundCloud()">▶ PLAY</button>
-                <button class="player-btn" id="stopBtn" onclick="stopSoundCloud()" style="display: none;">■ STOP</button>
-            </div>
-        </div>
-
         <div class="hidden lg:block opacity-30 text-[9px]">
             NODE: ARCHIVE-01
-        </div>
-
-        <!-- Hidden SoundCloud Widget for API Access -->
-        <div id="soundcloudWidgetContainer" style="position: absolute; left: -9999px; visibility: hidden;">
-            <iframe
-                id="soundcloudWidget"
-                title="SoundCloud player"
-                width="100%"
-                height="166"
-                scrolling="no"
-                frameborder="no"
-                allow="autoplay"
-                src="">
-            </iframe>
         </div>
     </footer>
 
     <!-- Scripts -->
     <script src="{{ url_for('static', filename='js/main.js') }}"></script>
-    <script src="https://w.soundcloud.com/player/api.js"></script>
     <script>
-        let scWidget = null;
-        let scWidgetReady = false;
-        let progressInterval = null;
-        
-        function initWidget() {
-            const widgetFrame = document.getElementById('soundcloudWidget');
-            const urlInput = document.getElementById('soundcloudUrlInput');
-            const defaultUrl = 'https://soundcloud.com/rrrjunkim/off-2';
-            
-            if (!widgetFrame.src) {
-                widgetFrame.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(defaultUrl)}&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=false`;
-            }
-
-            if (window.SC && window.SC.Widget) {
-                scWidget = window.SC.Widget(widgetFrame);
-                scWidget.bind(window.SC.Widget.Events.READY, () => {
-                    scWidgetReady = true;
-                    console.log('SC Widget Ready');
-                });
-
-                scWidget.bind(window.SC.Widget.Events.PLAY, () => {
-                    document.getElementById('playBtn').style.display = 'none';
-                    document.getElementById('stopBtn').style.display = 'block';
-                    startProgressTracking();
-                });
-
-                scWidget.bind(window.SC.Widget.Events.PAUSE, () => {
-                    document.getElementById('playBtn').style.display = 'block';
-                    document.getElementById('stopBtn').style.display = 'none';
-                    stopProgressTracking();
-                });
-
-                scWidget.bind(window.SC.Widget.Events.FINISH, () => {
-                    document.getElementById('playBtn').style.display = 'block';
-                    document.getElementById('stopBtn').style.display = 'none';
-                    resetProgress();
-                });
-            }
-        }
-
-        async function playSoundCloud() {
-            if (!scWidgetReady) initWidget();
-            if (scWidget) {
-                scWidget.play();
-                // Get track info
-                scWidget.getCurrentSound((sound) => {
-                    if (sound) document.getElementById('trackName').textContent = sound.title.toUpperCase();
-                });
-            }
-        }
-
-        // Global trigger for track detail pages
-        function playInGlobalPlayer(url, title) {
-            console.log('[Player] playInGlobalPlayer called:', url);
-            
-            // Widget이 없으면 먼저 초기화
-            if (!scWidget) {
-                initWidget();
-            }
-            
-            // Widget 준비 대기 후 로드
-            function tryLoad() {
-                if (scWidget && scWidgetReady) {
-                    console.log('[Player] Loading URL into widget');
-                    scWidget.load(url, {
-                        auto_play: true,
-                        hide_related: true,
-                        show_comments: false,
-                        show_user: true,
-                        show_reposts: false,
-                        show_teaser: false,
-                        visual: false
-                    });
-                    if (title) document.getElementById('trackName').textContent = title.toUpperCase();
-                } else if (scWidget) {
-                    // Widget 객체는 있지만 아직 ready가 아닌 경우
-                    console.log('[Player] Widget not ready, retrying...');
-                    setTimeout(tryLoad, 200);
-                } else {
-                    // Widget 초기화 중, 재시도
-                    console.log('[Player] Widget initializing, retrying...');
-                    setTimeout(tryLoad, 200);
-                }
-            }
-            
-            tryLoad();
-        }
-        
-        function stopSoundCloud() {
-            if (scWidget) scWidget.pause();
-        }
-
-        function startProgressTracking() {
-            if (progressInterval) clearInterval(progressInterval);
-            progressInterval = setInterval(() => {
-                if (scWidget) {
-                    scWidget.getPosition((pos) => {
-                        scWidget.getDuration((duration) => {
-                            const percent = (pos / duration) * 100;
-                            document.getElementById('progressFill').style.width = percent + '%';
-                        });
-                    });
-                }
-            }, 1000);
-        }
-
-        function stopProgressTracking() {
-            if (progressInterval) clearInterval(progressInterval);
-        }
-
-        function resetProgress() {
-            stopProgressTracking();
-            document.getElementById('progressFill').style.width = '0%';
-        }
-
-        // Initialize on load
-        window.addEventListener('load', initWidget);
-
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');
             const overlay = document.getElementById('mobileOverlay');

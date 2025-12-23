@@ -159,57 +159,36 @@
         
         <div class="post-actions">
             <a href="{{ url_for('diary') }}" class="btn-outline text-xs tracking-widest">LIST</a>
-            <button class="btn-pixel text-xs tracking-widest bg-red-600 text-white shadow-none" onclick="showDeleteModal()">DELETE</button>
+            {% if current_user.is_authenticated and (post.user_id|string == current_user.id|string or (not post.user_id and post.author == current_user.username)) %}
+            <button class="btn-pixel text-xs tracking-widest bg-red-600 text-white shadow-none" onclick="confirmDelete()">DELETE</button>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<!-- Password Modal -->
-<div id="deleteModal" class="modal-overlay" style="display: none;">
-    <div class="pixel-card modal-content">
-        <h3 class="text-xl serif-font mb-4">ADMIN_VERIFICATION</h3>
-        <p class="text-xs opacity-50 mb-6 uppercase tracking-widest">Enter password to delete this archive.</p>
-        <input type="password" id="adminPassword" class="modal-input" placeholder="********">
-        <div class="flex gap-4 justify-end">
-            <button class="btn-outline text-[10px] tracking-widest" onclick="closeDeleteModal()">CANCEL</button>
-            <button class="btn-pixel text-[10px] tracking-widest" onclick="confirmDelete()">CONFIRM_DELETE</button>
-        </div>
-    </div>
-</div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    const pagePostId = '{{ post_id }}';
-    
-    function showDeleteModal() {
-        document.getElementById('deleteModal').style.display = 'flex';
-        document.getElementById('adminPassword').focus();
-    }
-    
-    function closeDeleteModal() {
-        document.getElementById('deleteModal').style.display = 'none';
-    }
-    
     async function confirmDelete() {
-        const password = document.getElementById('adminPassword').value;
-        if (!password) return;
+        if (!confirm('정말 이 게시글을 삭제하시겠습니까?')) {
+            return;
+        }
         
         try {
             const response = await fetch(`/api/community/posts/{{ post.id }}`, {
                 method: 'DELETE',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ password })
+                headers: { 'Content-Type': 'application/json' }
             });
             
             const data = await response.json();
             if (data.success) {
                 window.location.href = '{{ url_for("diary") }}';
             } else {
-                alert(data.error || 'Access Denied.');
+                alert(data.error || '삭제에 실패했습니다.');
             }
         } catch (error) {
-            alert('Error occurred.');
+            alert('오류가 발생했습니다.');
         }
     }
 </script>
