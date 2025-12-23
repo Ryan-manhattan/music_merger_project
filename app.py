@@ -99,31 +99,6 @@ app.config['ALLOWED_EXTENSIONS'] = {'mp3', 'wav', 'm4a', 'flac', 'mp4', 'webm'}
 app.config['ALLOWED_IMAGE_EXTENSIONS'] = {'jpg', 'jpeg', 'png', 'bmp', 'gif'}
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-1225-change-in-production')
 
-# Google OAuth 설정
-GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
-GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
-
-# Flask-Login 초기화
-login_manager = LoginManager()
-login_manager.init_app(app)
-login_manager.login_view = 'login'
-login_manager.login_message = '로그인이 필요합니다.'
-login_manager.login_message_category = 'info'
-
-# Google OAuth Blueprint (Flask-Dance)
-if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
-    google_bp = make_google_blueprint(
-        client_id=GOOGLE_CLIENT_ID,
-        client_secret=GOOGLE_CLIENT_SECRET,
-        scope=["profile", "email"],
-        redirect_to="google_login_callback"
-    )
-    app.register_blueprint(google_bp, url_prefix="/login")
-    console.log("[Auth] Google OAuth 설정 완료")
-else:
-    console.log("[WARN] Google OAuth 클라이언트 ID/시크릿이 설정되지 않았습니다.")
-    google_bp = None
-
 # 폴더 생성 확인
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
 os.makedirs(app.config['PROCESSED_FOLDER'], exist_ok=True)
@@ -145,6 +120,31 @@ class console:
         # 즉시 플러시하여 버퍼링 방지
         import sys
         sys.stdout.flush()
+
+# Flask-Login 초기화
+login_manager = LoginManager()
+login_manager.init_app(app)
+login_manager.login_view = 'login'
+login_manager.login_message = '로그인이 필요합니다.'
+login_manager.login_message_category = 'info'
+
+# Google OAuth 설정
+GOOGLE_CLIENT_ID = os.getenv('GOOGLE_CLIENT_ID')
+GOOGLE_CLIENT_SECRET = os.getenv('GOOGLE_CLIENT_SECRET')
+
+# Google OAuth Blueprint (Flask-Dance)
+if GOOGLE_CLIENT_ID and GOOGLE_CLIENT_SECRET:
+    google_bp = make_google_blueprint(
+        client_id=GOOGLE_CLIENT_ID,
+        client_secret=GOOGLE_CLIENT_SECRET,
+        scope=["profile", "email"],
+        redirect_to="google_login_callback"
+    )
+    app.register_blueprint(google_bp, url_prefix="/login")
+    console.log("[Auth] Google OAuth 설정 완료")
+else:
+    console.log("[WARN] Google OAuth 클라이언트 ID/시크릿이 설정되지 않았습니다.")
+    google_bp = None
 
 # 서비스 초기화 (환경 변수 설정 후)
 music_service = None
@@ -378,15 +378,16 @@ def load_user(user_id):
 
 @app.route('/login')
 def login():
-    """로그인 페이지 - Google OAuth로 리다이렉트"""
+    """로그인 페이지"""
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
-    if not google_bp:
-        return render_template('login.html', error="Google OAuth가 설정되지 않았습니다.")
+    # Google OAuth가 설정되어 있으면 Google 로그인 사용
+    if google_bp:
+        return redirect(url_for('google.login'))
     
-    # Google 로그인으로 리다이렉트
-    return redirect(url_for('google.login'))
+    # Google OAuth가 없으면 일반 로그인 페이지 표시
+    return render_template('login.html')
 
 
 @app.route('/login/google/authorized')
@@ -455,19 +456,74 @@ def google_login_callback():
         return redirect(url_for('login'))
 
 
+@app.route('/register')
+def register():
+    """회원가입 페이지"""
+    if current_user.is_authenticated:
+        return redirect(url_for('index'))
+    return render_template('register.html')
+
+
 @app.route('/logout')
 @login_required
 def logout():
     """로그아웃"""
     logout_user()
     # Google OAuth 토큰도 제거
-    if google.authorized:
-        try:
+    try:
+        if google_bp and google.authorized:
             token = google.token
             # 토큰 무효화 (선택사항)
-        except:
-            pass
+    except:
+        pass
     return redirect(url_for('index'))
+
+
+@app.route('/api/auth/register', methods=['POST'])
+def api_register():
+    """회원가입 API"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        email = data.get('email', '').strip()
+        password = data.get('password', '')
+        
+        from utils.auth import AuthManager
+        auth_manager = AuthManager()
+        result = auth_manager.register_user(username, email, password)
+        
+        return jsonify(result)
+    except Exception as e:
+        console.log(f"[ERROR] 회원가입 API 오류: {e}")
+        return jsonify({'success': False, 'message': '오류가 발생했습니다.'}), 500
+
+
+@app.route('/api/auth/login', methods=['POST'])
+def api_login():
+    """로그인 API"""
+    try:
+        data = request.get_json()
+        username = data.get('username', '').strip()
+        password = data.get('password', '')
+        
+        from utils.auth import AuthManager
+        auth_manager = AuthManager()
+        result = auth_manager.login_user(username, password)
+        
+        if result['success']:
+            # Flask-Login으로 사용자 로그인
+            user = User(
+                user_id=result['user']['id'],
+                username=result['user']['username'],
+                email=result['user']['email']
+            )
+            login_user(user, remember=True)
+            result['redirect'] = request.args.get('next') or '/'
+        
+        return jsonify(result)
+    except Exception as e:
+        console.log(f"[ERROR] 로그인 API 오류: {e}")
+        return jsonify({'success': False, 'message': '오류가 발생했습니다.'}), 500
 
 
 @app.route('/api/auth/me')
