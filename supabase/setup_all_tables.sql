@@ -204,10 +204,38 @@ CREATE POLICY "Users can update own data" ON users
     USING (true);
 
 -- ============================================
+-- 5. visitor_logs 테이블 (방문자 로그)
+-- ============================================
+CREATE TABLE IF NOT EXISTS visitor_logs (
+    id UUID DEFAULT gen_random_uuid() PRIMARY KEY,
+    ip_address TEXT,
+    user_agent TEXT,
+    page_url TEXT,
+    referer TEXT,
+    visited_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_visitor_logs_visited_at ON visitor_logs(visited_at DESC);
+CREATE INDEX IF NOT EXISTS idx_visitor_logs_ip_address ON visitor_logs(ip_address);
+
+-- RLS 설정
+ALTER TABLE visitor_logs ENABLE ROW LEVEL SECURITY;
+
+DROP POLICY IF EXISTS "Anyone can read visitor_logs" ON visitor_logs;
+CREATE POLICY "Anyone can read visitor_logs" ON visitor_logs
+    FOR SELECT
+    USING (true);
+
+DROP POLICY IF EXISTS "Anyone can insert visitor_logs" ON visitor_logs;
+CREATE POLICY "Anyone can insert visitor_logs" ON visitor_logs
+    FOR INSERT
+    WITH CHECK (true);
+
+-- ============================================
 -- 완료 메시지
 -- ============================================
 DO $$
 BEGIN
     RAISE NOTICE '✅ 모든 테이블 생성 완료!';
-    RAISE NOTICE '생성된 테이블: posts, tracks, track_comments, users';
+    RAISE NOTICE '생성된 테이블: posts, tracks, track_comments, users, visitor_logs';
 END $$;
