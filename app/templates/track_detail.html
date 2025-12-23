@@ -91,113 +91,29 @@
 
 
     <section class="pixel-card p-6 md:p-10 mb-10">
-        <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-8">감정 기록 (Emotion Diary)</h3>
-
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
-            <!-- 감정 선택 -->
-            <div>
-                <label class="text-[10px] uppercase tracking-widest opacity-50 mb-4 block">현재 감정</label>
-                <div class="grid grid-cols-3 gap-2">
-                    <button type="button" class="emotion-btn text-2xl p-3 border-2 border-[#222] hover:border-white/50 transition-colors" data-emotion="happy">😊</button>
-                    <button type="button" class="emotion-btn text-2xl p-3 border-2 border-[#222] hover:border-white/50 transition-colors" data-emotion="sad">😢</button>
-                    <button type="button" class="emotion-btn text-2xl p-3 border-2 border-[#222] hover:border-white/50 transition-colors" data-emotion="excited">🤩</button>
-                    <button type="button" class="emotion-btn text-2xl p-3 border-2 border-[#222] hover:border-white/50 transition-colors" data-emotion="calm">😌</button>
-                    <button type="button" class="emotion-btn text-2xl p-3 border-2 border-[#222] hover:border-white/50 transition-colors" data-emotion="angry">😠</button>
-                    <button type="button" class="emotion-btn text-2xl p-3 border-2 border-[#222] hover:border-white/50 transition-colors" data-emotion="nostalgic">🥺</button>
-                </div>
-                <input type="hidden" id="selectedEmotion">
-            </div>
-
-            <!-- 감정 강도 -->
-            <div>
-                <label class="text-[10px] uppercase tracking-widest opacity-50 mb-4 block">감정 강도</label>
-                <div class="flex items-center gap-2">
-                    <span class="text-xs opacity-50">약함</span>
-                    <div class="flex gap-1">
-                        <input type="radio" name="intensity" value="1" id="int1" class="hidden">
-                        <label for="int1" class="intensity-btn w-6 h-6 border border-[#222] cursor-pointer hover:border-white/50"></label>
-                        <input type="radio" name="intensity" value="2" id="int2" class="hidden">
-                        <label for="int2" class="intensity-btn w-6 h-6 border border-[#222] cursor-pointer hover:border-white/50"></label>
-                        <input type="radio" name="intensity" value="3" id="int3" class="hidden" checked>
-                        <label for="int3" class="intensity-btn w-6 h-6 border border-[#222] cursor-pointer hover:border-white/50 bg-white/20"></label>
-                        <input type="radio" name="intensity" value="4" id="int4" class="hidden">
-                        <label for="int4" class="intensity-btn w-6 h-6 border border-[#222] cursor-pointer hover:border-white/50"></label>
-                        <input type="radio" name="intensity" value="5" id="int5" class="hidden">
-                        <label for="int5" class="intensity-btn w-6 h-6 border border-[#222] cursor-pointer hover:border-white/50"></label>
-                    </div>
-                    <span class="text-xs opacity-50">강함</span>
-                </div>
-            </div>
-        </div>
-
-        <!-- 청취 환경 -->
-        <div class="mb-8">
-            <label class="text-[10px] uppercase tracking-widest opacity-50 mb-4 block">청취 환경</label>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-3">
-                <select id="listenTime" class="bg-black border-2 border-[#222] p-3 text-sm focus:border-white outline-none font-pixel">
-                    <option value="">시간대</option>
-                    <option value="dawn">새벽 🌅</option>
-                    <option value="morning">아침 ☀️</option>
-                    <option value="afternoon">오후 🌤️</option>
-                    <option value="evening">저녁 🌆</option>
-                    <option value="night">밤 🌙</option>
-                </select>
-                <select id="listenPlace" class="bg-black border-2 border-[#222] p-3 text-sm focus:border-white outline-none font-pixel">
-                    <option value="">장소</option>
-                    <option value="home">집 🏠</option>
-                    <option value="work">직장 🏢</option>
-                    <option value="transport">이동중 🚗</option>
-                    <option value="outdoor">야외 🌳</option>
-                    <option value="cafe">카페 ☕</option>
-                    <option value="other">기타</option>
-                </select>
-                <select id="listenMood" class="bg-black border-2 border-[#222] p-3 text-sm focus:border-white outline-none font-pixel">
-                    <option value="">기분</option>
-                    <option value="good">좋음 😊</option>
-                    <option value="tired">피곤 😴</option>
-                    <option value="stressed">스트레스 😰</option>
-                    <option value="lonely">외로움 😢</option>
-                    <option value="excited">설렘 🤗</option>
-                    <option value="peaceful">평온 😌</option>
-                </select>
-                <input type="text" id="listenWith" placeholder="누구와 함께?" class="bg-black border-2 border-[#222] p-3 text-sm focus:border-white outline-none font-pixel" maxlength="50">
-            </div>
-        </div>
-
-        <!-- 개인 정보 -->
-        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+        <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6">Leave a Comment</h3>
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-4">
             <input
                 type="text"
                 id="commentAuthor"
                 maxlength="50"
-                placeholder="닉네임 (선택사항)"
+                placeholder="닉네임(선택)"
                 class="bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel"
             >
-            <input
-                type="text"
-                id="emotionTags"
-                maxlength="100"
-                placeholder="감정 태그 (쉼표로 구분: 사랑, 추억, 희망...)"
-                class="bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel"
-            >
-        </div>
-
-        <!-- 감정 일기 -->
-        <div class="mb-6">
-            <label class="text-[10px] uppercase tracking-widest opacity-50 mb-4 block">감정 일기</label>
-            <textarea
-                id="commentContent"
-                maxlength="5000"
-                placeholder="이 곡을 들으며 어떤 감정이 들었나요? 떠오르는 추억이나 생각을 자유롭게 적어보세요. 이 곡이 당신의 하루를 어떻게 물들였는지, 어떤 기분으로 들었는지, 어떤 생각이 들었는지... 모두 기록해보세요."
-                class="w-full bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-serif min-h-48 resize-vertical"
-            ></textarea>
-            <div class="text-[10px] mt-2 opacity-40 uppercase tracking-widest text-right">
-                <span id="commentCount">0</span> / 5000
+            <div class="md:col-span-2">
+                <textarea
+                    id="commentContent"
+                    maxlength="4000"
+                    placeholder="이 곡을 들으며 떠오른 생각을 자유롭게 남겨주세요."
+                    class="w-full bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-serif min-h-40"
+                ></textarea>
+                <div class="text-[10px] mt-2 opacity-40 uppercase tracking-widest text-right">
+                    <span id="commentCount">0</span> / 4000
+                </div>
             </div>
         </div>
-
         <div class="flex justify-end mt-6">
-            <button class="btn-pixel text-xs tracking-widest" id="commentSubmitBtn" onclick="submitComment()">SAVE_EMOTION_DIARY</button>
+            <button class="btn-pixel text-xs tracking-widest" id="commentSubmitBtn" onclick="submitComment()">SAVE_COMMENT</button>
         </div>
         <div id="commentMsg" class="text-xs mt-4 opacity-70"></div>
     </section>
@@ -341,24 +257,6 @@ function activateYouTube() {
     }
 }
 
-// 감정 버튼 클릭 핸들러
-document.querySelectorAll('.emotion-btn').forEach(btn => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.emotion-btn').forEach(b => b.classList.remove('bg-white/10', 'border-white'));
-        this.classList.add('bg-white/10', 'border-white');
-        document.getElementById('selectedEmotion').value = this.dataset.emotion;
-    });
-});
-
-// 감정 강도 버튼 클릭 핸들러
-document.querySelectorAll('.intensity-btn').forEach((btn, index) => {
-    btn.addEventListener('click', function() {
-        document.querySelectorAll('.intensity-btn').forEach(b => b.classList.remove('bg-white/20'));
-        this.classList.add('bg-white/20');
-        document.querySelector(`#int${index + 1}`).checked = true;
-    });
-});
-
 const contentEl = document.getElementById('commentContent');
 const countEl = document.getElementById('commentCount');
 contentEl.addEventListener('input', () => { countEl.textContent = (contentEl.value || '').length; });
@@ -367,78 +265,23 @@ renderAddedAtLocal();
 async function submitComment() {
     const btn = document.getElementById('commentSubmitBtn');
     const msg = document.getElementById('commentMsg');
-
-    // 기본 정보 수집
     const author = (document.getElementById('commentAuthor').value || '').trim() || 'Anonymous';
     const content = (document.getElementById('commentContent').value || '').trim();
-    const emotion = document.getElementById('selectedEmotion').value;
-    const intensity = document.querySelector('input[name="intensity"]:checked')?.value || '3';
-    const emotionTags = (document.getElementById('emotionTags').value || '').trim();
-
-    // 청취 환경 수집
-    const listenTime = document.getElementById('listenTime').value;
-    const listenPlace = document.getElementById('listenPlace').value;
-    const listenMood = document.getElementById('listenMood').value;
-    const listenWith = (document.getElementById('listenWith').value || '').trim();
 
     if (!content) {
-        msg.textContent = '감정 일기를 작성해주세요.';
+        msg.textContent = '내용을 입력해주세요.';
         return;
     }
 
-    // 감정 데이터를 포함한 콘텐츠 생성
-    let enhancedContent = content;
-
-    // 감정 정보 추가
-    if (emotion) {
-        const emotionMap = {
-            'happy': '😊 행복한',
-            'sad': '😢 슬픈',
-            'excited': '🤩 설레는',
-            'calm': '😌 평온한',
-            'angry': '😠 화나는',
-            'nostalgic': '🥺 그리운'
-        };
-        enhancedContent = `[감정: ${emotionMap[emotion]} (강도: ${intensity}/5)]\n\n${enhancedContent}`;
-    }
-
-    // 청취 환경 정보 추가
-    const envInfo = [];
-    if (listenTime) envInfo.push(`시간: ${listenTime}`);
-    if (listenPlace) envInfo.push(`장소: ${listenPlace}`);
-    if (listenMood) envInfo.push(`기분: ${listenMood}`);
-    if (listenWith) envInfo.push(`함께: ${listenWith}`);
-
-    if (envInfo.length > 0) {
-        enhancedContent += `\n\n[청취 환경]\n${envInfo.join(' | ')}`;
-    }
-
-    // 태그 정보 추가
-    if (emotionTags) {
-        enhancedContent += `\n\n[감정 태그]\n${emotionTags}`;
-    }
-
     btn.disabled = true;
-    btn.textContent = 'SAVING_EMOTION...';
+    btn.textContent = 'SAVING...';
     msg.textContent = '';
 
     try {
         const res = await fetch('/api/tracks/{{ track.id }}/comments', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
-            body: JSON.stringify({
-                author,
-                content: enhancedContent,
-                emotion_data: {
-                    emotion,
-                    intensity: parseInt(intensity),
-                    listen_time: listenTime,
-                    listen_place: listenPlace,
-                    listen_mood: listenMood,
-                    listen_with: listenWith,
-                    emotion_tags: emotionTags
-                }
-            })
+            body: JSON.stringify({author, content})
         });
         const data = await res.json();
         if (data.success) {
@@ -450,7 +293,7 @@ async function submitComment() {
         msg.textContent = '오류가 발생했어요.';
     } finally {
         btn.disabled = false;
-        btn.textContent = 'SAVE_EMOTION_DIARY';
+        btn.textContent = 'SAVE_COMMENT';
     }
 }
 
