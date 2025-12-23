@@ -334,6 +334,19 @@ class SupabaseClient:
         except Exception as e:
             print(f"[ERROR] Supabase track_comments 삭제 실패: {e}")
             return False
+
+    def update_track(self, track_id: str, data: Dict) -> bool:
+        """곡 메타데이터/필드 업데이트"""
+        try:
+            if not data:
+                return True
+            data = dict(data)
+            data["updated_at"] = datetime.now().isoformat()
+            self.client.table("tracks").update(data).eq("id", track_id).execute()
+            return True
+        except Exception as e:
+            print(f"[ERROR] Supabase tracks 업데이트 실패: {e}")
+            return False
     
     def log_visitor(self, ip_address: str, user_agent: str, page_url: str, referer: str = None) -> bool:
         """

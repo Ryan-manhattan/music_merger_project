@@ -18,3 +18,10 @@
 
 ### Won't (현재 범위 제외)
 - 사장님 지시: 테마 비정합 기능은 유지하되, 현재 기획 우선순위에서 제외
+
+---
+
+## (PM) 티켓 링크
+- **T-003**: `agents/planning/tickets/T-003__track_stats_metrics_spec.md`
+- **T-004**: `agents/planning/tickets/T-004__track_detail_data_panel_refine.md`
+- **T-005**: `agents/planning/tickets/T-005__implement_track_stats_collection.md`

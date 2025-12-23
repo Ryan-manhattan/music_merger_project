@@ -81,3 +81,4 @@ REDDIT_USER_AGENT=MusicTrendAnalyzer/1.0
 2. Supabase 대시보드에서 posts 테이블 존재 확인
 3. RLS 정책 확인
 
+

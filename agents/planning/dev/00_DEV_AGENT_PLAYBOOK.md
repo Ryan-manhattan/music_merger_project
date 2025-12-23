@@ -17,3 +17,11 @@
 - 작업 시작 전: `docs/planning/meetings/` 또는 `docs/planning/reports/`에 작업 범위/가정/리스크 기록
 - 작업 완료 후: 변경 요약 + 테스트 결과 + 영향 범위를 같은 문서에 추가
 - PR/커밋이 있다면: 해당 링크/해시를 문서에 남김
+
+---
+
+## (공지) SSOT 경로 변경 (2025-12-19 추가)
+- planning(기획/결정/보고/회의) SSOT는 `docs/planning/`가 아니라 **`agents/planning/`** 입니다.
+- 따라서 개발자 공유/보고도 아래를 기준으로 합니다:
+  - 보고서: `agents/planning/reports/`
+  - 회의록: `agents/planning/meetings/`

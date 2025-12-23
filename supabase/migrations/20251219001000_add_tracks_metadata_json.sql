@@ -7,3 +7,4 @@ ALTER TABLE tracks
 -- Optional (future): add a GIN index if we start querying inside metadata frequently.
 -- CREATE INDEX IF NOT EXISTS idx_tracks_metadata_gin ON tracks USING GIN (metadata);
 
+

@@ -9,6 +9,7 @@
 - 상세 역할 문서는 다음을 우선 참조한다.
   - PM: `agents/planning/01_PM_ROLE_AND_SCOPE.md`
   - DEV: `agents/dev/00_DEV_AGENT_PLAYBOOK.md`
+  - DESIGN: `agents/design/00_DESIGN_AGENT_PLAYBOOK.md`
   - 협업 플로우: `agents/planning/06_COLLAB_FLOW.md`
   - 보고 템플릿: `agents/planning/00_REPORT_TEMPLATE.md`
 
@@ -126,6 +127,19 @@
 - [ ] 영향 범위 명시
 - [ ] 산출물 경로/링크(보고서/회의록/커밋 등)
 - [ ] 문서 동기화가 필요한 경우 append로 반영
+- [ ] **(필수) 본인 역할 작업로그 업데이트 완료**: `agents/worklogs/<ROLE>.md` (미작성=미통과)
+
+---
+
+## 8-A) 역할 위반(즉시 미통과)
+- [ ] **PM이 코드 수정/개발 진행을 수행하지 않았다** (수행 시 즉시 미통과)
+
+---
+
+## 8-B) 협업 시스템 준수(티켓 기반)
+- [ ] 작업이 티켓(`agents/planning/tickets/`)으로 정의되어 있다(요구사항/AC 포함)
+- [ ] DESIGN이 필요한 작업은 티켓의 DESIGN 섹션(산출물 링크/핸드오프)이 업데이트되어 있다
+- [ ] DEV는 티켓의 DEV 섹션(기술/테스트)과 진행 로그가 업데이트되어 있다
 
 ---
 

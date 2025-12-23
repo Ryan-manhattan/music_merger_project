@@ -1,357 +1,178 @@
 {% extends "base.html" %}
 
-{% block title %}{{ post.title }} - Moodo{% endblock %}
+{% block title %}{{ post.title }} - OFF THE COMMUNITY{% endblock %}
 
 {% block extra_css %}
 <style>
-    .post-container {
-        max-width: 48rem;
-        margin: 0 auto;
-        padding: 2rem 1rem 5rem;
-        position: relative;
-        z-index: 10;
-    }
-    
-    .post-header {
-        margin-bottom: 2rem;
-    }
-    
     .post-header .back-link {
-        color: #999;
-        text-decoration: none;
-        font-size: 1rem;
-        font-family: 'Nanum Gothic Coding', monospace;
-        margin-bottom: 1rem;
+        color: #666;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.2em;
         display: inline-flex;
         align-items: center;
         gap: 0.5rem;
-        transition: all 0.2s ease;
     }
     
     .post-header .back-link:hover {
-        color: white;
+        color: var(--pixel-white);
     }
     
     .post-detail {
-        background: black;
-        border: 4px solid white;
-        padding: 1.5rem;
-        position: relative;
-        box-shadow: 8px 8px 0 0 rgba(255,255,255,0.2);
+        padding: 3.5rem;
     }
     
-    /* Decorative Corner Pixels */
-    .post-detail::before,
-    .post-detail::after {
-        content: '';
-        position: absolute;
-        width: 8px;
-        height: 8px;
-        background: white;
-    }
-    
-    .post-detail::before {
-        top: 0;
-        left: 0;
-    }
-    
-    .post-detail::after {
-        top: 0;
-        right: 0;
-    }
-    
-    .post-detail .corner-bottom-left,
-    .post-detail .corner-bottom-right {
-        position: absolute;
-        width: 8px;
-        height: 8px;
-        background: white;
-        bottom: 0;
-    }
-    
-    .post-detail .corner-bottom-left {
-        left: 0;
-    }
-    
-    .post-detail .corner-bottom-right {
-        right: 0;
+    @media (max-width: 768px) {
+        .post-detail {
+            padding: 1.5rem;
+        }
     }
     
     .post-title {
-        font-size: 2rem;
-        font-family: 'Nanum Gothic Coding', monospace;
-        color: white;
-        margin-bottom: 1rem;
-        line-height: 1.4;
-        font-weight: 700;
+        font-size: 2.5rem;
+        font-family: var(--font-serif);
+        line-height: 1.2;
+        margin-bottom: 2rem;
+        color: var(--pixel-white);
+    }
+    
+    @media (max-width: 768px) {
+        .post-title {
+            font-size: 1.75rem;
+            margin-bottom: 1.5rem;
+        }
     }
     
     .post-meta {
         display: flex;
         justify-content: space-between;
         align-items: center;
-        padding-bottom: 1rem;
-        border-bottom: 1px dashed #333;
-        margin-bottom: 1.5rem;
-        font-family: 'Nanum Gothic Coding', monospace;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+        margin-bottom: 3rem;
+        font-size: 0.75rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+        color: #444;
     }
     
-    .post-author {
-        color: #999;
-        font-size: 1rem;
-    }
-    
-    .post-date {
-        color: #666;
-        font-size: 0.875rem;
+    @media (max-width: 768px) {
+        .post-meta {
+            flex-direction: column;
+            align-items: flex-start;
+            gap: 0.5rem;
+            margin-bottom: 2rem;
+        }
     }
     
     .post-content {
-        color: #ccc;
-        line-height: 1.8;
-        font-size: 1.5rem;
-        font-family: 'Nanum Myeongjo', serif;
+        color: var(--sub-text);
+        line-height: 2;
+        font-size: 1.25rem;
+        font-family: var(--font-serif);
         white-space: pre-wrap;
         word-wrap: break-word;
-        min-height: 12rem;
+        min-height: 15rem;
+    }
+    
+    @media (max-width: 768px) {
+        .post-content {
+            font-size: 1.1rem;
+            line-height: 1.8;
+        }
     }
     
     .post-actions {
         display: flex;
-        gap: 0.75rem;
+        gap: 1rem;
         justify-content: flex-end;
-        margin-top: 2rem;
-        padding-top: 1.5rem;
-        border-top: 1px dashed #333;
+        margin-top: 5rem;
+        padding-top: 2rem;
+        border-top: 4px dashed #111;
     }
     
-    .btn {
-        padding: 0.625rem 1.25rem;
-        border: 2px solid;
-        font-family: 'Nanum Gothic Coding', monospace;
-        font-size: 0.875rem;
-        cursor: pointer;
-        text-decoration: none;
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        transition: all 0.2s ease;
-        font-weight: 700;
+    @media (max-width: 768px) {
+        .post-actions {
+            flex-direction: column;
+            margin-top: 3rem;
+        }
     }
-    
-    .btn-secondary {
-        background: transparent;
-        color: #999;
-        border-color: #666;
-    }
-    
-    .btn-secondary:hover {
-        background: #1a1a1a;
-        color: white;
-        border-color: #999;
-    }
-    
-    .btn-danger {
-        background: white;
-        color: black;
-        border-color: white;
-        box-shadow: 4px 4px 0 0 #666;
-    }
-    
-    .btn-danger:hover {
-        transform: translateY(2px);
-        box-shadow: 2px 2px 0 0 #666;
-    }
-    
-    .message {
-        padding: 0.75rem 1rem;
-        margin-bottom: 1.25rem;
-        font-family: 'Nanum Gothic Coding', monospace;
-        border: 2px solid;
-    }
-    
-    .message-success {
-        background: black;
-        color: #86efac;
-        border-color: #22c55e;
-    }
-    
-    .message-error {
-        background: black;
-        color: #fee2e2;
-        border-color: #dc2626;
-    }
-    
-    /* 비밀번호 입력 모달 */
+
+    /* Modal Styles */
     .modal-overlay {
         position: fixed;
-        top: 0;
-        left: 0;
-        right: 0;
-        bottom: 0;
-        background: rgba(0, 0, 0, 0.9);
+        top: 0; left: 0; right: 0; bottom: 0;
+        background: rgba(0, 0, 0, 0.95);
         display: flex;
         align-items: center;
         justify-content: center;
         z-index: 10000;
-        animation: fadeIn 0.3s ease;
+        backdrop-filter: blur(8px);
     }
     
     .modal-content {
-        background: black;
-        border: 4px solid white;
-        padding: 1.5rem;
         max-width: 400px;
         width: 90%;
-        box-shadow: 8px 8px 0 0 #333;
-        animation: slideUp 0.3s ease;
-    }
-    
-    .modal-header {
-        margin-bottom: 1.5rem;
-    }
-    
-    .modal-header h3 {
-        color: white;
-        font-size: 1.5rem;
-        font-family: 'Nanum Gothic Coding', monospace;
-        margin: 0;
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        font-weight: 700;
-    }
-    
-    .modal-body {
-        margin-bottom: 1.5rem;
-    }
-    
-    .modal-body p {
-        color: #999;
-        font-size: 0.875rem;
-        font-family: 'Nanum Myeongjo', serif;
-        margin-bottom: 1rem;
+        padding: 2.5rem;
     }
     
     .modal-input {
         width: 100%;
-        padding: 0.75rem 1rem;
-        background: #1a1a1a;
-        border: 2px solid #333;
+        padding: 1rem;
+        background: #000;
+        border: 2px solid #222;
         color: white;
-        font-size: 1rem;
-        font-family: 'Nanum Gothic Coding', monospace;
-        transition: all 0.2s ease;
+        font-family: var(--font-pixel);
         outline: none;
+        margin-bottom: 2rem;
     }
     
-    .modal-input:focus {
-        border-color: white;
-        background: black;
-    }
-    
-    .modal-actions {
-        display: flex;
-        gap: 0.75rem;
-        justify-content: flex-end;
-    }
-    
-    .btn-modal {
-        padding: 0.625rem 1.25rem;
-        border: 2px solid;
-        font-family: 'Nanum Gothic Coding', monospace;
-        font-size: 0.875rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        font-weight: 700;
-    }
-    
-    .btn-modal-cancel {
-        background: transparent;
-        color: #999;
-        border-color: #666;
-    }
-    
-    .btn-modal-cancel:hover {
-        background: #1a1a1a;
-        color: white;
-        border-color: #999;
-    }
-    
-    .btn-modal-submit {
-        background: white;
-        color: black;
-        border-color: white;
-        box-shadow: 4px 4px 0 0 #666;
-    }
-    
-    .btn-modal-submit:hover {
-        transform: translateY(2px);
-        box-shadow: 2px 2px 0 0 #666;
-    }
-    
-    @keyframes fadeIn {
-        from { opacity: 0; }
-        to { opacity: 1; }
-    }
-    
-    @keyframes slideUp {
-        from {
-            opacity: 0;
-            transform: translateY(20px);
-        }
-        to {
-            opacity: 1;
-            transform: translateY(0);
-        }
-    }
+    .modal-input:focus { border-color: var(--pixel-white); }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="post-container">
+<div class="main-content-container post-container">
     <div class="post-header">
-        <a href="{{ url_for('index') }}" class="back-link">
+        <a href="{{ url_for('diary') }}" class="back-link">
             <span>←</span>
-            <span>BACK TO LIST</span>
+            <span>RETURN_TO_ARCHIVE</span>
         </a>
     </div>
     
-    <div class="post-detail">
-        <div class="corner-bottom-left"></div>
-        <div class="corner-bottom-right"></div>
-        
+    <div class="pixel-card post-detail">
         <div id="message-container"></div>
         
+        <div class="inline-flex items-center gap-4 mb-8">
+            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">Entry_ID: {{ post.id[:8] if post.id else 'NULL' }}</span>
+            <div class="w-12 h-[1px] bg-white/20"></div>
+        </div>
+
         <h1 class="post-title">{{ post.title }}</h1>
         
         <div class="post-meta">
-            <span class="post-author">👤 {{ post.author }}</span>
-            <span class="post-date">{{ post.created_at[:19].replace('T', ' ') if post.created_at else '' }}</span>
+            <span>👤 AUTHOR: {{ post.author }}</span>
+            <span>TIMESTAMP: {{ post.created_at[:10] if post.created_at else '' }}</span>
         </div>
         
         <div class="post-content">{{ post.content }}</div>
         
         <div class="post-actions">
-            <a href="{{ url_for('index') }}" class="btn btn-secondary">LIST</a>
-            <button class="btn btn-danger" onclick="showDeleteModal('{{ post.id }}')">DELETE</button>
+            <a href="{{ url_for('diary') }}" class="btn-outline text-xs tracking-widest">LIST</a>
+            <button class="btn-pixel text-xs tracking-widest bg-red-600 text-white shadow-none" onclick="showDeleteModal()">DELETE</button>
         </div>
     </div>
 </div>
 
-<!-- 비밀번호 입력 모달 -->
+<!-- Password Modal -->
 <div id="deleteModal" class="modal-overlay" style="display: none;">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3>🔒 ADMIN AUTH</h3>
-        </div>
-        <div class="modal-body">
-            <p>Enter admin password to delete this entry.</p>
-            <input type="password" id="adminPassword" class="modal-input" placeholder="PASSWORD" autofocus>
-        </div>
-        <div class="modal-actions">
-            <button class="btn-modal btn-modal-cancel" onclick="closeDeleteModal()">CANCEL</button>
-            <button class="btn-modal btn-modal-submit" onclick="confirmDelete()">DELETE</button>
+    <div class="pixel-card modal-content">
+        <h3 class="text-xl serif-font mb-4">ADMIN_VERIFICATION</h3>
+        <p class="text-xs opacity-50 mb-6 uppercase tracking-widest">Enter password to delete this archive.</p>
+        <input type="password" id="adminPassword" class="modal-input" placeholder="********">
+        <div class="flex gap-4 justify-end">
+            <button class="btn-outline text-[10px] tracking-widest" onclick="closeDeleteModal()">CANCEL</button>
+            <button class="btn-pixel text-[10px] tracking-widest" onclick="confirmDelete()">CONFIRM_DELETE</button>
         </div>
     </div>
 </div>
@@ -359,147 +180,37 @@
 
 {% block extra_js %}
 <script>
-    // 페이지 로드 시 post_id 설정
     const pagePostId = '{{ post_id }}';
-    let currentPostId = pagePostId || null;
     
-    let enterKeyHandler = null;
-    let escapeKeyHandler = null;
-    
-    function showDeleteModal(postId) {
-        // postId가 없으면 페이지의 post_id 사용
-        const targetPostId = postId || pagePostId;
-        
-        if (!targetPostId || targetPostId === 'None' || targetPostId === 'null') {
-            console.error('Post ID is required. Received:', targetPostId);
-            showMessage('Post ID is missing. Please refresh the page.', 'error');
-            return;
-        }
-        
-        currentPostId = targetPostId;
-        const modal = document.getElementById('deleteModal');
-        const input = document.getElementById('adminPassword');
-        
-        if (!modal || !input) {
-            console.error('Modal elements not found');
-            return;
-        }
-        
-        modal.style.display = 'flex';
-        input.value = '';
-        input.focus();
-        
-        // 기존 이벤트 리스너 제거
-        if (enterKeyHandler) {
-            input.removeEventListener('keypress', enterKeyHandler);
-        }
-        if (escapeKeyHandler) {
-            document.removeEventListener('keydown', escapeKeyHandler);
-        }
-        
-        // Enter 키로 제출
-        enterKeyHandler = function(e) {
-            if (e.key === 'Enter') {
-                confirmDelete();
-            }
-        };
-        input.addEventListener('keypress', enterKeyHandler);
-        
-        // ESC 키로 닫기
-        escapeKeyHandler = function(e) {
-            if (e.key === 'Escape') {
-                closeDeleteModal();
-            }
-        };
-        document.addEventListener('keydown', escapeKeyHandler);
+    function showDeleteModal() {
+        document.getElementById('deleteModal').style.display = 'flex';
+        document.getElementById('adminPassword').focus();
     }
     
     function closeDeleteModal() {
-        const modal = document.getElementById('deleteModal');
-        const input = document.getElementById('adminPassword');
-        
-        if (modal) {
-            modal.style.display = 'none';
-        }
-        
-        // 이벤트 리스너 제거
-        if (input && enterKeyHandler) {
-            input.removeEventListener('keypress', enterKeyHandler);
-            enterKeyHandler = null;
-        }
-        if (escapeKeyHandler) {
-            document.removeEventListener('keydown', escapeKeyHandler);
-            escapeKeyHandler = null;
-        }
-        
-        currentPostId = null;
+        document.getElementById('deleteModal').style.display = 'none';
     }
     
     async function confirmDelete() {
-        // currentPostId가 없으면 pagePostId 사용
-        const targetPostId = currentPostId || pagePostId;
-        
-        if (!targetPostId || targetPostId === 'None' || targetPostId === 'null' || targetPostId === '') {
-            console.error('Post ID is missing. currentPostId:', currentPostId, 'pagePostId:', pagePostId);
-            showMessage('Post ID is missing. Please refresh the page.', 'error');
-            return;
-        }
-        
         const password = document.getElementById('adminPassword').value;
-        
-        if (!password) {
-            showMessage('Please enter password.', 'error');
-            return;
-        }
-        
-        if (!confirm('Are you sure you want to delete this entry?')) {
-            return;
-        }
-        
-        closeDeleteModal();
+        if (!password) return;
         
         try {
-            const response = await fetch(`/api/community/posts/${targetPostId}`, {
+            const response = await fetch(`/api/community/posts/{{ post.id }}`, {
                 method: 'DELETE',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    password: password
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ password })
             });
             
             const data = await response.json();
-            
             if (data.success) {
-                showMessage('Entry deleted successfully.', 'success');
-                setTimeout(() => {
-                    window.location.href = '{{ url_for("index") }}';
-                }, 1000);
+                window.location.href = '{{ url_for("diary") }}';
             } else {
-                showMessage(data.error || 'Failed to delete entry.', 'error');
+                alert(data.error || 'Access Denied.');
             }
         } catch (error) {
-            showMessage('An error occurred: ' + error.message, 'error');
+            alert('Error occurred.');
         }
     }
-    
-    function showMessage(message, type) {
-        const messageContainer = document.getElementById('message-container');
-        messageContainer.innerHTML = `<div class="message message-${type}">${message}</div>`;
-        
-        if (type === 'success') {
-            setTimeout(() => {
-                messageContainer.innerHTML = '';
-            }, 3000);
-        }
-    }
-    
-    // 모달 외부 클릭 시 닫기
-    document.getElementById('deleteModal').addEventListener('click', function(e) {
-        if (e.target === this) {
-            closeDeleteModal();
-        }
-    });
 </script>
 {% endblock %}

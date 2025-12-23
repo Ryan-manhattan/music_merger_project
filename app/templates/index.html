@@ -1,243 +1,209 @@
 {% extends "base.html" %}
 
 {% block content %}
-<div class="audio-studio">
-    <!-- 헤더 -->
-    <header class="studio-header">
-        <div class="studio-title">
-            <h1>🎵 음악 스튜디오</h1>
-            <p>파일 업로드부터 플레이리스트 생성, 음원 추출까지 한 번에</p>
+<div class="main-content-container studio-container">
+    <!-- Header -->
+    <header class="mb-20">
+        <div class="inline-flex items-center gap-4 mb-6">
+            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: Studio</span>
+            <div class="w-12 h-[1px] bg-white/20"></div>
         </div>
+        <h2 class="text-4xl md:text-5xl font-bold serif-font leading-tight mb-4">음악 스튜디오_</h2>
     </header>
 
-    <!-- 통합 스튜디오만 표시 -->
-
-    <!-- 통합 스튜디오 모드 -->
-    <div id="studioMode" class="studio-content active">
-        <!-- 파일 관리 섹션 (공통) -->
-        <section class="file-manager" id="fileManager">
-            <div class="upload-zone">
-                <div class="upload-area" id="uploadArea">
-                    <div class="upload-icon">📁</div>
-                    <h2>파일 업로드 또는 링크 입력</h2>
-                    <p>음원 파일 (MP3, WAV, M4A, FLAC) 또는 YouTube 링크를 입력하세요</p>
+    <div id="studioMode" class="space-y-12">
+        <!-- File Manager Section -->
+        <section class="pixel-card p-6 md:p-12" id="fileManager">
+            <div class="text-center">
+                <div class="upload-zone border-4 border-dashed border-[#222] p-6 md:p-12 hover:border-white transition-all cursor-pointer" id="uploadArea" onclick="document.getElementById('fileInput').click()">
+                    <div class="text-4xl mb-6">📁</div>
+                    <h2 class="text-xl md:text-2xl font-bold uppercase tracking-widest mb-4">Upload_Files</h2>
+                    <p class="text-xs opacity-40 mb-8 uppercase tracking-widest">MP3, WAV, M4A, FLAC or YouTube Link</p>
                     
-                    <!-- 파일 업로드 -->
                     <input type="file" id="fileInput" multiple accept=".mp3,.wav,.m4a,.flac,.mp4,.webm" hidden>
-                    <button class="btn btn-primary" onclick="document.getElementById('fileInput').click()">
-                        📁 파일 선택
-                    </button>
+                    <button class="btn-pixel">Select Files</button>
+                </div>
+
+                <div class="mt-12 max-w-xl mx-auto">
+                    <div class="flex items-center gap-4 mb-8">
+                        <div class="h-[1px] bg-[#222] flex-1"></div>
+                        <span class="text-[10px] opacity-20 uppercase tracking-[0.5em]">OR_LINK</span>
+                        <div class="h-[1px] bg-[#222] flex-1"></div>
+                    </div>
                     
-                    <!-- URL 입력 -->
-                    <div class="url-input-section">
-                        <div class="section-divider">
-                            <span>또는</span>
+                    <div class="flex flex-col md:flex-row gap-4">
+                        <input type="url" id="urlInput" placeholder="https://youtube.com/watch?v=..." 
+                               class="flex-1 bg-black border-2 border-[#222] p-3 text-sm focus:border-white outline-none font-pixel">
+                        <button class="btn-outline text-xs tracking-widest md:px-8" id="extractBtn" onclick="extractFromUrl()">EXTRACT</button>
+                    </div>
+                    
+                    <!-- Progress Bar -->
+                    <div class="mt-8 hidden" id="extractProgress">
+                        <div class="progress-container">
+                            <div class="progress-fill" id="extractProgressFill" style="width: 0%"></div>
                         </div>
-                        <div class="url-input-group">
-                            <input type="url" id="urlInput" placeholder="https://youtube.com/watch?v=..." class="url-input">
-                            <button class="btn btn-secondary" id="extractBtn" onclick="extractFromUrl()">🔗 링크 추출</button>
-                        </div>
-                        
-                        <!-- 링크 추출 진행바 -->
-                        <div class="extract-progress" id="extractProgress" style="display: none;">
-                            <div class="progress-container">
-                                <div class="progress-bar">
-                                    <div class="progress-fill" id="extractProgressFill"></div>
-                                </div>
-                                <div class="progress-text" id="extractProgressText">진행 중...</div>
-                            </div>
-                        </div>
+                        <p class="text-[9px] mt-2 opacity-40 text-left uppercase tracking-widest" id="extractProgressText">Processing...</p>
                     </div>
                 </div>
             </div>
             
-            <!-- 업로드된 파일 목록 -->
-            <div class="files-list" id="filesList" style="display: none;">
-                <h3>📂 업로드된 파일</h3>
-                <div class="files-container" id="filesContainer"></div>
+            <!-- Uploaded Files List -->
+            <div class="mt-16 hidden" id="filesList">
+                <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6 pb-2 border-b border-[#222]">Loaded_Assets</h3>
+                <div class="space-y-4" id="filesContainer"></div>
             </div>
         </section>
 
-        <!-- 작업 선택 섹션 -->
-        <section class="work-selector" id="workSelector" style="display: none;">
-            <h3>🛠️ 작업 선택</h3>
-            <div class="work-options">
-                <div class="work-option" onclick="selectWork('playlist')">
-                    <div class="work-icon">🎵</div>
-                    <h4>플레이리스트 생성</h4>
-                    <p>여러 음원을 하나로 합치기</p>
+        <!-- Work Selector -->
+        <section class="hidden" id="workSelector">
+            <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-8">Select_Module</h3>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+                <div class="pixel-card group cursor-pointer" onclick="selectWork('playlist')">
+                    <div class="text-3xl mb-4">🎵</div>
+                    <h4 class="text-xl font-bold serif-font mb-2">플레이리스트 생성</h4>
+                    <p class="text-sm opacity-40">여러 음원을 하나로 결합합니다.</p>
                 </div>
-                <div class="work-option" onclick="selectWork('extract')">
-                    <div class="work-icon">🎧</div>
-                    <h4>음원 추출 & 편집</h4>
-                    <p>음원 추출, 키 변경, 자르기</p>
+                <div class="pixel-card group cursor-pointer" onclick="selectWork('extract')">
+                    <div class="text-3xl mb-4">🎧</div>
+                    <h4 class="text-xl font-bold serif-font mb-2">음원 추출 & 편집</h4>
+                    <p class="text-sm opacity-40">키 변경, 자르기 등 세부 편집을 수행합니다.</p>
                 </div>
             </div>
         </section>
 
-        <!-- 작업별 설정 섹션 -->
-        <section class="work-settings" id="workSettings" style="display: none;">
-            <!-- 플레이리스트 생성 설정 -->
-            <div class="settings-panel" id="playlistSettings">
-                <h3>🎵 플레이리스트 생성 설정</h3>
-                <div class="settings-group">
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="normalizeVolume" checked>
-                        <span>볼륨 정규화</span>
-                    </label>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="crossfade">
-                        <span>크로스페이드</span>
-                    </label>
-                </div>
-            </div>
-
-            <!-- 음원 추출 설정 -->
-            <div class="settings-panel" id="extractSettings">
-                <h3>🎧 음원 추출 & 편집 설정</h3>
-                <div class="settings-group">
-                    <div class="setting-item">
-                        <label>출력 형식:</label>
-                        <select id="outputFormat" class="form-select">
-                            <option value="mp3">MP3 (권장)</option>
-                            <option value="wav">WAV (고음질)</option>
-                            <option value="original">원본 형식</option>
-                        </select>
-                    </div>
-                    <div class="setting-item">
-                        <label>키 조절 (반음): <span id="pitchValue">0</span></label>
-                        <input type="range" id="pitchSlider" min="-12" max="12" value="0" step="1" 
-                               oninput="document.getElementById('pitchValue').textContent = this.value">
-                    </div>
-                    <div class="setting-item">
-                        <label class="checkbox-label">
-                            <input type="checkbox" id="trimToThirty">
-                            <span>30초로 자르기</span>
+        <!-- Work Settings -->
+        <section class="hidden" id="workSettings">
+            <div class="pixel-card p-12">
+                <!-- Playlist Settings -->
+                <div id="playlistSettings" class="hidden">
+                    <h3 class="text-xl font-bold serif-font mb-8 uppercase tracking-widest">Playlist_Config</h3>
+                    <div class="flex gap-8">
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" id="normalizeVolume" checked class="hidden">
+                            <div class="w-5 h-5 border-2 border-[#333] group-hover:border-white flex items-center justify-center">
+                                <div class="w-3 h-3 bg-white hidden checked-indicator"></div>
+                            </div>
+                            <span class="text-xs uppercase tracking-widest opacity-60 group-hover:opacity-100">Normalize_Volume</span>
+                        </label>
+                        <label class="flex items-center gap-3 cursor-pointer group">
+                            <input type="checkbox" id="crossfade" class="hidden">
+                            <div class="w-5 h-5 border-2 border-[#333] group-hover:border-white flex items-center justify-center">
+                                <div class="w-3 h-3 bg-white hidden checked-indicator"></div>
+                            </div>
+                            <span class="text-xs uppercase tracking-widest opacity-60 group-hover:opacity-100">Crossfade</span>
                         </label>
                     </div>
                 </div>
-            </div>
 
-            
-            <!-- 실행 버튼 -->
-            <div class="execute-section">
-                <button class="btn btn-success btn-large" id="executeBtn" onclick="executeWork()">
-                    <span id="executeText">🎵 실행하기</span>
-                </button>
+                <!-- Extract Settings -->
+                <div id="extractSettings" class="hidden">
+                    <h3 class="text-xl font-bold serif-font mb-8 uppercase tracking-widest">Edit_Config</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-12">
+                        <div>
+                            <label class="text-[10px] uppercase tracking-widest opacity-40 block mb-4">Output_Format</label>
+                            <select id="outputFormat" class="w-full bg-black border-2 border-[#222] p-3 text-xs focus:border-white outline-none appearance-none">
+                                <option value="mp3">MP3 (RECOMMENDED)</option>
+                                <option value="wav">WAV (LOSSLESS)</option>
+                                <option value="original">ORIGINAL_FORMAT</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="text-[10px] uppercase tracking-widest opacity-40 block mb-4">Pitch_Shift (Semitones): <span id="pitchValue" class="text-white ml-2">0</span></label>
+                            <input type="range" id="pitchSlider" min="-12" max="12" value="0" step="1" 
+                                   class="w-full accent-white"
+                                   oninput="document.getElementById('pitchValue').textContent = this.value">
+                        </div>
+                        <div class="flex items-end">
+                            <label class="flex items-center gap-3 cursor-pointer group">
+                                <input type="checkbox" id="trimToThirty" class="hidden">
+                                <div class="w-5 h-5 border-2 border-[#333] group-hover:border-white flex items-center justify-center">
+                                    <div class="w-3 h-3 bg-white hidden checked-indicator"></div>
+                                </div>
+                                <span class="text-xs uppercase tracking-widest opacity-60 group-hover:opacity-100">Trim_to_30s</span>
+                            </label>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="mt-12 pt-8 border-t border-[#111] flex justify-center">
+                    <button class="btn-pixel text-lg px-12" id="executeBtn" onclick="executeWork()">
+                        <span id="executeText">RUN_PROCESS</span>
+                    </button>
+                </div>
             </div>
         </section>
 
-        <!-- 진행 상황 (공통) -->
-        <section class="progress-section" id="progressSection" style="display: none;">
-            <h3 id="progressTitle">처리 중...</h3>
-            <div class="progress-bar">
-                <div class="progress-fill" id="progressFill"></div>
+        <!-- Progress -->
+        <section class="hidden text-center py-20" id="progressSection">
+            <h3 class="text-xl font-bold serif-font mb-8 uppercase tracking-widest" id="progressTitle">PROCESSING_ARCHIVE</h3>
+            <div class="max-w-xl mx-auto">
+                <div class="progress-container mb-4">
+                    <div class="progress-fill" id="progressFill" style="width: 0%"></div>
+                </div>
+                <p class="text-[10px] opacity-40 uppercase tracking-widest" id="progressText">Initializing system...</p>
             </div>
-            <p class="progress-text" id="progressText">준비 중...</p>
         </section>
 
-        <!-- 결과 (공통) -->
-        <section class="result-section" id="resultSection" style="display: none;">
-            <h3>✅ 완료!</h3>
-            <div class="result-content" id="resultContent">
-                <!-- 동적으로 채워짐 -->
-            </div>
-            <div class="result-actions">
-                <button class="btn btn-primary" id="downloadBtn">📥 다운로드</button>
-                <button class="btn btn-secondary" onclick="resetStudio()">🔄 새로 시작</button>
+        <!-- Result -->
+        <section class="hidden" id="resultSection">
+            <div class="pixel-card p-12 text-center">
+                <div class="text-5xl mb-6">✅</div>
+                <h3 class="text-2xl font-bold serif-font mb-8 uppercase tracking-widest">Process_Complete</h3>
+                <div class="result-content mb-12" id="resultContent"></div>
+                <div class="flex justify-center gap-6">
+                    <button class="btn-pixel" id="downloadBtn">DOWNLOAD_FILE</button>
+                    <button class="btn-outline text-xs tracking-widest" onclick="resetStudio()">RESTART_MODULE</button>
+                </div>
             </div>
         </section>
     </div>
-
 </div>
-<!-- 파일 아이템 템플릿 -->
+
+<!-- File Item Template -->
 <template id="fileItemTemplate">
-    <div class="file-item" data-filename="">
-        <div class="file-header">
-            <span class="file-icon">🎵</span>
-            <span class="file-name"></span>
-            <div class="file-actions">
-                <button class="btn-icon" onclick="audioStudio.fileManager.toggleFileSettings(this)" title="설정">⚙️</button>
-                <button class="btn-icon" onclick="audioStudio.fileManager.moveFileUp(this)" title="위로">⬆️</button>
-                <button class="btn-icon" onclick="audioStudio.fileManager.moveFileDown(this)" title="아래로">⬇️</button>
-                <button class="btn-icon btn-danger" onclick="audioStudio.fileManager.removeFileByButton(this)" title="삭제">❌</button>
+    <div class="pixel-card !p-4 flex flex-col gap-4 group" data-filename="">
+        <div class="flex items-center justify-between">
+            <div class="flex items-center gap-4">
+                <span class="text-xl">🎵</span>
+                <span class="file-name text-sm font-bold tracking-tight"></span>
+            </div>
+            <div class="flex gap-2 opacity-20 group-hover:opacity-100 transition-opacity">
+                <button class="w-8 h-8 flex items-center justify-center border border-white/20 hover:border-white" onclick="audioStudio.fileManager.toggleFileSettings(this)">⚙️</button>
+                <button class="w-8 h-8 flex items-center justify-center border border-white/20 hover:border-white" onclick="audioStudio.fileManager.moveFileUp(this)">↑</button>
+                <button class="w-8 h-8 flex items-center justify-center border border-white/20 hover:border-white" onclick="audioStudio.fileManager.moveFileDown(this)">↓</button>
+                <button class="w-8 h-8 flex items-center justify-center border border-red-900/50 hover:bg-red-900/20 text-red-500" onclick="audioStudio.fileManager.removeFileByButton(this)">×</button>
             </div>
         </div>
-        <div class="file-settings" style="display: none;">
-            <div class="setting-group">
-                <label>페이드인 (초): <span class="value-display">2</span></label>
-                <input type="range" class="slider" name="fadeIn" min="0" max="10" value="2" step="0.5">
+        
+        <div class="file-settings hidden grid grid-cols-2 md:grid-cols-4 gap-6 p-4 bg-white/5 border-t border-white/5 mt-2">
+            <div class="space-y-2">
+                <label class="text-[9px] uppercase tracking-widest opacity-40 block">Fade_In: <span class="value-display text-white">2</span>s</label>
+                <input type="range" class="w-full accent-white" name="fadeIn" min="0" max="10" value="2" step="0.5">
             </div>
-            <div class="setting-group">
-                <label>페이드아웃 (초): <span class="value-display">3</span></label>
-                <input type="range" class="slider" name="fadeOut" min="0" max="10" value="3" step="0.5">
+            <div class="space-y-2">
+                <label class="text-[9px] uppercase tracking-widest opacity-40 block">Fade_Out: <span class="value-display text-white">3</span>s</label>
+                <input type="range" class="w-full accent-white" name="fadeOut" min="0" max="10" value="3" step="0.5">
             </div>
-            <div class="setting-group">
-                <label>볼륨 (dB): <span class="value-display">0</span></label>
-                <input type="range" class="slider" name="volume" min="-20" max="20" value="0" step="1">
+            <div class="space-y-2">
+                <label class="text-[9px] uppercase tracking-widest opacity-40 block">Volume: <span class="value-display text-white">0</span>dB</label>
+                <input type="range" class="w-full accent-white" name="volume" min="-20" max="20" value="0" step="1">
             </div>
-            <div class="setting-group">
-                <label>간격 (초): <span class="value-display">1</span></label>
-                <input type="range" class="slider" name="gap" min="0" max="5" value="1" step="0.5">
+            <div class="space-y-2">
+                <label class="text-[9px] uppercase tracking-widest opacity-40 block">Gap: <span class="value-display text-white">1</span>s</label>
+                <input type="range" class="w-full accent-white" name="gap" min="0" max="5" value="1" step="0.5">
             </div>
         </div>
     </div>
 </template>
-</div>
 
-{% endblock %}
-
-{% block extra_css %}
 <style>
-/* 통합 스튜디오 CSS */
-@import url('{{ url_for("static", filename="css/studio.css") }}');
+    /* UI Specific Helper */
+    input[type="checkbox"]:checked + div .checked-indicator {
+        display: block !important;
+    }
 </style>
 {% endblock %}
 
 {% block extra_js %}
 <script src="{{ url_for('static', filename='js/audio_studio.js') }}"></script>
-<script>
-// 기존 탭 전환 함수와 통합
-function showTab(tabName) {
-    // 모든 탭 버튼 비활성화
-    document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
-    
-    // 모든 탭 컨텐츠 숨김
-    document.querySelectorAll('.tab-content, .studio-content').forEach(content => {
-        content.classList.remove('active');
-        content.style.display = 'none';
-    });
-    
-    // 클릭된 버튼 활성화
-    event.target.classList.add('active');
-    
-    // 해당 탭 컨텐츠 표시
-    const tabContent = document.getElementById(tabName + 'Tab');
-    if (tabContent) {
-        tabContent.classList.add('active');
-        tabContent.style.display = 'block';
-    }
-}
-
-function showStudioMode() {
-    // 모든 탭 버튼 비활성화
-    document.querySelectorAll('.nav-tab').forEach(btn => btn.classList.remove('active'));
-    
-    // 모든 탭 컨텐츠 숨김
-    document.querySelectorAll('.tab-content, .studio-content').forEach(content => {
-        content.classList.remove('active');
-        content.style.display = 'none';
-    });
-    
-    // 스튜디오 모드 버튼 활성화
-    event.target.classList.add('active');
-    
-    // 스튜디오 모드 표시
-    const studioMode = document.getElementById('studioMode');
-    if (studioMode) {
-        studioMode.classList.add('active');
-        studioMode.style.display = 'block';
-    }
-}
-</script>
 {% endblock %}

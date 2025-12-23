@@ -1,584 +1,80 @@
-<!DOCTYPE html>
-<html lang="ko">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>영상 스튜디오 - Moodo</title>
-    
-    <!-- CSS -->
-    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-</head>
-<body>
-    <div class="container">
-        <!-- 헤더 -->
-        <header class="header">
-            <h1 class="logo">🎵 Moodo</h1>
-            <p class="tagline">음악 파일 이어붙이기 서비스</p>
-            
-            <!-- 네비게이션 -->
-            <nav class="nav">
-                <ul class="nav-list">
-                    <li class="nav-item">
-                        <a href="{{ url_for('index') }}" class="nav-link">🎵 음악 스튜디오</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ url_for('music_video') }}" class="nav-link active">🎬 영상 스튜디오</a>
-                    </li>
-                    <li class="nav-item">
-                        <a href="{{ url_for('music_analysis') }}" class="nav-link">📊 분석 스튜디오</a>
-                    </li>
-                </ul>
-            </nav>
-        </header>
+{% extends "base.html" %}
 
-        <!-- 메인 컨텐츠 -->
-        <main class="main-content">
-            <div class="music-video-wrapper">
-                <!-- 헤더 -->
-                <section class="video-header">
-                    <div class="video-header-content">
-                        <div class="upload-icon">🎬</div>
-                        <h1>음원 영상 만들기</h1>
-                        <p>음악 파일과 이미지를 조합하여 뮤직비디오를 생성하세요</p>
-                    </div>
-                </section>
+{% block content %}
+<div class="main-content-container video-container">
+    <!-- Header -->
+    <header class="mb-20">
+        <div class="inline-flex items-center gap-4 mb-6">
+            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: Video</span>
+            <div class="w-12 h-[1px] bg-white/20"></div>
+        </div>
+        <h2 class="text-4xl md:text-5xl font-bold serif-font leading-tight mb-4">영상 스튜디오_</h2>
+    </header>
 
-                <!-- 통합 입력 폼 -->
-                <section class="unified-form" id="unifiedForm">
-                    <div class="form-grid">
-                        <!-- 음원 업로드 섹션 -->
-                        <div class="form-section">
-                            <h3>🎵 음원 파일</h3>
-                            <div class="upload-area" id="audioUploadArea">
-                                <div class="upload-icon">🎵</div>
-                                <p>음악 파일을 드래그하거나 클릭하여 선택하세요</p>
-                                <p class="file-types">MP3, WAV, M4A, FLAC</p>
-                                <input type="file" id="audioFileInput" accept=".mp3,.wav,.m4a,.flac" hidden>
-                                <div class="btn btn-primary btn-display-only">
-                                    파일 선택
-                                </div>
-                            </div>
-                            <div class="file-info" id="audioInfo" style="display: none;">
-                                <div class="file-preview">
-                                    <span class="file-icon">🎵</span>
-                                    <div class="file-details">
-                                        <h4 id="audioFileName">파일명</h4>
-                                        <p id="audioFileDetails">파일 정보</p>
-                                    </div>
-                                    <button class="btn btn-outline btn-small" onclick="changeAudioFile()">변경</button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- 이미지 업로드 섹션 -->
-                        <div class="form-section">
-                            <h3>🖼️ 배경 이미지</h3>
-                            
-                            <!-- 이미지 선택 탭 -->
-                            <div class="tab-selector">
-                                <button class="tab-btn active" onclick="switchImageTab('upload')">직접 업로드</button>
-                                <button class="tab-btn" onclick="switchImageTab('ai')">AI 생성</button>
-                            </div>
-
-                            <!-- 직접 업로드 -->
-                            <div class="tab-content active" id="uploadTab">
-                                <div class="upload-area" id="imageUploadArea">
-                                    <div class="upload-icon">🖼️</div>
-                                    <p>이미지 파일을 드래그하거나 클릭하여 선택하세요</p>
-                                    <p class="file-types">JPG, PNG, BMP, GIF</p>
-                                    <input type="file" id="imageFileInput" accept=".jpg,.jpeg,.png,.bmp,.gif" hidden>
-                                    <div class="btn btn-primary btn-display-only">
-                                        파일 선택
-                                    </div>
-                                </div>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="applyLogoCheckbox" name="apply_logo">
-                                    <span>로고 합성 적용</span>
-                                </label>
-                            </div>
-
-                            <!-- AI 생성 -->
-                            <div class="tab-content" id="aiTab">
-                                <div class="input-group">
-                                    <textarea id="imagePrompt" placeholder="예: 아름다운 석양과 바다, 미래적인 도시..." rows="3"></textarea>
-                                </div>
-                                <div class="form-row">
-                                    <select id="imageStyle" class="form-select">
-                                        <option value="realistic">사실적</option>
-                                        <option value="artistic">예술적</option>
-                                        <option value="cartoon">만화풍</option>
-                                    </select>
-                                    <select id="imageSize" class="form-select">
-                                        <option value="1024x1024">정방형 (1:1)</option>
-                                        <option value="1792x1024">유튜브 썸네일 (16:9)</option>
-                                        <option value="1024x1792">유튜브 쇼츠 (9:16)</option>
-                                    </select>
-                                </div>
-                                <button class="btn btn-success" onclick="generateAIImage()">🎨 AI 이미지 생성</button>
-                            </div>
-
-                            <!-- 선택된 이미지 미리보기 -->
-                            <div class="image-preview" id="imagePreview" style="display: none;">
-                                <img id="previewImage" src="" alt="미리보기">
-                                <p id="imageDetails">이미지 정보</p>
-                                <button class="btn btn-outline btn-small" onclick="changeImage()">변경</button>
-                            </div>
-                        </div>
-
-                        <!-- 영상 설정 섹션 -->
-                        <div class="form-section">
-                            <h3>🎬 영상 설정</h3>
-                            
-                            <div class="input-group">
-                                <label for="videoQuality">영상 품질</label>
-                                <select id="videoQuality" class="form-select">
-                                    <option value="youtube_hd">유튜브 HD (1080p, 30fps)</option>
-                                    <option value="youtube_hd_60">유튜브 HD (1080p, 60fps)</option>
-                                    <option value="youtube_standard">유튜브 표준 (720p)</option>
-                                    <option value="youtube_mobile">모바일 최적화 (720p)</option>
-                                </select>
-                            </div>
-
-                            <div class="options-group">
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="addWatermark">
-                                    <span>워터마크 추가</span>
-                                </label>
-                                <label class="checkbox-label">
-                                    <input type="checkbox" id="fadeInOut" checked>
-                                    <span>페이드 인/아웃 효과</span>
-                                </label>
-                            </div>
-                        </div>
-
-                        <!-- 미리보기 및 생성 -->
-                        <div class="form-section summary-section">
-                            <h3>📋 요약</h3>
-                            <div class="summary-card">
-                                <div class="summary-item">
-                                    <strong>음원:</strong> <span id="summaryAudio">선택되지 않음</span>
-                                </div>
-                                <div class="summary-item">
-                                    <strong>이미지:</strong> <span id="summaryImage">선택되지 않음</span>
-                                </div>
-                                <div class="summary-item">
-                                    <strong>예상 길이:</strong> <span id="summaryDuration">0:00</span>
-                                </div>
-                            </div>
-                            
-                            <button class="btn btn-success btn-large btn-generate" id="generateBtn" onclick="generateVideo()" disabled>
-                                🎬 영상 생성하기
-                            </button>
-                        </div>
-                    </div>
-                </section>
-
-                <!-- 영상 생성 진행 상황 -->
-                <section class="video-progress" id="videoProgress" style="display: none;">
-                    <h2>🎬 영상 생성 중...</h2>
-                    <div class="progress-bar">
-                        <div class="progress-fill" id="videoProgressFill"></div>
-                    </div>
-                    <p class="progress-text" id="videoProgressText">영상 생성 준비 중...</p>
-                </section>
-
-                <!-- 완성된 영상 결과 -->
-                <section class="video-result" id="videoResult" style="display: none;">
-                    <h2>✅ 영상 생성 완료!</h2>
-                    <div class="result-content">
-                        <div class="video-player">
-                            <video id="resultVideo" controls width="100%" height="400">
-                                <source id="videoSource" src="" type="video/mp4">
-                                브라우저가 비디오를 지원하지 않습니다.
-                            </video>
-                        </div>
-                        <div class="result-info">
-                            <p id="resultDetails">영상 정보</p>
-                            <div class="result-actions">
-                                <button class="btn btn-primary" id="downloadVideoBtn">
-                                    📥 영상 다운로드
-                                </button>
-                                <button class="btn btn-secondary" onclick="resetVideoCreation()">
-                                    🔄 새로 만들기
-                                </button>
-                            </div>
-                        </div>
-                    </div>
-                </section>
+    <div class="space-y-12">
+        <!-- Input Section -->
+        <section class="pixel-card p-6 md:p-12">
+            <div class="max-w-2xl mx-auto">
+                <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-8 text-center">Video_Source_Input</h3>
+                <div class="flex flex-col md:flex-row gap-4">
+                    <input type="url" id="videoUrl" placeholder="https://www.youtube.com/watch?v=..." 
+                           class="flex-1 bg-black border-2 border-[#222] p-4 text-sm focus:border-white outline-none font-pixel">
+                    <button class="btn-pixel md:px-8" onclick="processVideo()">Process</button>
+                </div>
+                <p class="text-[10px] mt-4 opacity-30 text-center uppercase tracking-widest">Archive_ID extraction via YouTube Link</p>
             </div>
-        </main>
+        </section>
 
-        <!-- 푸터 -->
-        <footer class="footer">
-            <p>&copy; 2024 Moodo. All rights reserved.</p>
-        </footer>
+        <!-- Status / Progress -->
+        <section id="statusSection" class="hidden py-12">
+            <div class="pixel-card p-8 border-[#222]">
+                <div class="flex items-center justify-between mb-4">
+                    <span id="statusTitle" class="text-xs uppercase tracking-widest font-bold">Initializing_Link_Node</span>
+                    <span id="progressPercent" class="text-[10px] opacity-40 tracking-tighter">0%</span>
+                </div>
+                <div class="progress-container">
+                    <div id="videoProgressBar" class="progress-fill" style="width: 0%"></div>
+                </div>
+                <p id="statusDetail" class="text-[10px] mt-4 opacity-40 uppercase tracking-widest">Waiting for response...</p>
+            </div>
+        </section>
+
+        <!-- Output Selection -->
+        <section id="outputSection" class="hidden grid grid-cols-1 md:grid-cols-2 gap-8">
+            <!-- Audio Extraction -->
+            <div class="pixel-card">
+                <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6 pb-2 border-b border-[#111]">Audio_Extraction</h3>
+                <div class="space-y-6">
+                    <p class="text-sm opacity-60">영상에서 음원 파일만 추출하여 아카이브 합니다.</p>
+                    <button class="btn-pixel w-full" onclick="downloadAudio()">Download_MP3</button>
+                </div>
+            </div>
+
+            <!-- Video with Lyrics (Subtitles) -->
+            <div class="pixel-card">
+                <h3 class="text-xs uppercase tracking-[0.3em] opacity-40 mb-6 pb-2 border-b border-[#111]">Visual_Archive</h3>
+                <div class="space-y-6">
+                    <p class="text-sm opacity-60">가사가 포함된 커스텀 영상을 생성하여 저장합니다.</p>
+                    <button class="btn-outline w-full text-xs tracking-widest" onclick="generateLyricVideo()">Generate_Video</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Final Result -->
+        <section id="videoResult" class="hidden text-center py-12">
+            <div class="pixel-card p-12">
+                <div class="text-4xl mb-6">📂</div>
+                <h3 class="text-2xl font-bold serif-font mb-8">Process_Complete</h3>
+                <div id="videoPlayerContainer" class="max-w-3xl mx-auto mb-12">
+                    <!-- Video player or audio link will be inserted here -->
+                </div>
+                <button class="btn-outline text-xs tracking-widest" onclick="resetVideoStudio()">RESTART_MODULE</button>
+            </div>
+        </section>
     </div>
+</div>
+{% endblock %}
 
-    <!-- 스타일 -->
-    <style>
-    .music-video-wrapper {
-        max-width: 1200px;
-        margin: 0 auto;
-        padding: 20px;
-    }
-
-    .video-header {
-        text-align: center;
-        margin-bottom: 40px;
-    }
-
-    .video-header-content .upload-icon {
-        font-size: 4rem;
-        margin-bottom: 20px;
-    }
-
-    .unified-form {
-        background: white;
-        border-radius: 12px;
-        padding: 30px;
-        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
-        margin-bottom: 20px;
-    }
-
-    .form-grid {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px;
-        align-items: start;
-    }
-
-    .form-section {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 20px;
-    }
-
-    .form-section h3 {
-        margin-bottom: 20px;
-        color: #333;
-        font-size: 1.2rem;
-    }
-
-    .summary-section {
-        grid-column: 1 / -1;
-        background: #e8f5e8;
-        border: 2px solid #4CAF50;
-    }
-
-    .tab-selector {
-        display: flex;
-        margin-bottom: 20px;
-        background: #e9ecef;
-        border-radius: 6px;
-        padding: 4px;
-    }
-
-    .tab-btn {
-        flex: 1;
-        padding: 8px 16px;
-        border: none;
-        background: transparent;
-        border-radius: 4px;
-        cursor: pointer;
-        transition: all 0.3s;
-    }
-
-    .tab-btn.active {
-        background: white;
-        box-shadow: 0 1px 3px rgba(0,0,0,0.1);
-    }
-
-    .tab-content {
-        display: none;
-    }
-
-    .tab-content.active {
-        display: block;
-    }
-
-    .form-row {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 10px;
-        margin-bottom: 15px;
-    }
-
-    .upload-area {
-        border: 2px dashed #ddd;
-        border-radius: 8px;
-        padding: 30px;
-        text-align: center;
-        transition: all 0.3s;
-        cursor: pointer;
-        margin-bottom: 15px;
-    }
-
-    .upload-area:hover {
-        border-color: #4CAF50;
-        background: #f8fff8;
-    }
-
-    .upload-area.drag-over {
-        border-color: #4CAF50;
-        background: #f0fff0;
-    }
-
-    .upload-area .upload-icon {
-        font-size: 2rem;
-        margin-bottom: 10px;
-        display: block;
-    }
-
-    .upload-area p {
-        margin: 5px 0;
-        color: #666;
-    }
-
-    .file-types {
-        font-size: 0.85rem;
-        color: #999;
-    }
-
-    .file-info {
-        margin-top: 15px;
-    }
-
-    .file-preview {
-        display: flex;
-        align-items: center;
-        gap: 15px;
-        background: white;
-        border-radius: 6px;
-        padding: 15px;
-        border: 1px solid #ddd;
-    }
-
-    .file-icon {
-        font-size: 1.5rem;
-    }
-
-    .file-details {
-        flex: 1;
-    }
-
-    .file-details h4 {
-        margin: 0 0 5px 0;
-        color: #333;
-        font-size: 0.95rem;
-    }
-
-    .file-details p {
-        margin: 0;
-        color: #666;
-        font-size: 0.85rem;
-    }
-
-    .image-preview {
-        margin-top: 15px;
-        text-align: center;
-    }
-
-    .image-preview img {
-        max-width: 100%;
-        max-height: 150px;
-        border-radius: 6px;
-        margin-bottom: 10px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .options-group {
-        margin-top: 20px;
-    }
-
-    .btn-generate {
-        width: 100%;
-        margin-top: 20px;
-        font-size: 1.1rem;
-        padding: 15px;
-    }
-
-    .btn-generate:disabled {
-        background: #ccc;
-        cursor: not-allowed;
-    }
-
-    .image-options {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: 30px;
-        margin-bottom: 30px;
-    }
-
-    .option-card {
-        border: 1px solid #ddd;
-        border-radius: 12px;
-        padding: 25px;
-        text-align: center;
-    }
-
-    .option-card h3 {
-        margin-bottom: 20px;
-        color: #333;
-    }
-
-    .input-group {
-        margin-bottom: 20px;
-    }
-
-    .input-group label {
-        display: block;
-        margin-bottom: 8px;
-        font-weight: 500;
-    }
-
-    .input-group textarea {
-        width: 100%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-family: inherit;
-        resize: vertical;
-    }
-
-    .generation-options {
-        display: flex;
-        gap: 15px;
-        justify-content: center;
-        margin-bottom: 20px;
-    }
-
-    .generation-options label {
-        display: flex;
-        align-items: center;
-        gap: 5px;
-        cursor: pointer;
-    }
-
-    .preview-container {
-        display: flex;
-        gap: 20px;
-        align-items: flex-start;
-        margin: 20px 0;
-    }
-
-    .preview-container img {
-        max-width: 300px;
-        max-height: 200px;
-        border-radius: 8px;
-        box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-    }
-
-    .preview-info {
-        flex: 1;
-    }
-
-    .video-settings {
-        max-width: 600px;
-        margin: 0 auto;
-    }
-
-    .settings-group {
-        margin-bottom: 30px;
-    }
-
-    .settings-group h3 {
-        margin-bottom: 15px;
-        color: #333;
-    }
-
-    .form-select {
-        width: 100%;
-        padding: 12px;
-        border: 1px solid #ddd;
-        border-radius: 6px;
-        font-size: 16px;
-    }
-
-    .checkbox-label {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        margin-bottom: 10px;
-        cursor: pointer;
-    }
-
-    .summary-card {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 20px;
-        margin: 20px 0;
-    }
-
-    .summary-item {
-        margin-bottom: 10px;
-    }
-
-    .progress-indicator {
-        text-align: center;
-        padding: 40px;
-    }
-
-    .spinner {
-        width: 40px;
-        height: 40px;
-        border: 4px solid #f3f3f3;
-        border-top: 4px solid #4CAF50;
-        border-radius: 50%;
-        animation: spin 1s linear infinite;
-        margin: 0 auto 20px;
-    }
-
-    @keyframes spin {
-        0% { transform: rotate(0deg); }
-        100% { transform: rotate(360deg); }
-    }
-
-    .video-player {
-        margin-bottom: 20px;
-    }
-
-    .result-actions {
-        display: flex;
-        gap: 15px;
-        justify-content: center;
-    }
-
-    .btn-display-only {
-        pointer-events: none;
-        cursor: default;
-        opacity: 0.8;
-    }
-    
-    @media (max-width: 768px) {
-        .form-grid {
-            grid-template-columns: 1fr;
-            gap: 20px;
-        }
-        
-        .form-row {
-            grid-template-columns: 1fr;
-        }
-        
-        .tab-selector {
-            flex-direction: column;
-            gap: 5px;
-        }
-        
-        .music-video-wrapper {
-            padding: 10px;
-        }
-        
-        .unified-form {
-            padding: 20px;
-        }
-        
-        .form-section {
-            padding: 15px;
-        }
-    }
-    </style>
-
-    <!-- JavaScript -->
-    <script src="{{ url_for('static', filename='js/music_video.js') }}"></script>
-</body>
-</html>
+{% block extra_js %}
+<script src="{{ url_for('static', filename='js/music_video.js') }}"></script>
+{% endblock %}

@@ -1,325 +1,169 @@
 {% extends "base.html" %}
 
-{% block title %}이야기 남기기 - Moodo{% endblock %}
+{% block title %}이야기 남기기 - OFF THE COMMUNITY{% endblock %}
 
 {% block extra_css %}
 <style>
-    .write-container {
-        max-width: 48rem;
-        margin: 0 auto;
-        padding: 2rem 1rem 5rem;
-        position: relative;
-        z-index: 10;
-    }
-    
-    .write-header {
-        margin-bottom: 2rem;
-        border-bottom: 2px solid white;
-        padding-bottom: 1rem;
-    }
-    
     .write-header h2 {
-        font-size: 2.5rem;
-        font-family: 'Nanum Gothic Coding', monospace;
-        color: white;
-        margin-bottom: 0.5rem;
-        letter-spacing: 0.1em;
-        font-weight: 700;
+        font-size: 3rem;
+        letter-spacing: -0.05em;
+        line-height: 1.1;
+        margin-bottom: 1rem;
     }
     
-    .write-header p {
-        font-family: 'Nanum Myeongjo', serif;
-        font-size: 1.25rem;
-        color: #999;
-    }
-    
-    .write-form {
-        background: black;
-        border: 4px solid white;
-        padding: 1px;
-        box-shadow: 8px 8px 0 0 #333;
-    }
-    
-    .write-form-inner {
-        border: 1px solid #333;
-        padding: 1.5rem;
-        background: black;
+    @media (max-width: 768px) {
+        .write-header h2 {
+            font-size: 2rem;
+        }
     }
     
     .form-group {
-        margin-bottom: 1.5rem;
+        margin-bottom: 2.5rem;
+    }
+    
+    @media (max-width: 768px) {
+        .form-group {
+            margin-bottom: 1.5rem;
+        }
     }
     
     .form-group label {
         display: block;
-        font-family: 'Nanum Gothic Coding', monospace;
-        color: #999;
-        margin-bottom: 0.5rem;
-        font-size: 0.875rem;
+        font-family: var(--font-pixel);
+        color: #666;
+        margin-bottom: 0.75rem;
+        font-size: 0.75rem;
         text-transform: uppercase;
-        letter-spacing: 0.1em;
-        font-weight: 700;
+        letter-spacing: 0.2em;
     }
     
     .form-group input,
     .form-group textarea {
         width: 100%;
-        padding: 1rem;
-        background: #1a1a1a;
-        border: 2px solid #333;
+        padding: 1.25rem;
+        background: #000;
+        border: 2px solid #222;
         color: white;
-        font-size: 1rem;
+        font-size: 1.1rem;
         transition: all 0.2s ease;
         outline: none;
-        font-family: 'Nanum Gothic Coding', monospace;
+        font-family: var(--font-pixel);
+    }
+    
+    @media (max-width: 768px) {
+        .form-group input,
+        .form-group textarea {
+            padding: 1rem;
+            font-size: 1rem;
+        }
     }
     
     .form-group input:focus,
     .form-group textarea:focus {
-        border-color: white;
-        background: black;
-    }
-    
-    .form-group input::placeholder,
-    .form-group textarea::placeholder {
-        color: #666;
-    }
-    
-    .form-group input {
-        height: 3rem;
+        border-color: var(--pixel-white);
+        box-shadow: 0 0 15px rgba(255, 255, 255, 0.05);
     }
     
     .form-group textarea {
-        min-height: 20rem;
+        min-height: 24rem;
         resize: vertical;
-        font-family: 'Nanum Myeongjo', serif;
-        font-size: 1.5rem;
+        font-family: var(--font-serif);
+        font-size: 1.25rem;
         line-height: 1.8;
-        background-image: linear-gradient(transparent 2.9rem, #222 3rem);
-        background-size: 100% 3rem;
     }
     
-    .form-actions {
-        display: flex;
-        gap: 0.75rem;
-        justify-content: flex-end;
-        margin-top: 2rem;
-        padding-top: 1rem;
-        border-top: 2px dashed #333;
-    }
-    
-    .btn {
-        padding: 0.75rem 1.5rem;
-        border: 2px solid;
-        font-family: 'Nanum Gothic Coding', monospace;
-        font-size: 1rem;
-        cursor: pointer;
-        transition: all 0.2s ease;
-        font-weight: 700;
-    }
-    
-    .btn-primary {
-        background: white;
-        color: black;
-        border-color: white;
-        box-shadow: 4px 4px 0 0 #666;
-    }
-    
-    .btn-primary:hover {
-        transform: translateY(2px);
-        box-shadow: 2px 2px 0 0 #666;
-    }
-    
-    .btn-secondary {
-        background: transparent;
-        color: #999;
-        border-color: #666;
-    }
-    
-    .btn-secondary:hover {
-        background: #1a1a1a;
-        color: white;
-        border-color: #999;
-    }
-    
-    .btn:disabled {
-        opacity: 0.6;
-        cursor: not-allowed;
-    }
-    
-    .message {
-        padding: 0.75rem 1rem;
-        margin-bottom: 1.25rem;
-        font-family: 'Nanum Gothic Coding', monospace;
-        border: 2px solid;
-    }
-    
-    .message-success {
-        background: black;
-        color: #86efac;
-        border-color: #22c55e;
-    }
-    
-    .message-error {
-        background: black;
-        color: #fee2e2;
-        border-color: #dc2626;
+    @media (max-width: 768px) {
+        .form-group textarea {
+            min-height: 16rem;
+            font-size: 1.1rem;
+        }
     }
     
     .char-count {
         text-align: right;
-        color: #666;
-        font-size: 0.75rem;
-        margin-top: 0.25rem;
-        font-family: 'Nanum Gothic Coding', monospace;
+        color: #333;
+        font-size: 10px;
+        margin-top: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
     }
 
-    /* 모바일 최적화 */
+    .form-actions {
+        display: flex;
+        gap: 1rem;
+        justify-content: flex-end;
+        margin-top: 4rem;
+        padding-top: 2rem;
+        border-top: 4px dashed #111;
+    }
+    
     @media (max-width: 768px) {
-        .write-container {
-            max-width: 100%;
-            padding: 1.5rem 1rem 4rem;
-            box-sizing: border-box;
-        }
-
-        .write-header {
-            margin-bottom: 1.5rem;
-        }
-
-        .write-header h2 {
-            font-size: 1.75rem;
-            padding-left: 56px; /* 모바일 메뉴 버튼과 겹치지 않도록 여백 */
-        }
-
-        .write-header p {
-            font-size: 1rem;
-        }
-
-        .write-form-inner {
-            padding: 1.25rem;
-        }
-
-        .form-group {
-            margin-bottom: 1.25rem;
-        }
-
-        .form-group input {
-            height: 2.75rem;
-            padding: 0.75rem 0.85rem;
-            font-size: 0.95rem;
-        }
-
-        .form-group textarea {
-            min-height: 14rem;
-            font-size: 1.1rem;
-            line-height: 1.6;
-            background-image: linear-gradient(transparent 2.4rem, #222 2.5rem);
-            background-size: 100% 2.5rem;
-        }
-
         .form-actions {
             flex-direction: column-reverse;
-            align-items: stretch;
-        }
-
-        .btn {
-            width: 100%;
-            text-align: center;
-        }
-    }
-
-    @media (max-width: 480px) {
-        .write-container {
-            padding: 1.25rem 0.75rem 3.5rem;
-        }
-
-        .write-header h2 {
-            font-size: 1.5rem;
-            padding-left: 52px;
-        }
-
-        .write-header p {
-            font-size: 0.95rem;
-        }
-
-        .form-group textarea {
-            min-height: 12rem;
-            font-size: 1rem;
+            margin-top: 2rem;
         }
     }
 </style>
 {% endblock %}
 
 {% block content %}
-<div class="write-container">
+<div class="main-content-container write-container">
     <div class="write-header">
-        <h2>NEW_ENTRY_</h2>
-        <p>Record your emotions today</p>
+        <div class="inline-flex items-center gap-4 mb-6">
+            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: Writer</span>
+            <div class="w-12 h-[1px] bg-white/20"></div>
+        </div>
+        <h2 class="serif-font">NEW ARCHIVE_</h2>
     </div>
     
-    <div class="write-form">
-        <div class="write-form-inner">
-            <div id="message-container"></div>
+    <div class="pixel-card">
+        <div id="message-container"></div>
+        
+        <form id="write-form">
+            <div class="form-group">
+                <label for="author">Author_ID (Optional)</label>
+                <input type="text" id="author" name="author" placeholder="Enter pseudonym or leave anonymous" maxlength="50">
+            </div>
             
-            <form id="write-form">
-                <div class="form-group">
-                    <label for="author">NICKNAME</label>
-                    <input type="text" id="author" name="author" placeholder="Enter your name (optional)" maxlength="50">
-                </div>
-                
-                <div class="form-group">
-                    <label for="title">TITLE</label>
-                    <input type="text" id="title" name="title" placeholder="Enter title" required maxlength="200">
-                    <div class="char-count"><span id="title-count">0</span>/200 CHARS</div>
-                </div>
-                
-                <div class="form-group">
-                    <label for="content">CONTENT</label>
-                    <textarea id="content" name="content" placeholder="What happened today?" required maxlength="10000"></textarea>
-                    <div class="char-count"><span id="content-count">0</span>/10000 CHARS</div>
-                </div>
-                
-                <div class="form-actions">
-                    <button type="button" class="btn btn-secondary" onclick="window.location.href='{{ url_for('index') }}'">CANCEL</button>
-                    <button type="submit" class="btn btn-primary" id="submit-btn">SAVE ENTRY</button>
-                </div>
-            </form>
-        </div>
+            <div class="form-group">
+                <label for="title">Archive_Title</label>
+                <input type="text" id="title" name="title" placeholder="A short title for your entry" required maxlength="200">
+                <div class="char-count"><span id="title-count">0</span> / 200 UNITS</div>
+            </div>
+            
+            <div class="form-group">
+                <label for="content">Archive_Content</label>
+                <textarea id="content" name="content" placeholder="Type your thoughts here..." required maxlength="10000"></textarea>
+                <div class="char-count"><span id="content-count">0</span> / 10000 UNITS</div>
+            </div>
+            
+            <div class="form-actions">
+                <button type="button" class="btn-outline text-xs tracking-widest" onclick="window.location.href='{{ url_for('diary') }}'">CANCEL</button>
+                <button type="submit" class="btn-pixel text-xs tracking-widest" id="submit-btn">SAVE_ARCHIVE</button>
+            </div>
+        </form>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
 <script>
-    // 글자 수 카운터
     const titleInput = document.getElementById('title');
     const contentInput = document.getElementById('content');
     const titleCount = document.getElementById('title-count');
     const contentCount = document.getElementById('content-count');
     
-    titleInput.addEventListener('input', () => {
-        titleCount.textContent = titleInput.value.length;
-    });
+    titleInput.addEventListener('input', () => { titleCount.textContent = titleInput.value.length; });
+    contentInput.addEventListener('input', () => { contentCount.textContent = contentInput.value.length; });
     
-    contentInput.addEventListener('input', () => {
-        contentCount.textContent = contentInput.value.length;
-    });
-    
-    // 폼 제출
     document.getElementById('write-form').addEventListener('submit', async (e) => {
         e.preventDefault();
-        
         const submitBtn = document.getElementById('submit-btn');
-        const messageContainer = document.getElementById('message-container');
-        
         const title = titleInput.value.trim();
         const content = contentInput.value.trim();
         const author = document.getElementById('author').value.trim() || 'Anonymous';
         
-        if (!title || !content) {
-            showMessage('Please enter both title and content.', 'error');
-            return;
-        }
+        if (!title || !content) return;
         
         submitBtn.disabled = true;
         submitBtn.textContent = 'SAVING...';
@@ -327,44 +171,23 @@
         try {
             const response = await fetch('/api/community/posts', {
                 method: 'POST',
-                headers: {
-                    'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                    title,
-                    content,
-                    author
-                })
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ title, content, author })
             });
             
             const data = await response.json();
-            
             if (data.success) {
-                showMessage('Entry created successfully!', 'success');
-                setTimeout(() => {
-                    window.location.href = `/community/post/${data.post_id}`;
-                }, 1000);
+                window.location.href = `/community/post/${data.post_id}`;
             } else {
-                showMessage(data.error || 'Failed to create entry.', 'error');
+                alert(data.error || 'Failed to save.');
                 submitBtn.disabled = false;
-                submitBtn.textContent = 'SAVE ENTRY';
+                submitBtn.textContent = 'SAVE_ARCHIVE';
             }
         } catch (error) {
-            showMessage('An error occurred: ' + error.message, 'error');
+            alert('Error occurred.');
             submitBtn.disabled = false;
-            submitBtn.textContent = 'SAVE ENTRY';
+            submitBtn.textContent = 'SAVE_ARCHIVE';
         }
     });
-    
-    function showMessage(message, type) {
-        const messageContainer = document.getElementById('message-container');
-        messageContainer.innerHTML = `<div class="message message-${type}">${message}</div>`;
-        
-        if (type === 'success') {
-            setTimeout(() => {
-                messageContainer.innerHTML = '';
-            }, 3000);
-        }
-    }
 </script>
 {% endblock %}

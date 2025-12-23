@@ -12,6 +12,7 @@
 
 - 역할별 지침
   - DEV: `agents/dev/00_DEV_AGENT_PLAYBOOK.md`
+  - DESIGN: `agents/design/00_DESIGN_AGENT_PLAYBOOK.md`
   - HR: `agents/hr/07_HR_GOVERNANCE.md`
 
 ---

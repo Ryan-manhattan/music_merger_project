@@ -13,3 +13,11 @@
 - **진행**: 개발자 에이전트 공유 폴더 `docs/planning/dev/` 생성 및 행동지침 문서화
 - **진행**: 기획↔개발 최신 공유 플로우 문서화(`docs/planning/06_COLLAB_FLOW.md`)
 
+### 2025-12-19 (금) 추가(agents SSOT)
+- **진행**: 지표/통계(Stats) 결재 옵션(숫자+추천) 정리 및 보고서 생성
+- **산출물**: `agents/planning/reports/2025-12-19_23-41-22__REPORT.md`, `agents/planning/tickets/T-003__track_stats_metrics_spec.md`
+
+### 2025-12-19 (금) 추가(결재 확정)
+- **결정(사장님 결재)**: 지표 범위=내부+YouTube+SoundCloud, stats 초기 키셋=최소
+- **산출물**: `agents/planning/reports/2025-12-19_23-47-33__REPORT.md`, `agents/planning/tickets/T-005__implement_track_stats_collection.md`
+

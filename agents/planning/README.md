@@ -21,3 +21,4 @@
 
 ## docs/planning 과의 관계
 - `docs/planning/`은 과거/참고용으로 남길 수 있으나, **최신(SSOT)은 `agents/planning/`** 입니다.
+

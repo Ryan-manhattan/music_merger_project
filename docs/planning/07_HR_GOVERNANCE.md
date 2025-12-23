@@ -152,3 +152,4 @@
 - 이 문서는 `docs/planning/`에 **참고용으로 유지**됩니다(삭제/덮어쓰기 금지 원칙 유지).
 - planning 문서의 **최신(SSOT)** 은 `agents/planning/`에서 관리합니다.
   - HR 감리 기준(최신): `agents/hr/07_HR_GOVERNANCE.md`
+

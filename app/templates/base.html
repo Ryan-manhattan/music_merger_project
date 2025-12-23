@@ -125,36 +125,40 @@
 
     <!-- Status Bar (Bottom) -->
     <footer class="status-bar">
-        <div class="status-indicator">
-            <div class="status-dot animate-pulse"></div>
-            <span class="hidden sm:inline opacity-60">System Synchronized</span>
-            <span class="sm:hidden opacity-60">SYNCED</span>
+        <div class="flex items-center gap-4">
+            <div class="w-3 h-3 bg-white animate-pulse shadow-[0_0_8px_white]"></div>
+            <span class="hidden sm:inline opacity-60">SYSTEM_SYNCED</span>
+            <span class="sm:hidden opacity-60">SYNC</span>
         </div>
         
-        <!-- Integrated SoundCloud Player -->
-        <div class="flex items-center gap-4 md:gap-6">
-            <div id="playerInfo" class="hidden lg:flex items-center gap-3 opacity-40">
-                <span class="text-[9px]">NOW PLAYING:</span>
-                <span id="trackName" class="text-[9px] tracking-tighter">OFF_COMMUNITY_BGM.MP3</span>
+        <!-- Custom Pixel Player -->
+        <div class="pixel-progress-player">
+            <div class="hidden md:block opacity-40 text-[9px] min-w-[80px] truncate" id="trackName">STANDBY_</div>
+            
+            <div class="pixel-progress-track">
+                <div class="pixel-progress-fill" id="progressFill">
+                    <!-- Progress units will be dynamically generated if needed, but width-based fill is simpler for now -->
+                    <div class="pixel-unit" style="width: 100%"></div>
+                </div>
             </div>
-            <div class="flex items-center gap-2">
-                <input type="url" id="soundcloudUrlInput" class="hidden" value="https://soundcloud.com/rrrjunkim/off-2">
-                <button class="px-3 md:px-4 py-1 border border-white/20 hover:bg-white hover:text-black transition-all text-[10px] md:text-xs" id="playBtn" onclick="playSoundCloud()">▶ PLAY</button>
-                <button class="px-3 md:px-4 py-1 border border-white/20 hover:bg-white hover:text-black transition-all text-[10px] md:text-xs" id="stopBtn" onclick="stopSoundCloud()" style="display: none;">⏸ STOP</button>
+
+            <div class="player-controls">
+                <button class="player-btn" id="playBtn" onclick="playSoundCloud()">▶ PLAY</button>
+                <button class="player-btn" id="stopBtn" onclick="stopSoundCloud()" style="display: none;">■ STOP</button>
             </div>
         </div>
 
-        <div class="hidden sm:block opacity-30">
-            NODE_ID: ARCHIVE-01
+        <div class="hidden lg:block opacity-30 text-[9px]">
+            NODE: ARCHIVE-01
         </div>
 
-        <!-- SoundCloud 공식 위젯 (HLS/m3u8 직접 재생 문제 회피) -->
-        <div id="soundcloudWidgetContainer" style="display: none; width: 320px; max-width: 45vw;">
+        <!-- Hidden SoundCloud Widget for API Access -->
+        <div id="soundcloudWidgetContainer" style="position: absolute; left: -9999px; visibility: hidden;">
             <iframe
                 id="soundcloudWidget"
                 title="SoundCloud player"
                 width="100%"
-                height="80"
+                height="166"
                 scrolling="no"
                 frameborder="no"
                 allow="autoplay"
@@ -169,90 +173,121 @@
     <script>
         let scWidget = null;
         let scWidgetReady = false;
-        let scWidgetContainerVisible = false;
+        let progressInterval = null;
         
-        async function playSoundCloud() {
-            const playBtn = document.getElementById('playBtn');
-            const stopBtn = document.getElementById('stopBtn');
-            const urlInput = document.getElementById('soundcloudUrlInput');
-            const widgetContainer = document.getElementById('soundcloudWidgetContainer');
+        function initWidget() {
             const widgetFrame = document.getElementById('soundcloudWidget');
-            const trackName = document.getElementById('trackName');
+            const urlInput = document.getElementById('soundcloudUrlInput');
+            const defaultUrl = 'https://soundcloud.com/rrrjunkim/off-2';
             
-            if (!urlInput || !playBtn || !stopBtn || !widgetContainer || !widgetFrame) {
-                console.error('SoundCloud widget elements missing');
-                return;
+            if (!widgetFrame.src) {
+                widgetFrame.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(defaultUrl)}&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=false`;
             }
 
-            try {
-                const url = (urlInput.value || '').trim();
-                if (!url) return;
-
-                // 위젯을 한 번이라도 보여줘야 사용자 입장에서 “재생 중”이 명확함
-                if (!scWidgetContainerVisible) {
-                    widgetContainer.style.display = 'block';
-                    scWidgetContainerVisible = true;
-                }
-
-                // 최초 src 세팅 (auto_play는 위젯 load에서 처리)
-                if (!widgetFrame.src) {
-                    widgetFrame.src = `https://w.soundcloud.com/player/?url=${encodeURIComponent(url)}&auto_play=false&hide_related=true&show_comments=false&show_user=true&show_reposts=false&show_teaser=false&visual=false`;
-                }
-
-                // Widget API 연결
-                if (!scWidget && window.SC && window.SC.Widget) {
-                    scWidget = window.SC.Widget(widgetFrame);
+            if (window.SC && window.SC.Widget) {
+                scWidget = window.SC.Widget(widgetFrame);
+                scWidget.bind(window.SC.Widget.Events.READY, () => {
                     scWidgetReady = true;
+                    console.log('SC Widget Ready');
+                });
 
-                    // 버튼 UI 동기화
-                    scWidget.bind(window.SC.Widget.Events.PLAY, function() {
-                        playBtn.style.display = 'none';
-                        stopBtn.style.display = 'block';
-                    });
-                    scWidget.bind(window.SC.Widget.Events.PAUSE, function() {
-                        playBtn.style.display = 'block';
-                        stopBtn.style.display = 'none';
-                    });
-                    scWidget.bind(window.SC.Widget.Events.FINISH, function() {
-                        playBtn.style.display = 'block';
-                        stopBtn.style.display = 'none';
-                    });
-                }
+                scWidget.bind(window.SC.Widget.Events.PLAY, () => {
+                    document.getElementById('playBtn').style.display = 'none';
+                    document.getElementById('stopBtn').style.display = 'block';
+                    startProgressTracking();
+                });
 
-                // 트랙 로드 + 재생(사용자 클릭 이벤트이므로 autoplay 차단 가능성 낮음)
-                if (scWidgetReady && scWidget) {
+                scWidget.bind(window.SC.Widget.Events.PAUSE, () => {
+                    document.getElementById('playBtn').style.display = 'block';
+                    document.getElementById('stopBtn').style.display = 'none';
+                    stopProgressTracking();
+                });
+
+                scWidget.bind(window.SC.Widget.Events.FINISH, () => {
+                    document.getElementById('playBtn').style.display = 'block';
+                    document.getElementById('stopBtn').style.display = 'none';
+                    resetProgress();
+                });
+            }
+        }
+
+        async function playSoundCloud() {
+            if (!scWidgetReady) initWidget();
+            if (scWidget) {
+                scWidget.play();
+                // Get track info
+                scWidget.getCurrentSound((sound) => {
+                    if (sound) document.getElementById('trackName').textContent = sound.title.toUpperCase();
+                });
+            }
+        }
+
+        // Global trigger for track detail pages
+        function playInGlobalPlayer(url, title) {
+            console.log('[Player] playInGlobalPlayer called:', url);
+            
+            // Widget이 없으면 먼저 초기화
+            if (!scWidget) {
+                initWidget();
+            }
+            
+            // Widget 준비 대기 후 로드
+            function tryLoad() {
+                if (scWidget && scWidgetReady) {
+                    console.log('[Player] Loading URL into widget');
                     scWidget.load(url, {
                         auto_play: true,
-                        visual: false,
-                        show_artwork: false,
+                        hide_related: true,
                         show_comments: false,
                         show_user: true,
                         show_reposts: false,
-                        show_teaser: false
+                        show_teaser: false,
+                        visual: false
                     });
+                    if (title) document.getElementById('trackName').textContent = title.toUpperCase();
+                } else if (scWidget) {
+                    // Widget 객체는 있지만 아직 ready가 아닌 경우
+                    console.log('[Player] Widget not ready, retrying...');
+                    setTimeout(tryLoad, 200);
+                } else {
+                    // Widget 초기화 중, 재시도
+                    console.log('[Player] Widget initializing, retrying...');
+                    setTimeout(tryLoad, 200);
                 }
-
-                // 표시 텍스트는 최소한으로 업데이트
-                if (trackName) trackName.textContent = 'SoundCloud';
-
-                // UI는 즉시 토글(위젯 이벤트가 늦을 수 있음)
-                playBtn.style.display = 'none';
-                stopBtn.style.display = 'block';
-            } catch (error) {
-                console.error('Playback error:', error);
             }
+            
+            tryLoad();
         }
         
         function stopSoundCloud() {
-            const playBtn = document.getElementById('playBtn');
-            const stopBtn = document.getElementById('stopBtn');
-
-            if (scWidgetReady && scWidget) {
-                try { scWidget.pause(); } catch (e) { /* ignore */ }
-            }
-            playBtn.style.display = 'block';
-            stopBtn.style.display = 'none';
+            if (scWidget) scWidget.pause();
         }
+
+        function startProgressTracking() {
+            if (progressInterval) clearInterval(progressInterval);
+            progressInterval = setInterval(() => {
+                if (scWidget) {
+                    scWidget.getPosition((pos) => {
+                        scWidget.getDuration((duration) => {
+                            const percent = (pos / duration) * 100;
+                            document.getElementById('progressFill').style.width = percent + '%';
+                        });
+                    });
+                }
+            }, 1000);
+        }
+
+        function stopProgressTracking() {
+            if (progressInterval) clearInterval(progressInterval);
+        }
+
+        function resetProgress() {
+            stopProgressTracking();
+            document.getElementById('progressFill').style.width = '0%';
+        }
+
+        // Initialize on load
+        window.addEventListener('load', initWidget);
 
         function toggleSidebar() {
             const sidebar = document.getElementById('sidebar');

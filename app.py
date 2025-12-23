@@ -523,8 +523,7 @@ def create_track_api():
 
         supabase = SupabaseClient()
         existing = supabase.get_track_by_url(url)
-        if existing:
-            return jsonify({"success": True, "track_id": existing.get("id"), "existing": True}), 200
+        existing_id = existing.get("id") if existing else None
 
         extractor = LinkExtractor(console_log=console.log)
 
@@ -571,6 +570,27 @@ def create_track_api():
             },
             "stats": {},  # future: views/likes/plays/etc
         }
+
+        # 이미 등록된 트랙이면: metadata가 비어있을 때만 보강(비용/변경 최소화)
+        if existing_id:
+            try:
+                existing_meta = existing.get("metadata")
+                is_empty_meta = (existing_meta is None) or (existing_meta == {}) or (existing_meta == "null")
+            except Exception:
+                is_empty_meta = True
+
+            if is_empty_meta:
+                supabase.update_track(existing_id, {
+                    "source": source,
+                    "source_id": source_id,
+                    "title": title,
+                    "artist": artist,
+                    "duration_seconds": duration_seconds,
+                    "thumbnail_url": thumbnail,
+                    "metadata": metadata,
+                })
+
+            return jsonify({"success": True, "track_id": existing_id, "existing": True}), 200
 
         track_id = supabase.create_track(
             url=url,
