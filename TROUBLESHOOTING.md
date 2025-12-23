@@ -26,7 +26,7 @@ cat .env | grep SUPABASE
 
 #### 2. Supabase API 키 확인
 1. Supabase 대시보드 접속:
-   https://supabase.com/dashboard/project/ycmeslqlgijckhukfkcd/settings/api
+   https://supabase.com/dashboard/project/ilqhifguxtnsrucawgcm/settings/api
 
 2. **Project API keys** 섹션에서:
    - **anon public** 키 확인
@@ -34,8 +34,8 @@ cat .env | grep SUPABASE
 
 3. `.env` 파일 업데이트:
    ```bash
-   SUPABASE_URL=https://ycmeslqlgijckhukfkcd.supabase.co
-   SUPABASE_KEY=<새로운_anon_key>
+   SUPABASE_URL=https://ilqhifguxtnsrucawgcm.supabase.co
+   SUPABASE_KEY=sb_publishable_3T468Q9xGIudxuYL-tuGOg_q2eK8ufb
    ```
 
 #### 3. Render 배포 환경

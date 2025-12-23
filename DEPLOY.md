@@ -23,8 +23,8 @@ Render 대시보드에서 다음 환경변수를 설정하세요:
 
 #### 필수 환경변수
 ```
-SUPABASE_URL=https://ycmeslqlgijckhukfkcd.supabase.co
-SUPABASE_KEY=eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+SUPABASE_URL=https://ilqhifguxtnsrucawgcm.supabase.co
+SUPABASE_KEY=sb_publishable_3T468Q9xGIudxuYL-tuGOg_q2eK8ufb
 ```
 
 #### 선택적 환경변수 (기능별)
