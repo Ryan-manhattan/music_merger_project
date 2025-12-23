@@ -382,12 +382,8 @@ def login():
     if current_user.is_authenticated:
         return redirect(url_for('index'))
     
-    # Google OAuth가 설정되어 있으면 Google 로그인 사용
-    if google_bp:
-        return redirect(url_for('google.login'))
-    
-    # Google OAuth가 없으면 일반 로그인 페이지 표시
-    return render_template('login.html')
+    # Google OAuth 활성화 여부를 템플릿에 전달
+    return render_template('login.html', google_oauth_enabled=google_bp is not None)
 
 
 @app.route('/login/google/authorized')
