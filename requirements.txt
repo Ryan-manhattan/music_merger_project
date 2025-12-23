@@ -3,6 +3,7 @@
 Flask==3.0.0
 werkzeug==3.0.1
 Flask-Login==0.6.3
+Flask-Dance==7.0.0
 
 # Audio Processing
 pydub==0.25.1

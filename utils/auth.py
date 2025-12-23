@@ -189,3 +189,73 @@ class AuthManager:
         except Exception as e:
             print(f"[ERROR] 사용자 조회 실패: {e}")
             return None
+    
+    def create_google_user(self, google_id: str, email: str, name: str, picture: str = None) -> Dict:
+        """
+        Google OAuth 사용자 생성
+        
+        Args:
+            google_id: Google 사용자 ID
+            email: 이메일
+            name: 이름
+            picture: 프로필 사진 URL
+        
+        Returns:
+            Dict: {'success': bool, 'message': str, 'user_id': str}
+        """
+        try:
+            # 이메일로 기존 사용자 확인
+            existing_user = self.get_user_by_email(email)
+            if existing_user:
+                # 기존 사용자 업데이트 (Google ID 추가)
+                try:
+                    self.supabase.client.table("users").update({
+                        "google_id": google_id,
+                        "picture": picture,
+                        "updated_at": datetime.now().isoformat()
+                    }).eq("id", existing_user['id']).execute()
+                except:
+                    pass  # 필드가 없어도 계속 진행
+                
+                return {
+                    'success': True,
+                    'message': '기존 사용자 로그인',
+                    'user_id': existing_user['id']
+                }
+            
+            # 새 사용자 생성
+            # 사용자명 중복 확인 및 생성
+            base_username = name or email.split('@')[0]
+            username = base_username
+            counter = 1
+            while self.get_user_by_username(username):
+                username = f"{base_username}{counter}"
+                counter += 1
+            
+            data = {
+                "username": username,
+                "email": email.lower().strip(),
+                "google_id": google_id,
+                "picture": picture,
+                "password_hash": "",  # Google OAuth는 비밀번호 없음
+                "created_at": datetime.now().isoformat(),
+                "updated_at": datetime.now().isoformat()
+            }
+            
+            response = self.supabase.client.table("users").insert(data).execute()
+            
+            if response.data:
+                user_id = response.data[0].get("id")
+                return {
+                    'success': True,
+                    'message': 'Google 사용자 생성 완료',
+                    'user_id': str(user_id)
+                }
+            else:
+                return {'success': False, 'message': '사용자 생성에 실패했습니다.'}
+                
+        except Exception as e:
+            print(f"[ERROR] Google 사용자 생성 실패: {e}")
+            import traceback
+            traceback.print_exc()
+            return {'success': False, 'message': f'오류가 발생했습니다: {str(e)}'}
