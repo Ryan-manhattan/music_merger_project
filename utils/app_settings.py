@@ -23,3 +23,4 @@ SUPABASE_KEY = os.getenv("SUPABASE_KEY", "")  # anon key
 
 
 
+

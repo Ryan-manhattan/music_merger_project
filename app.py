@@ -585,6 +585,10 @@ def index():
     """랜딩 페이지"""
     console.log("[Route] / - 랜딩 페이지 요청")
     
+    # 로그인 체크
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    
     featured_track = None
     daily_curator_track = None
     recent_diary = None
