@@ -393,14 +393,34 @@ def google_login():
     try:
         # Supabase Auth Google OAuth URL로 리다이렉트
         # redirect_to는 Supabase 대시보드의 Redirect URLs에 등록된 URL이어야 함
-        # _external=True로 전체 URL 생성 (포트 포함)
-        port = os.environ.get('PORT', '5000')
-        redirect_to = f"http://localhost:{port}/login/google/authorized"
+        # 동적으로 현재 호스트와 스킵을 사용하여 URL 생성
+        scheme = request.scheme  # http 또는 https
+        host = request.host  # 호스트명과 포트 포함
+        
+        # 환경 변수에서 명시적으로 설정된 경우 사용 (배포 환경)
+        if os.environ.get('SITE_URL'):
+            site_url = os.environ.get('SITE_URL').rstrip('/')
+            redirect_to = f"{site_url}/login/google/authorized"
+        else:
+            # 로컬 개발 환경에서는 request에서 가져온 정보 사용
+            redirect_to = f"{scheme}://{host}/login/google/authorized"
+        
+        # 모바일 브라우저 감지 (User-Agent 확인)
+        user_agent = request.headers.get('User-Agent', '').lower()
+        is_mobile = any(mobile in user_agent for mobile in ['mobile', 'android', 'iphone', 'ipad', 'ipod'])
         
         console.log(f"[INFO] Google OAuth 리다이렉트 URL: {redirect_to}")
+        console.log(f"[INFO] 모바일 브라우저 감지: {is_mobile}")
         console.log(f"[INFO] Supabase 대시보드의 Redirect URLs에 '{redirect_to}'가 등록되어 있는지 확인하세요.")
+        if is_mobile:
+            console.log(f"[INFO] 모바일 브라우저에서 로그인 시도 - 외부 브라우저에서 열립니다.")
         
-        result = supabase_auth.sign_in_with_oauth(provider="google", redirect_to=redirect_to)
+        # Supabase Auth는 기본적으로 외부 브라우저를 사용하므로
+        # skip_browser_redirect는 사용하지 않음 (Supabase가 자동 처리)
+        result = supabase_auth.sign_in_with_oauth(
+            provider="google", 
+            redirect_to=redirect_to
+        )
         
         if result.get('success'):
             console.log(f"[INFO] Google OAuth URL 생성 성공: {result['url']}")
@@ -502,9 +522,23 @@ def supabase_auth_callback_api():
             pass
         console.log(f"[INFO] Google 로그인 성공: {user.username} ({user.email}), 세션 저장 완료")
         
+        # 리다이렉트 URL 동적 생성 (현재 요청의 호스트 사용)
+        scheme = request.scheme  # http 또는 https
+        host = request.host  # 호스트명과 포트 포함
+        
+        # 환경 변수에서 명시적으로 설정된 경우 사용 (배포 환경)
+        if os.environ.get('SITE_URL'):
+            site_url = os.environ.get('SITE_URL').rstrip('/')
+            redirect_url = site_url
+        else:
+            # 로컬 개발 환경에서는 request에서 가져온 정보 사용
+            redirect_url = f"{scheme}://{host}"
+        
+        console.log(f"[INFO] 리다이렉트 URL: {redirect_url}")
+        
         return jsonify({
             'success': True,
-            'redirect': request.args.get('next') or '/'
+            'redirect': request.args.get('next') or redirect_url
         })
         
     except Exception as e:

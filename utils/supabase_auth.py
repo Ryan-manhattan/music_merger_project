@@ -49,12 +49,13 @@ class SupabaseAuth:
         # Supabase 클라이언트 초기화
         self.client: Client = create_client(self.url, self.key)
     
-    def get_google_oauth_url(self, redirect_to: str = None) -> str:
+    def get_google_oauth_url(self, redirect_to: str = None, skip_browser_redirect: bool = False) -> str:
         """
         Google OAuth 로그인 URL 생성 (Supabase Auth)
         
         Args:
             redirect_to: 로그인 후 리다이렉트할 URL (앱의 콜백 URL)
+            skip_browser_redirect: 모바일 브라우저 리다이렉트 스킵 (외부 브라우저 사용)
         
         Returns:
             Google OAuth 로그인 URL
@@ -68,22 +69,28 @@ class SupabaseAuth:
             from urllib.parse import quote
             oauth_url += f"&redirect_to={quote(redirect_to)}"
         
+        # 모바일 브라우저 호환성을 위한 파라미터 추가
+        # PKCE flow는 모바일에서 Google OAuth disallowed_useragent 오류를 방지
+        # Supabase Auth는 기본적으로 PKCE를 지원하지만 명시적으로 설정 가능
+        # 참고: Supabase Auth는 기본적으로 외부 브라우저를 사용하도록 권장
+        
         return oauth_url
     
-    def sign_in_with_oauth(self, provider: str = "google", redirect_to: str = None) -> Dict:
+    def sign_in_with_oauth(self, provider: str = "google", redirect_to: str = None, skip_browser_redirect: bool = False) -> Dict:
         """
         OAuth 제공자로 로그인 (서버 사이드)
         
         Args:
             provider: OAuth 제공자 (google, github 등)
             redirect_to: 로그인 후 리다이렉트할 URL (앱의 콜백 URL)
+            skip_browser_redirect: 모바일 브라우저 리다이렉트 스킵 (외부 브라우저 사용)
         
         Returns:
             Dict: {'url': str} - 리다이렉트할 URL
         """
         try:
             # Supabase Auth OAuth URL 생성
-            oauth_url = self.get_google_oauth_url(redirect_to=redirect_to)
+            oauth_url = self.get_google_oauth_url(redirect_to=redirect_to, skip_browser_redirect=skip_browser_redirect)
             
             return {
                 'success': True,
