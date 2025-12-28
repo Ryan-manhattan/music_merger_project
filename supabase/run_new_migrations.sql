@@ -71,3 +71,5 @@ CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 
 -- 완료 메시지
 SELECT '✅ 모든 마이그레이션 완료!' as message;
+
+

@@ -153,3 +153,5 @@ class SupabaseAuth:
         except Exception as e:
             print(f"[ERROR] Supabase Auth 로그아웃 실패: {e}")
             return False
+
+

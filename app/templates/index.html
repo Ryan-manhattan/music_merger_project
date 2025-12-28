@@ -4,68 +4,218 @@
 
 {% block content %}
 <div class="main-content-container">
-    <!-- Hero Section -->
-    <header class="mb-16 text-center">
-        <div class="inline-flex items-center gap-4 mb-6">
-            <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">Welcome</span>
-            <div class="w-12 h-[1px] bg-white/20"></div>
+    <!-- Top Bar / Breadcrumb -->
+    <div class="hidden md:flex items-center justify-between mb-6 pb-4 border-b border-white/10">
+        <div class="flex items-center gap-2 text-[10px] uppercase tracking-widest opacity-40 font-pixel">
+            <span>ROOT</span>
+            <span>/</span>
+            <span class="opacity-70">HOME</span>
         </div>
-        <h1 class="serif-font text-5xl md:text-6xl mb-4">OFF THE COMMUNITY</h1>
-        <p class="text-sm opacity-60 max-w-2xl mx-auto leading-relaxed">
-            음악을 수집하고, 공유하고, 아카이브하는 커뮤니티 공간
-        </p>
-    </header>
-
-    <!-- Features Grid -->
-    <section class="grid md:grid-cols-3 gap-6 mb-16">
-        <div class="pixel-card p-6 hover:border-white/40 transition-all cursor-pointer"
-             onclick="window.location.href='{{ url_for('playlists') }}'">
-            <div class="text-2xl mb-3">🎵</div>
-            <h3 class="text-sm font-bold mb-2 uppercase tracking-widest">SONG ARCHIVE</h3>
-            <p class="text-xs opacity-60 leading-relaxed">
-                좋아하는 음악을 수집하고 아카이브하세요
-            </p>
+        <div class="flex items-center gap-3">
+            <div class="w-2 h-2 bg-green-500 rounded-full animate-pulse"></div>
+            <span class="text-[10px] uppercase tracking-widest opacity-60 font-pixel">SERVER: STABLE</span>
         </div>
+    </div>
 
-        <div class="pixel-card p-6 hover:border-white/40 transition-all cursor-pointer"
-             onclick="window.location.href='{{ url_for('community') }}'">
-            <div class="text-2xl mb-3">💬</div>
-            <h3 class="text-sm font-bold mb-2 uppercase tracking-widest">COMMUNITY</h3>
-            <p class="text-xs opacity-60 leading-relaxed">
-                음악에 대한 생각과 감상을 나누세요
-            </p>
+    <!-- Trending / Info Bar -->
+    <div class="mb-6 md:mb-8 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+        <div class="flex items-center gap-3 md:gap-6 text-[9px] md:text-[10px] uppercase tracking-widest opacity-50 font-pixel whitespace-nowrap">
+            <span>TRENDING: <span class="text-red-400">#LOFI_BEATS</span></span>
+            <span class="hidden sm:inline">///</span>
+            <span class="hidden md:inline">COMMUNITY CHALLENGE: "RETRO FUTURE" ENDING IN 24H</span>
+            <span class="hidden lg:inline">///</span>
+            <span class="hidden lg:inline">LIVE SESSION STARTING IN 15M</span>
+            <span class="hidden xl:inline">///</span>
+            <span class="hidden xl:inline">NEW ALBUM RELEASE:</span>
         </div>
+    </div>
 
-        <div class="pixel-card p-6 hover:border-white/40 transition-all cursor-pointer"
-             onclick="window.location.href='{{ url_for('charts_page') }}'">
-            <div class="text-2xl mb-3">📊</div>
-            <h3 class="text-sm font-bold mb-2 uppercase tracking-widest">CHARTS</h3>
-            <p class="text-xs opacity-60 leading-relaxed">
-                실시간 음악 차트와 트렌드를 확인하세요
-            </p>
-        </div>
-    </section>
-
-    <!-- CTA Section -->
-    <section class="pixel-card p-8 md:p-12 text-center">
-        <h2 class="serif-font text-3xl mb-4">시작하기</h2>
-        <p class="text-sm opacity-60 mb-8 max-w-xl mx-auto">
-            로그인하여 나만의 음악 아카이브를 만들어보세요
-        </p>
-        <div class="flex gap-4 justify-center">
-            {% if current_user.is_authenticated %}
-                <a href="{{ url_for('playlists') }}" class="btn-pixel text-xs tracking-widest px-8 py-4">
-                    ARCHIVE로 이동
-                </a>
+    <!-- Main Content Grid -->
+    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4 md:gap-6 mb-8 md:mb-10">
+        <!-- LIVE BROADCAST - Large Card -->
+        <section class="lg:col-span-2 pixel-card p-6 md:p-8 lg:p-12 relative overflow-hidden group">
+            <div class="absolute top-3 left-3 md:top-4 md:left-4 bg-red-600/80 px-2 py-1 md:px-3 md:py-1 border-2 border-white">
+                <span class="text-[9px] md:text-[10px] uppercase tracking-widest font-bold">LIVE BROADCAST</span>
+            </div>
+            {% if featured_track %}
+            <div class="absolute top-3 right-3 md:top-4 md:right-4 text-[8px] md:text-[9px] uppercase tracking-widest opacity-40">
+                <span class="hidden sm:inline">ARCHIVE_ID #</span>{{ featured_track.id[:8] }}
+            </div>
+            
+            <div class="relative z-10 mt-10 md:mt-12">
+                <h2 class="serif-font text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6 leading-tight">{{ featured_track.title or 'NEON DREAMS' }}</h2>
+                <p class="text-xs md:text-sm opacity-70 mb-3 md:mb-4 leading-relaxed serif-font">
+                    {% if featured_track.artist %}{{ featured_track.artist }}{% else %}Explore the synthesized reality of our latest audio-visual collection.{% endif %}
+                </p>
+                {% if featured_track.duration_str %}
+                <p class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-50 mb-6 md:mb-8">{{ featured_track.duration_str }}</p>
+                {% endif %}
+                <div class="flex flex-col sm:flex-row gap-3 md:gap-4">
+                    <button class="btn-pixel text-xs tracking-widest px-6 py-3 md:px-8 md:py-4 flex items-center justify-center gap-2" onclick="window.location.href='{{ url_for('track_detail', track_id=featured_track.id) }}'">
+                        <span>▶</span>
+                        <span>PLAY NOW</span>
+                    </button>
+                    <button class="btn-outline text-xs tracking-widest px-6 py-3 md:px-8 md:py-4" onclick="window.location.href='{{ url_for('track_detail', track_id=featured_track.id) }}'">
+                        VIEW DETAILS
+                    </button>
+                </div>
+            </div>
             {% else %}
-                <a href="{{ url_for('login') }}" class="btn-pixel text-xs tracking-widest px-8 py-4">
-                    로그인
-                </a>
-                <a href="{{ url_for('register') }}" class="btn-outline text-xs tracking-widest px-8 py-4">
-                    회원가입
-                </a>
+            <div class="relative z-10 mt-10 md:mt-12">
+                <h2 class="serif-font text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6 leading-tight">NEON DREAMS</h2>
+                <p class="text-xs md:text-sm opacity-70 mb-6 md:mb-8 max-w-2xl leading-relaxed serif-font">
+                    Explore the synthesized reality of our latest audio-visual collection. A journey through digital nostalgia and future echoes.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-3 md:gap-4">
+                    <button class="btn-pixel text-xs tracking-widest px-6 py-3 md:px-8 md:py-4 flex items-center justify-center gap-2" onclick="window.location.href='{{ url_for('playlists') }}'">
+                        <span>▶</span>
+                        <span>PLAY NOW</span>
+                    </button>
+                    <button class="btn-outline text-xs tracking-widest px-6 py-3 md:px-8 md:py-4" onclick="window.location.href='{{ url_for('playlists') }}'">
+                        VIEW DETAILS
+                    </button>
+                </div>
+            </div>
             {% endif %}
+            
+            <!-- Background Visual Elements -->
+            <div class="absolute right-0 top-0 w-1/2 h-full opacity-10 pointer-events-none">
+                <div class="w-full h-full bg-gradient-to-l from-white/20 to-transparent"></div>
+            </div>
+        </section>
+
+        <!-- Right Sidebar - Two Panels -->
+        <div class="space-y-4 md:space-y-6">
+            <!-- DAILY CURATOR -->
+            <section class="pixel-card p-4 md:p-6 cursor-pointer hover:border-white/40 transition-all" onclick="{% if daily_curator_track %}window.location.href='{{ url_for('track_detail', track_id=daily_curator_track.id) }}'{% else %}window.location.href='{{ url_for('playlists') }}'{% endif %}">
+                <h3 class="text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-40 mb-3 md:mb-4">DAILY CURATOR</h3>
+                <div class="mb-3">
+                    <h4 class="text-xs md:text-sm font-bold mb-2 line-clamp-1">{% if daily_curator_track %}{{ daily_curator_track.title or 'Analog Warmth' }}{% else %}Analog Warmth{% endif %}</h4>
+                    <div class="flex items-center gap-2 md:gap-3">
+                        <div class="w-12 h-12 md:w-16 md:h-16 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
+                            {% if daily_curator_track and daily_curator_track.thumbnail_url %}
+                            <img src="{{ daily_curator_track.thumbnail_url }}" alt="Thumbnail" class="w-full h-full object-cover opacity-70">
+                            {% else %}
+                            <span class="text-xl md:text-2xl opacity-30">🎵</span>
+                            {% endif %}
+                        </div>
+                        <div class="flex-1 min-w-0">
+                            <div class="w-full h-2 bg-white/10 mb-2">
+                                <div class="h-full bg-white/40" style="width: 58%"></div>
+                            </div>
+                            <div class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-40 truncate">
+                                {% if daily_curator_track and daily_curator_track.duration_str %}{{ daily_curator_track.duration_str }}{% else %}02:14 / 03:45{% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ACTIVITY PULSE -->
+            <section class="pixel-card p-4 md:p-6 cursor-pointer hover:border-white/40 transition-all" onclick="window.location.href='{{ url_for('charts_page') }}'">
+                <h3 class="text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-40 mb-3 md:mb-4">ACTIVITY PULSE</h3>
+                <p class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-50 mb-3 md:mb-4">Last 7 Days</p>
+                <div class="flex items-end gap-1 md:gap-2 h-20 md:h-24 mb-2 md:mb-3">
+                    <div class="flex-1 bg-white/20" style="height: 30%"></div>
+                    <div class="flex-1 bg-white/30" style="height: 45%"></div>
+                    <div class="flex-1 bg-white/40" style="height: 60%"></div>
+                    <div class="flex-1 bg-white/50" style="height: 75%"></div>
+                    <div class="flex-1 bg-white/60" style="height: 90%"></div>
+                    <div class="flex-1 bg-white/70" style="height: 100%"></div>
+                    <div class="flex-1 bg-white/80" style="height: 85%"></div>
+                </div>
+                <div class="text-[9px] md:text-[10px] uppercase tracking-widest text-green-400 mb-1 md:mb-2">
+                    +{{ activity_stats.growth }}%
+                </div>
+                <div class="text-[8px] md:text-[9px] uppercase tracking-widest opacity-40">
+                    {{ activity_stats.total_tracks }} TRACKS
+                </div>
+            </section>
         </div>
-    </section>
+    </div>
+
+    <!-- Content Filters -->
+    <div class="flex gap-2 mb-6 md:mb-8 border-b-2 border-white/10 pb-3 md:pb-4 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
+        <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white bg-white text-black font-bold whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('index') }}'">ALL</button>
+        <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white/20 hover:border-white/40 transition-colors whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('playlists') }}'">MUSIC</button>
+        <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white/20 hover:border-white/40 transition-colors whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('diary') }}'">DIARIES</button>
+        <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white/20 hover:border-white/40 transition-colors whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('charts_page') }}'">CHARTS</button>
+    </div>
+
+    <!-- Recent Content Grid (Bento Style) -->
+    <div class="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 mb-8 md:mb-10">
+        <!-- Recent Diary Entry -->
+        {% if recent_diary %}
+        <div class="col-span-1 md:col-span-4 pixel-card p-4 md:p-6 hover:border-white/40 transition-all cursor-pointer group" onclick="window.location.href='{{ url_for('community_post', post_id=recent_diary.id) }}'">
+            <div class="flex justify-between items-start mb-4 md:mb-6">
+                <span class="text-xl md:text-2xl opacity-60 group-hover:opacity-100 transition-opacity">📖</span>
+                <span class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-40">UPDATED</span>
+            </div>
+            <h4 class="text-base md:text-lg font-bold mb-2 group-hover:underline decoration-1 underline-offset-4 line-clamp-2">{{ recent_diary.title or 'Untitled' }}</h4>
+            <p class="text-xs opacity-60 leading-relaxed line-clamp-3">
+                {{ recent_diary.content[:100] }}{% if recent_diary.content|length > 100 %}...{% endif %}
+            </p>
+            <div class="mt-3 md:mt-4 flex gap-2">
+                <span class="px-2 py-1 bg-white/5 text-[8px] md:text-[9px] uppercase tracking-wider opacity-60">Diary</span>
+            </div>
+        </div>
+        {% else %}
+        <div class="col-span-1 md:col-span-4 pixel-card p-4 md:p-6 hover:border-white/40 transition-all cursor-pointer group" onclick="window.location.href='{{ url_for('diary') }}'">
+            <div class="flex justify-between items-start mb-4 md:mb-6">
+                <span class="text-xl md:text-2xl opacity-60 group-hover:opacity-100 transition-opacity">📖</span>
+                <span class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-40">NO ENTRIES</span>
+            </div>
+            <h4 class="text-base md:text-lg font-bold mb-2">Start Writing</h4>
+            <p class="text-xs opacity-60 leading-relaxed">
+                Share your thoughts and memories in the diary community.
+            </p>
+        </div>
+        {% endif %}
+
+        <!-- World Cup Status -->
+        <div class="col-span-1 md:col-span-4 pixel-card p-4 md:p-6 hover:border-white/40 transition-all cursor-pointer group relative overflow-hidden bg-gradient-to-br from-white/5 to-transparent" onclick="window.location.href='{{ url_for('worldcup') }}'">
+            <div class="absolute -right-2 -top-2 md:-right-4 md:-top-4 opacity-10">
+                <span class="text-4xl md:text-6xl">🏆</span>
+            </div>
+            <div class="relative z-10">
+                <div class="flex items-center gap-2 mb-2">
+                    <span class="relative flex h-2 w-2">
+                        <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-400 opacity-75"></span>
+                        <span class="relative inline-flex rounded-full h-2 w-2 bg-red-500"></span>
+                    </span>
+                    <span class="text-[9px] md:text-[10px] font-bold text-red-400 uppercase tracking-widest">Live Voting</span>
+                </div>
+                <h3 class="text-lg md:text-xl font-bold mb-3 md:mb-4">World Cup</h3>
+                <p class="text-xs opacity-60 mb-3 md:mb-4">Vote for your favorite tracks in head-to-head battles.</p>
+                <button class="w-full py-2 bg-white/5 border border-white/10 text-[10px] md:text-xs font-bold uppercase text-white hover:bg-white hover:text-black transition-all">
+                    Join Vote
+                </button>
+            </div>
+        </div>
+
+        <!-- Quick Stats -->
+        <div class="col-span-1 md:col-span-4 pixel-card p-4 md:p-6">
+            <h3 class="text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-40 mb-3 md:mb-4">QUICK STATS</h3>
+            <div class="space-y-3 md:space-y-4">
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs opacity-60">Tracks</span>
+                        <span class="text-sm font-bold">{{ activity_stats.total_tracks }}</span>
+                    </div>
+                </div>
+                <div>
+                    <div class="flex justify-between items-center mb-1">
+                        <span class="text-xs opacity-60">Posts</span>
+                        <span class="text-sm font-bold">{{ activity_stats.total_posts }}</span>
+                    </div>
+                </div>
+                <div class="pt-3 md:pt-4 border-t border-white/10">
+                    <a href="{{ url_for('playlists') }}" class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-60 hover:opacity-100 transition-opacity">
+                        View Archive →
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

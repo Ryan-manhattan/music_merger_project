@@ -29,3 +29,5 @@ CREATE POLICY "Anyone can insert visitor_logs" ON visitor_logs
 
 
 
+
+

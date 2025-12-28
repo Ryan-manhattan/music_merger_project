@@ -390,10 +390,17 @@ def google_login():
     try:
         # Supabase Auth Google OAuth URL로 리다이렉트
         # redirect_to는 Supabase 대시보드의 Redirect URLs에 등록된 URL이어야 함
-        redirect_to = url_for('google_login_callback', _external=True)
+        # _external=True로 전체 URL 생성 (포트 포함)
+        port = os.environ.get('PORT', '5000')
+        redirect_to = f"http://localhost:{port}/login/google/authorized"
+        
+        console.log(f"[INFO] Google OAuth 리다이렉트 URL: {redirect_to}")
+        console.log(f"[INFO] Supabase 대시보드의 Redirect URLs에 '{redirect_to}'가 등록되어 있는지 확인하세요.")
+        
         result = supabase_auth.sign_in_with_oauth(provider="google", redirect_to=redirect_to)
         
         if result.get('success'):
+            console.log(f"[INFO] Google OAuth URL 생성 성공: {result['url']}")
             return redirect(result['url'])
         else:
             console.log(f"[ERROR] Google OAuth URL 생성 실패: {result.get('error')}")
@@ -577,7 +584,63 @@ def api_me():
 def index():
     """랜딩 페이지"""
     console.log("[Route] / - 랜딩 페이지 요청")
-    return render_template('index.html')
+    
+    featured_track = None
+    daily_curator_track = None
+    recent_diary = None
+    activity_stats = {
+        'total_tracks': 0,
+        'total_comments': 0,
+        'total_posts': 0,
+        'growth': 12.4
+    }
+    
+    try:
+        if supabase_available:
+            supabase = SupabaseClient()
+            
+            # LIVE BROADCAST: 최신 곡 1개 (모든 사용자)
+            all_tracks = supabase.get_tracks(limit=1, offset=0, user_id=None, playlist_id=None)
+            if all_tracks:
+                featured_track = all_tracks[0]
+                if featured_track.get("duration_seconds"):
+                    featured_track["duration_str"] = _format_duration(featured_track.get("duration_seconds"))
+            
+            # DAILY CURATOR: 랜덤 곡 1개
+            random_tracks = supabase.get_random_tracks(count=1, user_id=None, exclude_ids=None)
+            if random_tracks:
+                daily_curator_track = random_tracks[0]
+                if daily_curator_track.get("duration_seconds"):
+                    daily_curator_track["duration_str"] = _format_duration(daily_curator_track.get("duration_seconds"))
+            
+            # 최근 다이어리 게시글 1개
+            recent_posts = supabase.get_posts(limit=1, offset=0)
+            if recent_posts:
+                recent_diary = recent_posts[0]
+            
+            # 활동 통계 (간단한 카운트)
+            try:
+                all_tracks_count = supabase.get_tracks(limit=1000, offset=0, user_id=None, playlist_id=None)
+                activity_stats['total_tracks'] = len(all_tracks_count) if all_tracks_count else 0
+            except:
+                pass
+            
+            try:
+                all_posts = supabase.get_posts(limit=1000, offset=0)
+                activity_stats['total_posts'] = len(all_posts) if all_posts else 0
+            except:
+                pass
+                
+    except Exception as e:
+        print(f"[ERROR] 인덱스 페이지 데이터 로드 실패: {e}")
+    
+    return render_template(
+        'index.html',
+        featured_track=featured_track,
+        daily_curator_track=daily_curator_track,
+        recent_diary=recent_diary,
+        activity_stats=activity_stats
+    )
 
 
 @app.route('/tracks')

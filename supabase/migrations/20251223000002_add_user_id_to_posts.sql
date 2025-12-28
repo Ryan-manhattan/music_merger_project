@@ -10,3 +10,5 @@ CREATE INDEX IF NOT EXISTS idx_posts_user_id ON posts(user_id);
 
 -- 완료 메시지
 SELECT '✅ posts 테이블에 user_id 컬럼 추가 완료!' as message;
+
+

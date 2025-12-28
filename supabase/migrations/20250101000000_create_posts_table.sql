@@ -62,3 +62,5 @@ CREATE POLICY "Anyone can delete posts" ON posts
 
 
 
+
+

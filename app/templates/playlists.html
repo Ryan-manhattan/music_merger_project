@@ -4,7 +4,7 @@
 
 {% block content %}
 <div class="main-content-container">
-    <header class="community-header">
+    <header class="community-header mb-12">
         <div class="flex items-center justify-between mb-6">
             <div class="inline-flex items-center gap-4">
                 <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: Playlists</span>
@@ -12,7 +12,10 @@
             </div>
             <button class="btn-outline text-[10px] tracking-widest" id="globalEditBtn" onclick="toggleGlobalEditMode()">EDIT</button>
         </div>
-        <h2 class="serif-font">SONG ARCHIVE_</h2>
+        <h2 class="serif-font text-4xl md:text-5xl mb-3">SONG ARCHIVE_</h2>
+        <p class="text-[11px] uppercase tracking-widest opacity-50">
+            Playlist Management
+        </p>
     </header>
 
     {% if error %}
@@ -279,3 +282,5 @@ async function deletePlaylist(playlistId) {
 }
 </script>
 {% endblock %}
+
+
