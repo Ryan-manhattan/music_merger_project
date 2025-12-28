@@ -611,7 +611,21 @@ def api_login():
             except:
                 pass
             console.log(f"[INFO] 로그인 성공: {user.username} (ID: {user.id}), 세션 저장 완료")
-            result['redirect'] = request.args.get('next') or '/'
+            
+            # 리다이렉트 URL 동적 생성 (현재 요청의 호스트 사용)
+            scheme = request.scheme  # http 또는 https
+            host = request.host  # 호스트명과 포트 포함
+            
+            # 환경 변수에서 명시적으로 설정된 경우 사용 (배포 환경)
+            if os.environ.get('SITE_URL'):
+                site_url = os.environ.get('SITE_URL').rstrip('/')
+                redirect_url = site_url
+            else:
+                # 로컬 개발 환경에서는 request에서 가져온 정보 사용
+                redirect_url = f"{scheme}://{host}"
+            
+            console.log(f"[INFO] 리다이렉트 URL: {redirect_url}")
+            result['redirect'] = request.args.get('next') or redirect_url
         
         return jsonify(result)
     except Exception as e:
@@ -847,12 +861,8 @@ def vote_worldcup():
 
 @app.route('/diary')
 def diary():
-    """일기(기존 커뮤니티) 피드"""
+    """일기(기존 커뮤니티) 피드 - 전체 사용자 접근 가능"""
     console.log("[Route] /diary - 일기 피드 페이지 요청")
-    
-    # 로그인 체크
-    if not current_user.is_authenticated:
-        return redirect(url_for('login'))
     
     error_message = None
 
@@ -880,9 +890,8 @@ def diary():
     try:
         if supabase_available:
             supabase = SupabaseClient()
-            current_user_id = str(current_user.id)
-            # 현재 사용자의 게시글만 조회
-            posts = supabase.get_posts(limit=per_page, offset=offset, user_id=current_user_id)
+            # 전체 사용자의 게시글 조회 (user_id 필터 제거)
+            posts = supabase.get_posts(limit=per_page, offset=offset, user_id=None)
         else:
             posts = []
     except Exception as e:
