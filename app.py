@@ -91,7 +91,7 @@ except ImportError as e:
 app = Flask(__name__, 
            template_folder='app/templates', 
            static_folder='app/static')
-CORS(app)
+CORS(app, supports_credentials=True)
 
 # 설정
 app.config['MAX_CONTENT_LENGTH'] = 500 * 1024 * 1024  # 500MB 제한
@@ -100,6 +100,9 @@ app.config['PROCESSED_FOLDER'] = os.path.join(os.path.dirname(__file__), 'app', 
 app.config['ALLOWED_EXTENSIONS'] = {'mp3', 'wav', 'm4a', 'flac', 'mp4', 'webm'}
 app.config['ALLOWED_IMAGE_EXTENSIONS'] = {'jpg', 'jpeg', 'png', 'bmp', 'gif'}
 app.config['SECRET_KEY'] = os.getenv('SECRET_KEY', 'dev-secret-key-1225-change-in-production')
+app.config['SESSION_COOKIE_HTTPONLY'] = True
+app.config['SESSION_COOKIE_SAMESITE'] = 'Lax'
+app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24시간
 
 # 폴더 생성 확인
 os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
@@ -487,7 +490,17 @@ def supabase_auth_callback_api():
         
         # Flask-Login으로 로그인
         login_user(user, remember=True)
-        console.log(f"[INFO] Google 로그인 성공: {user.username} ({user.email})")
+        # 세션 저장 보장
+        session.permanent = True
+        # 세션 저장 강제
+        from flask import session as flask_session
+        flask_session.permanent = True
+        # 세션 저장 확인
+        try:
+            flask_session.modified = True
+        except:
+            pass
+        console.log(f"[INFO] Google 로그인 성공: {user.username} ({user.email}), 세션 저장 완료")
         
         return jsonify({
             'success': True,
@@ -557,6 +570,13 @@ def api_login():
                 email=result['user']['email']
             )
             login_user(user, remember=True)
+            # 세션 저장 보장
+            session.permanent = True
+            try:
+                session.modified = True
+            except:
+                pass
+            console.log(f"[INFO] 로그인 성공: {user.username} (ID: {user.id}), 세션 저장 완료")
             result['redirect'] = request.args.get('next') or '/'
         
         return jsonify(result)
@@ -585,10 +605,6 @@ def index():
     """랜딩 페이지"""
     console.log("[Route] / - 랜딩 페이지 요청")
     
-    # 로그인 체크
-    if not current_user.is_authenticated:
-        return redirect(url_for('login'))
-    
     featured_track = None
     daily_curator_track = None
     recent_diary = None
@@ -599,51 +615,68 @@ def index():
         'growth': 12.4
     }
     
+    # 로그인한 사용자인지 확인
+    is_authenticated = current_user.is_authenticated
+    current_user_id = str(current_user.id) if is_authenticated else None
+    
     try:
         if supabase_available:
             supabase = SupabaseClient()
             
-            # LIVE BROADCAST: 최신 곡 1개 (모든 사용자)
-            all_tracks = supabase.get_tracks(limit=1, offset=0, user_id=None, playlist_id=None)
-            if all_tracks:
-                featured_track = all_tracks[0]
-                if featured_track.get("duration_seconds"):
-                    featured_track["duration_str"] = _format_duration(featured_track.get("duration_seconds"))
-            
-            # DAILY CURATOR: 랜덤 곡 1개
-            random_tracks = supabase.get_random_tracks(count=1, user_id=None, exclude_ids=None)
-            if random_tracks:
-                daily_curator_track = random_tracks[0]
-                if daily_curator_track.get("duration_seconds"):
-                    daily_curator_track["duration_str"] = _format_duration(daily_curator_track.get("duration_seconds"))
-            
-            # 최근 다이어리 게시글 1개
-            recent_posts = supabase.get_posts(limit=1, offset=0)
-            if recent_posts:
-                recent_diary = recent_posts[0]
-            
-            # 활동 통계 (간단한 카운트)
-            try:
-                all_tracks_count = supabase.get_tracks(limit=1000, offset=0, user_id=None, playlist_id=None)
-                activity_stats['total_tracks'] = len(all_tracks_count) if all_tracks_count else 0
-            except:
-                pass
-            
-            try:
-                all_posts = supabase.get_posts(limit=1000, offset=0)
-                activity_stats['total_posts'] = len(all_posts) if all_posts else 0
-            except:
+            if is_authenticated and current_user_id:
+                # 로그인한 사용자: 자신의 콘텐츠만 표시
+                # LIVE BROADCAST: 현재 사용자의 최신 곡 1개 (다른 사용자 곡 표시 안 함)
+                user_tracks = supabase.get_tracks(limit=1, offset=0, user_id=current_user_id, playlist_id=None)
+                if user_tracks:
+                    featured_track = user_tracks[0]
+                    if featured_track.get("duration_seconds"):
+                        featured_track["duration_str"] = _format_duration(featured_track.get("duration_seconds"))
+                # 사용자 곡이 없으면 featured_track은 None으로 유지 (템플릿에서 "곡이 없습니다" 표시)
+                
+                # DAILY CURATOR: 현재 사용자의 랜덤 곡 1개 (다른 사용자 곡 표시 안 함)
+                random_tracks = supabase.get_random_tracks(count=1, user_id=current_user_id, exclude_ids=None)
+                if random_tracks:
+                    daily_curator_track = random_tracks[0]
+                    if daily_curator_track.get("duration_seconds"):
+                        daily_curator_track["duration_str"] = _format_duration(daily_curator_track.get("duration_seconds"))
+                # 사용자 곡이 없으면 daily_curator_track은 None으로 유지
+                
+                # 최근 다이어리 게시글 1개 (현재 사용자만)
+                user_posts = supabase.get_posts(limit=1, offset=0, user_id=current_user_id)
+                if user_posts:
+                    recent_diary = user_posts[0]
+                # 사용자 게시글이 없으면 recent_diary는 None으로 유지
+                
+                # 활동 통계 (현재 사용자)
+                try:
+                    user_tracks_count = supabase.get_tracks(limit=1000, offset=0, user_id=current_user_id, playlist_id=None)
+                    activity_stats['total_tracks'] = len(user_tracks_count) if user_tracks_count else 0
+                except:
+                    pass
+                
+                try:
+                    user_posts_count = supabase.get_posts(limit=1000, offset=0, user_id=current_user_id)
+                    activity_stats['total_posts'] = len(user_posts_count) if user_posts_count else 0
+                except:
+                    pass
+            else:
+                # 로그인하지 않은 사용자: 곡 정보 표시 안 함
+                # featured_track, daily_curator_track, recent_diary는 모두 None으로 유지
+                # 템플릿에서 "로그인이 필요합니다" 메시지 표시
                 pass
                 
     except Exception as e:
         print(f"[ERROR] 인덱스 페이지 데이터 로드 실패: {e}")
+        import traceback
+        traceback.print_exc()
     
     return render_template(
         'index.html',
         featured_track=featured_track,
         daily_curator_track=daily_curator_track,
         recent_diary=recent_diary,
-        activity_stats=activity_stats
+        activity_stats=activity_stats,
+        is_authenticated=is_authenticated
     )
 
 
@@ -782,6 +815,11 @@ def vote_worldcup():
 def diary():
     """일기(기존 커뮤니티) 피드"""
     console.log("[Route] /diary - 일기 피드 페이지 요청")
+    
+    # 로그인 체크
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    
     error_message = None
 
     # 페이지네이션
@@ -808,7 +846,9 @@ def diary():
     try:
         if supabase_available:
             supabase = SupabaseClient()
-            posts = supabase.get_posts(limit=per_page, offset=offset)
+            current_user_id = str(current_user.id)
+            # 현재 사용자의 게시글만 조회
+            posts = supabase.get_posts(limit=per_page, offset=offset, user_id=current_user_id)
         else:
             posts = []
     except Exception as e:
@@ -903,10 +943,8 @@ def track_detail(track_id):
     source = track.get("source")
     embed = {"type": source, "url": track.get("url"), "source_id": track.get("source_id")}
 
-    # 현재 로그인한 사용자 ID
-    current_user_id = None
-    if current_user.is_authenticated:
-        current_user_id = str(current_user.id)
+    # 현재 로그인한 사용자 ID (이미 로그인 체크 완료)
+    current_user_id = str(current_user.id)
     
     # 트랙을 추가한 사용자 ID
     track_user_id = track.get('user_id')
@@ -3354,6 +3392,10 @@ def get_spotify_charts():
 @app.route('/charts')
 def charts_page():
     """Spotify 차트 전용 페이지"""
+    # 로그인 체크
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    
     return render_template('charts.html')
 
 @app.route('/api/melon/charts')

@@ -60,19 +60,37 @@
                     </button>
                 </div>
             </div>
-            {% else %}
+            {% elif is_authenticated %}
+            <!-- 로그인했지만 곡이 없는 경우 -->
             <div class="relative z-10 mt-10 md:mt-12">
-                <h2 class="serif-font text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6 leading-tight">NEON DREAMS</h2>
+                <h2 class="serif-font text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6 leading-tight">NO TRACKS</h2>
                 <p class="text-xs md:text-sm opacity-70 mb-6 md:mb-8 max-w-2xl leading-relaxed serif-font">
-                    Explore the synthesized reality of our latest audio-visual collection. A journey through digital nostalgia and future echoes.
+                    아직 추가된 곡이 없습니다. 첫 번째 곡을 추가해보세요.
                 </p>
                 <div class="flex flex-col sm:flex-row gap-3 md:gap-4">
                     <button class="btn-pixel text-xs tracking-widest px-6 py-3 md:px-8 md:py-4 flex items-center justify-center gap-2" onclick="window.location.href='{{ url_for('playlists') }}'">
-                        <span>▶</span>
-                        <span>PLAY NOW</span>
+                        <span>+</span>
+                        <span>ADD TRACK</span>
                     </button>
                     <button class="btn-outline text-xs tracking-widest px-6 py-3 md:px-8 md:py-4" onclick="window.location.href='{{ url_for('playlists') }}'">
-                        VIEW DETAILS
+                        VIEW ARCHIVE
+                    </button>
+                </div>
+            </div>
+            {% else %}
+            <!-- 로그인하지 않은 사용자 -->
+            <div class="relative z-10 mt-10 md:mt-12">
+                <h2 class="serif-font text-3xl sm:text-4xl md:text-5xl lg:text-6xl mb-4 md:mb-6 leading-tight">LOGIN REQUIRED</h2>
+                <p class="text-xs md:text-sm opacity-70 mb-6 md:mb-8 max-w-2xl leading-relaxed serif-font">
+                    이 섹션을 보려면 로그인이 필요합니다. 로그인하여 나만의 음악 아카이브를 만들어보세요.
+                </p>
+                <div class="flex flex-col sm:flex-row gap-3 md:gap-4">
+                    <button class="btn-pixel text-xs tracking-widest px-6 py-3 md:px-8 md:py-4 flex items-center justify-center gap-2" onclick="window.location.href='{{ url_for('login') }}'">
+                        <span>→</span>
+                        <span>LOGIN</span>
+                    </button>
+                    <button class="btn-outline text-xs tracking-widest px-6 py-3 md:px-8 md:py-4" onclick="window.location.href='{{ url_for('register') }}'">
+                        REGISTER
                     </button>
                 </div>
             </div>
@@ -87,13 +105,14 @@
         <!-- Right Sidebar - Two Panels -->
         <div class="space-y-4 md:space-y-6">
             <!-- DAILY CURATOR -->
-            <section class="pixel-card p-4 md:p-6 cursor-pointer hover:border-white/40 transition-all" onclick="{% if daily_curator_track %}window.location.href='{{ url_for('track_detail', track_id=daily_curator_track.id) }}'{% else %}window.location.href='{{ url_for('playlists') }}'{% endif %}">
+            <section class="pixel-card p-4 md:p-6 {% if daily_curator_track or is_authenticated %}cursor-pointer hover:border-white/40 transition-all{% endif %}" onclick="{% if daily_curator_track %}window.location.href='{{ url_for('track_detail', track_id=daily_curator_track.id) }}'{% elif is_authenticated %}window.location.href='{{ url_for('playlists') }}'{% else %}window.location.href='{{ url_for('login') }}'{% endif %}">
                 <h3 class="text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-40 mb-3 md:mb-4">DAILY CURATOR</h3>
+                {% if daily_curator_track %}
                 <div class="mb-3">
-                    <h4 class="text-xs md:text-sm font-bold mb-2 line-clamp-1">{% if daily_curator_track %}{{ daily_curator_track.title or 'Analog Warmth' }}{% else %}Analog Warmth{% endif %}</h4>
+                    <h4 class="text-xs md:text-sm font-bold mb-2 line-clamp-1">{{ daily_curator_track.title or 'Analog Warmth' }}</h4>
                     <div class="flex items-center gap-2 md:gap-3">
                         <div class="w-12 h-12 md:w-16 md:h-16 bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden flex-shrink-0">
-                            {% if daily_curator_track and daily_curator_track.thumbnail_url %}
+                            {% if daily_curator_track.thumbnail_url %}
                             <img src="{{ daily_curator_track.thumbnail_url }}" alt="Thumbnail" class="w-full h-full object-cover opacity-70">
                             {% else %}
                             <span class="text-xl md:text-2xl opacity-30">🎵</span>
@@ -104,11 +123,24 @@
                                 <div class="h-full bg-white/40" style="width: 58%"></div>
                             </div>
                             <div class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-40 truncate">
-                                {% if daily_curator_track and daily_curator_track.duration_str %}{{ daily_curator_track.duration_str }}{% else %}02:14 / 03:45{% endif %}
+                                {% if daily_curator_track.duration_str %}{{ daily_curator_track.duration_str }}{% else %}--:--{% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
+                {% elif is_authenticated %}
+                <!-- 로그인했지만 곡이 없는 경우 -->
+                <div class="mb-3">
+                    <h4 class="text-xs md:text-sm font-bold mb-2 opacity-60">No Tracks</h4>
+                    <p class="text-[9px] md:text-[10px] opacity-50">곡을 추가해주세요</p>
+                </div>
+                {% else %}
+                <!-- 로그인하지 않은 사용자 -->
+                <div class="mb-3">
+                    <h4 class="text-xs md:text-sm font-bold mb-2 opacity-60">Login Required</h4>
+                    <p class="text-[9px] md:text-[10px] opacity-50">로그인이 필요합니다</p>
+                </div>
+                {% endif %}
             </section>
 
             <!-- ACTIVITY PULSE -->
@@ -137,37 +169,56 @@
     <!-- Content Filters -->
     <div class="flex gap-2 mb-6 md:mb-8 border-b-2 border-white/10 pb-3 md:pb-4 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
         <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white bg-white text-black font-bold whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('index') }}'">ALL</button>
+        {% if is_authenticated %}
         <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white/20 hover:border-white/40 transition-colors whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('playlists') }}'">MUSIC</button>
         <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white/20 hover:border-white/40 transition-colors whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('diary') }}'">DIARIES</button>
         <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white/20 hover:border-white/40 transition-colors whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('charts_page') }}'">CHARTS</button>
+        {% else %}
+        <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white/20 hover:border-white/40 transition-colors whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('login') }}'">MUSIC</button>
+        <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white/20 hover:border-white/40 transition-colors whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('login') }}'">DIARIES</button>
+        <button class="px-3 py-2 md:px-4 md:py-2 text-[10px] md:text-xs uppercase tracking-widest border-2 border-white/20 hover:border-white/40 transition-colors whitespace-nowrap flex-shrink-0" onclick="window.location.href='{{ url_for('login') }}'">CHARTS</button>
+        {% endif %}
     </div>
 
     <!-- Recent Content Grid (Bento Style) -->
     <div class="grid grid-cols-1 md:grid-cols-12 gap-3 md:gap-4 mb-8 md:mb-10">
         <!-- Recent Diary Entry -->
-        {% if recent_diary %}
-        <div class="col-span-1 md:col-span-4 pixel-card p-4 md:p-6 hover:border-white/40 transition-all cursor-pointer group" onclick="window.location.href='{{ url_for('community_post', post_id=recent_diary.id) }}'">
-            <div class="flex justify-between items-start mb-4 md:mb-6">
-                <span class="text-xl md:text-2xl opacity-60 group-hover:opacity-100 transition-opacity">📖</span>
-                <span class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-40">UPDATED</span>
+        {% if is_authenticated %}
+            {% if recent_diary %}
+            <div class="col-span-1 md:col-span-4 pixel-card p-4 md:p-6 hover:border-white/40 transition-all cursor-pointer group" onclick="window.location.href='{{ url_for('community_post', post_id=recent_diary.id) }}'">
+                <div class="flex justify-between items-start mb-4 md:mb-6">
+                    <span class="text-xl md:text-2xl opacity-60 group-hover:opacity-100 transition-opacity">📖</span>
+                    <span class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-40">UPDATED</span>
+                </div>
+                <h4 class="text-base md:text-lg font-bold mb-2 group-hover:underline decoration-1 underline-offset-4 line-clamp-2">{{ recent_diary.title or 'Untitled' }}</h4>
+                <p class="text-xs opacity-60 leading-relaxed line-clamp-3">
+                    {{ recent_diary.content[:100] }}{% if recent_diary.content|length > 100 %}...{% endif %}
+                </p>
+                <div class="mt-3 md:mt-4 flex gap-2">
+                    <span class="px-2 py-1 bg-white/5 text-[8px] md:text-[9px] uppercase tracking-wider opacity-60">Diary</span>
+                </div>
             </div>
-            <h4 class="text-base md:text-lg font-bold mb-2 group-hover:underline decoration-1 underline-offset-4 line-clamp-2">{{ recent_diary.title or 'Untitled' }}</h4>
-            <p class="text-xs opacity-60 leading-relaxed line-clamp-3">
-                {{ recent_diary.content[:100] }}{% if recent_diary.content|length > 100 %}...{% endif %}
-            </p>
-            <div class="mt-3 md:mt-4 flex gap-2">
-                <span class="px-2 py-1 bg-white/5 text-[8px] md:text-[9px] uppercase tracking-wider opacity-60">Diary</span>
+            {% else %}
+            <div class="col-span-1 md:col-span-4 pixel-card p-4 md:p-6 hover:border-white/40 transition-all cursor-pointer group" onclick="window.location.href='{{ url_for('diary') }}'">
+                <div class="flex justify-between items-start mb-4 md:mb-6">
+                    <span class="text-xl md:text-2xl opacity-60 group-hover:opacity-100 transition-opacity">📖</span>
+                    <span class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-40">NO ENTRIES</span>
+                </div>
+                <h4 class="text-base md:text-lg font-bold mb-2">Start Writing</h4>
+                <p class="text-xs opacity-60 leading-relaxed">
+                    Share your thoughts and memories in the diary community.
+                </p>
             </div>
-        </div>
+            {% endif %}
         {% else %}
-        <div class="col-span-1 md:col-span-4 pixel-card p-4 md:p-6 hover:border-white/40 transition-all cursor-pointer group" onclick="window.location.href='{{ url_for('diary') }}'">
+        <div class="col-span-1 md:col-span-4 pixel-card p-4 md:p-6 hover:border-white/40 transition-all cursor-pointer group" onclick="window.location.href='{{ url_for('login') }}'">
             <div class="flex justify-between items-start mb-4 md:mb-6">
                 <span class="text-xl md:text-2xl opacity-60 group-hover:opacity-100 transition-opacity">📖</span>
-                <span class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-40">NO ENTRIES</span>
+                <span class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-40">LOGIN REQUIRED</span>
             </div>
-            <h4 class="text-base md:text-lg font-bold mb-2">Start Writing</h4>
+            <h4 class="text-base md:text-lg font-bold mb-2">Login Required</h4>
             <p class="text-xs opacity-60 leading-relaxed">
-                Share your thoughts and memories in the diary community.
+                로그인하여 다이어리를 작성해보세요.
             </p>
         </div>
         {% endif %}

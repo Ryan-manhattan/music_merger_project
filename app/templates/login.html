@@ -96,6 +96,7 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         const res = await fetch('/api/auth/login', {
             method: 'POST',
             headers: {'Content-Type': 'application/json'},
+            credentials: 'include',  // 쿠키 포함
             body: JSON.stringify({username, password})
         });
         const data = await res.json();
@@ -103,8 +104,9 @@ document.getElementById('loginForm').addEventListener('submit', async function(e
         if (data.success) {
             msg.textContent = '로그인 성공! 리다이렉트 중...';
             msg.classList.add('text-green-400');
+            // 세션 저장을 위해 약간의 지연 후 완전 리로드
             setTimeout(() => {
-                window.location.href = data.redirect || '/';
+                window.location.replace(data.redirect || '/');
             }, 500);
         } else {
             msg.textContent = data.message || '로그인 실패';

@@ -96,21 +96,27 @@ class SupabaseClient:
             print(f"[ERROR] Supabase 게시글 생성 실패: {e}")
             return None
     
-    def get_posts(self, limit: int = 50, offset: int = 0) -> List[Dict]:
+    def get_posts(self, limit: int = 50, offset: int = 0, user_id: str = None) -> List[Dict]:
         """
         게시글 목록 조회
         
         Args:
             limit: 조회 개수 제한
             offset: 오프셋
+            user_id: 사용자 ID (필터링용, None이면 모든 사용자)
         
         Returns:
             List[Dict]: 게시글 리스트
         """
         try:
+            query = self.client.table("posts").select("*")
+            
+            # user_id가 제공되면 필터링
+            if user_id:
+                query = query.eq("user_id", user_id)
+            
             response = (
-                self.client.table("posts")
-                .select("*")
+                query
                 .order("created_at", desc=True)
                 .limit(limit)
                 .offset(offset)
