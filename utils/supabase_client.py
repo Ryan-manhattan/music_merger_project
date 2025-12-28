@@ -544,6 +544,127 @@ class SupabaseClient:
             print(f"[ERROR] Supabase track_battles 통계 조회 실패: {e}")
             return {"wins": 0, "total_battles": 0, "win_rate": 0.0}
     
+    def get_worldcup_rankings(self, limit: int = 50) -> List[Dict]:
+        """
+        이상형 월드컵 투표 결과 순위 조회 (승리 횟수 기준)
+        
+        Args:
+            limit: 조회할 최대 순위 수
+        
+        Returns:
+            List[Dict]: 순위별 곡 정보 리스트 (승리 횟수 내림차순)
+        """
+        try:
+            # 모든 투표에서 승리한 곡들의 승리 횟수 집계
+            response = (
+                self.client.table("track_battles")
+                .select("winner_id")
+                .execute()
+            )
+            
+            # 승리 횟수 집계
+            win_counts = {}
+            for battle in response.data:
+                winner_id = battle.get("winner_id")
+                if winner_id:
+                    win_counts[winner_id] = win_counts.get(winner_id, 0) + 1
+            
+            # 승리 횟수로 정렬
+            sorted_tracks = sorted(win_counts.items(), key=lambda x: x[1], reverse=True)
+            
+            # 상위 limit개만 선택
+            top_tracks = sorted_tracks[:limit]
+            
+            # 곡 정보와 함께 반환
+            rankings = []
+            for rank, (track_id, wins) in enumerate(top_tracks, 1):
+                # 곡 정보 조회
+                track_response = (
+                    self.client.table("tracks")
+                    .select("*")
+                    .eq("id", track_id)
+                    .execute()
+                )
+                
+                if track_response.data:
+                    track = track_response.data[0]
+                    rankings.append({
+                        "rank": rank,
+                        "track_id": track_id,
+                        "wins": wins,
+                        "title": track.get("title", "Unknown"),
+                        "artist": track.get("artist", "Unknown"),
+                        "cover_url": track.get("cover_url"),
+                        "source_url": track.get("source_url"),
+                        "duration_seconds": track.get("duration_seconds", 0)
+                    })
+            
+            return rankings
+        except Exception as e:
+            print(f"[ERROR] Supabase 월드컵 순위 조회 실패: {e}")
+            return []
+    
+    def get_worldcup_stats(self) -> Dict:
+        """
+        월드컵 투표 통계 조회
+        
+        Returns:
+            Dict: {total_battles: int, total_votes: int, recent_battles: int}
+        """
+        try:
+            # 전체 배틀 수 (투표 수)
+            battles_response = (
+                self.client.table("track_battles")
+                .select("id", count="exact")
+                .execute()
+            )
+            total_battles = battles_response.count if battles_response.count else 0
+            
+            # 최근 7일간의 배틀 수
+            from datetime import datetime, timedelta
+            seven_days_ago = (datetime.now() - timedelta(days=7)).isoformat()
+            
+            recent_response = (
+                self.client.table("track_battles")
+                .select("id", count="exact")
+                .gte("created_at", seven_days_ago)
+                .execute()
+            )
+            recent_battles = recent_response.count if recent_response.count else 0
+            
+            return {
+                "total_battles": total_battles,
+                "total_votes": total_battles,  # 배틀 수 = 투표 수
+                "recent_battles": recent_battles
+            }
+        except Exception as e:
+            print(f"[ERROR] Supabase 월드컵 통계 조회 실패: {e}")
+            return {"total_battles": 0, "total_votes": 0, "recent_battles": 0}
+    
+    def get_today_visits(self) -> int:
+        """
+        오늘 방문횟수 조회
+        
+        Returns:
+            int: 오늘 방문횟수
+        """
+        try:
+            from datetime import datetime, timedelta
+            today_start = datetime.now().replace(hour=0, minute=0, second=0, microsecond=0)
+            today_start_iso = today_start.isoformat()
+            
+            response = (
+                self.client.table("visitor_logs")
+                .select("id", count="exact")
+                .gte("visited_at", today_start_iso)
+                .execute()
+            )
+            
+            return response.count if response.count else 0
+        except Exception as e:
+            print(f"[ERROR] Supabase 오늘 방문횟수 조회 실패: {e}")
+            return 0
+    
     # =========================
     # Playlists (플레이리스트)
     # =========================

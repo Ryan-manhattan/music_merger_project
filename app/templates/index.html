@@ -20,13 +20,9 @@
     <!-- Trending / Info Bar -->
     <div class="mb-6 md:mb-8 overflow-x-auto -mx-4 px-4 md:mx-0 md:px-0">
         <div class="flex items-center gap-3 md:gap-6 text-[9px] md:text-[10px] uppercase tracking-widest opacity-50 font-pixel whitespace-nowrap">
-            <span>TRENDING: <span class="text-red-400">#LOFI_BEATS</span></span>
+            <span>DATE: <span class="text-red-400">{{ today_date }}</span></span>
             <span class="hidden sm:inline">///</span>
-            <span class="hidden md:inline">COMMUNITY CHALLENGE: "RETRO FUTURE" ENDING IN 24H</span>
-            <span class="hidden lg:inline">///</span>
-            <span class="hidden lg:inline">LIVE SESSION STARTING IN 15M</span>
-            <span class="hidden xl:inline">///</span>
-            <span class="hidden xl:inline">NEW ALBUM RELEASE:</span>
+            <span class="hidden md:inline">TODAY VISITS: <span class="text-blue-400">{{ today_visits }}</span></span>
         </div>
     </div>
 
@@ -143,24 +139,39 @@
                 {% endif %}
             </section>
 
-            <!-- ACTIVITY PULSE -->
-            <section class="pixel-card p-4 md:p-6 cursor-pointer hover:border-white/40 transition-all" onclick="window.location.href='{{ url_for('charts_page') }}'">
-                <h3 class="text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-40 mb-3 md:mb-4">ACTIVITY PULSE</h3>
-                <p class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-50 mb-3 md:mb-4">Last 7 Days</p>
-                <div class="flex items-end gap-1 md:gap-2 h-20 md:h-24 mb-2 md:mb-3">
-                    <div class="flex-1 bg-white/20" style="height: 30%"></div>
-                    <div class="flex-1 bg-white/30" style="height: 45%"></div>
-                    <div class="flex-1 bg-white/40" style="height: 60%"></div>
-                    <div class="flex-1 bg-white/50" style="height: 75%"></div>
-                    <div class="flex-1 bg-white/60" style="height: 90%"></div>
-                    <div class="flex-1 bg-white/70" style="height: 100%"></div>
-                    <div class="flex-1 bg-white/80" style="height: 85%"></div>
+            <!-- ACTIVITY PULSE (월드컵 투표) -->
+            <section class="pixel-card p-4 md:p-6 cursor-pointer hover:border-white/40 transition-all relative overflow-hidden bg-gradient-to-br from-white/5 to-transparent" onclick="window.location.href='{{ url_for('worldcup') }}'">
+                <div class="absolute -right-2 -top-2 md:-right-4 md:-top-4 opacity-10">
+                    <span class="text-4xl md:text-6xl">🏆</span>
                 </div>
-                <div class="text-[9px] md:text-[10px] uppercase tracking-widest text-green-400 mb-1 md:mb-2">
-                    +{{ activity_stats.growth }}%
-                </div>
-                <div class="text-[8px] md:text-[9px] uppercase tracking-widest opacity-40">
-                    {{ activity_stats.total_tracks }} TRACKS
+                <div class="relative z-10">
+                    <h3 class="text-[10px] md:text-xs uppercase tracking-[0.3em] opacity-40 mb-3 md:mb-4">WORLD CUP VOTES</h3>
+                    <p class="text-[9px] md:text-[10px] uppercase tracking-widest opacity-50 mb-3 md:mb-4">Last 7 Days</p>
+                    <div class="flex items-end gap-1 md:gap-2 h-20 md:h-24 mb-2 md:mb-3">
+                        {% if worldcup_stats.recent_battles > 0 %}
+                            {% set max_votes = worldcup_stats.recent_battles %}
+                            {% for day in range(7) %}
+                                {% set day_votes = (worldcup_stats.recent_battles // 7) + (1 if day < (worldcup_stats.recent_battles % 7) else 0) %}
+                                {% set height_percent = (day_votes / max_votes * 100) if max_votes > 0 else 20 %}
+                                {% set opacity = 20 + (day * 10) %}
+                                <div class="flex-1 bg-white" style="height: {{ height_percent }}%; opacity: {{ opacity / 100 }};"></div>
+                            {% endfor %}
+                        {% else %}
+                            <div class="flex-1 bg-white/20" style="height: 30%"></div>
+                            <div class="flex-1 bg-white/30" style="height: 45%"></div>
+                            <div class="flex-1 bg-white/40" style="height: 60%"></div>
+                            <div class="flex-1 bg-white/50" style="height: 75%"></div>
+                            <div class="flex-1 bg-white/60" style="height: 90%"></div>
+                            <div class="flex-1 bg-white/70" style="height: 100%"></div>
+                            <div class="flex-1 bg-white/80" style="height: 85%"></div>
+                        {% endif %}
+                    </div>
+                    <div class="text-[9px] md:text-[10px] uppercase tracking-widest text-green-400 mb-1 md:mb-2">
+                        {{ worldcup_stats.recent_battles }} VOTES
+                    </div>
+                    <div class="text-[8px] md:text-[9px] uppercase tracking-widest opacity-40">
+                        {{ worldcup_stats.total_votes }} TOTAL
+                    </div>
                 </div>
             </section>
         </div>

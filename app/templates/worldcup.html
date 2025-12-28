@@ -7,10 +7,9 @@
     .worldcup-container {
         max-width: 1400px;
         margin: 0 auto;
-        height: calc(100vh - 120px);
+        min-height: calc(100vh - 120px);
         display: flex;
         flex-direction: column;
-        overflow: hidden;
     }
     
     .worldcup-header {
@@ -111,6 +110,142 @@
     .stats-section {
         display: none;
     }
+    
+    .results-section {
+        display: none !important;
+        width: 100%;
+        position: relative;
+    }
+    
+    .results-section.active {
+        display: block !important;
+    }
+    
+    .battle-section.hidden {
+        display: none !important;
+    }
+    
+    .results-header {
+        text-align: center;
+        margin-bottom: 3rem;
+        padding: 2rem 0;
+    }
+    
+    .rankings-list {
+        display: grid;
+        gap: 1.5rem;
+        max-width: 900px;
+        margin: 0 auto;
+    }
+    
+    .ranking-item {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 1.5rem;
+        align-items: center;
+        padding: 1.5rem;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+        background: rgba(0, 0, 0, 0.3);
+        transition: all 0.3s ease;
+    }
+    
+    .ranking-item:hover {
+        border-color: rgba(255, 255, 255, 0.3);
+        background: rgba(0, 0, 0, 0.5);
+    }
+    
+    .ranking-item.top-3 {
+        border-color: rgba(255, 215, 0, 0.5);
+        background: rgba(255, 215, 0, 0.1);
+    }
+    
+    .rank-number {
+        font-size: 2rem;
+        font-weight: bold;
+        min-width: 60px;
+        text-align: center;
+        font-family: var(--font-mono);
+    }
+    
+    .rank-number.top-1 {
+        color: #FFD700;
+    }
+    
+    .rank-number.top-2 {
+        color: #C0C0C0;
+    }
+    
+    .rank-number.top-3 {
+        color: #CD7F32;
+    }
+    
+    .ranking-track-info {
+        flex: 1;
+    }
+    
+    .ranking-track-title {
+        font-size: 1.25rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        font-family: var(--font-serif);
+    }
+    
+    .ranking-track-artist {
+        font-size: 0.9rem;
+        opacity: 0.7;
+        margin-bottom: 0.25rem;
+    }
+    
+    .ranking-track-stats {
+        font-size: 0.75rem;
+        opacity: 0.5;
+        font-family: var(--font-mono);
+    }
+    
+    .ranking-wins {
+        text-align: right;
+        font-size: 1.5rem;
+        font-weight: bold;
+        font-family: var(--font-mono);
+    }
+    
+    .ranking-wins-label {
+        font-size: 0.75rem;
+        opacity: 0.5;
+        margin-top: 0.25rem;
+        text-transform: uppercase;
+        letter-spacing: 0.1em;
+    }
+    
+    .ranking-cover {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border: 2px solid rgba(255, 255, 255, 0.1);
+    }
+    
+    @media (max-width: 768px) {
+        .ranking-item {
+            grid-template-columns: auto 1fr;
+            gap: 1rem;
+        }
+        
+        .ranking-wins {
+            grid-column: 1 / -1;
+            text-align: left;
+            margin-top: 0.5rem;
+        }
+        
+        .rank-number {
+            font-size: 1.5rem;
+            min-width: 40px;
+        }
+        
+        .ranking-cover {
+            width: 60px;
+            height: 60px;
+        }
+    }
 </style>
 {% endblock %}
 
@@ -121,15 +256,41 @@
             <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: WorldCup</span>
             <div class="w-12 h-[1px] bg-white/20"></div>
         </div>
-        <h2 class="serif-font text-4xl md:text-5xl mb-3">SONG WORLD CUP_</h2>
-        <p class="text-[11px] uppercase tracking-widest opacity-50">
-            Track Battle System
-        </p>
+        <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: 1rem;">
+            <div>
+                <h2 class="serif-font text-4xl md:text-5xl mb-3">SONG WORLD CUP_</h2>
+                <p class="text-[11px] uppercase tracking-widest opacity-50">
+                    Track Battle System
+                </p>
+            </div>
+            <button class="btn-outline text-xs tracking-widest" onclick="showResults()" id="showResultsBtn">
+                결과 보기
+            </button>
+        </div>
     </header>
     
     <div id="battleContainer" class="battle-section">
         <div class="loading-state">
             <p class="text-lg opacity-50">로딩 중...</p>
+        </div>
+    </div>
+    
+    <div id="resultsSection" class="results-section">
+        <div class="results-header">
+            <div class="inline-flex items-center gap-4 mb-6">
+                <span class="text-[10px] tracking-[0.4em] uppercase opacity-40">System Node: Results</span>
+                <div class="w-12 h-[1px] bg-white/20"></div>
+            </div>
+            <h2 class="serif-font text-4xl md:text-5xl mb-3">🏆 투표 결과</h2>
+            <p class="text-[11px] uppercase tracking-widest opacity-50 mb-6">
+                Rankings by Win Count
+            </p>
+            <button class="btn-outline text-xs tracking-widest" onclick="hideResults()">← 투표로 돌아가기</button>
+        </div>
+        <div id="rankingsList" class="rankings-list">
+            <div class="loading-state">
+                <p class="text-lg opacity-50">결과 로딩 중...</p>
+            </div>
         </div>
     </div>
     
@@ -144,7 +305,26 @@ let seenTrackIds = []; // 이미 등장한 곡 ID 목록
 
 async function loadBattle() {
     const container = document.getElementById('battleContainer');
-    container.innerHTML = '<div class="loading-state"><p class="text-lg opacity-50">로딩 중...</p></div>';
+    const resultsSection = document.getElementById('resultsSection');
+    const showResultsBtn = document.getElementById('showResultsBtn');
+    
+    // 결과 섹션 완전히 숨기기
+    if (resultsSection) {
+        resultsSection.style.display = 'none';
+        resultsSection.classList.remove('active');
+    }
+    
+    // 배틀 섹션 표시
+    if (container) {
+        container.style.display = 'grid';
+        container.classList.remove('hidden');
+        container.innerHTML = '<div class="loading-state"><p class="text-lg opacity-50">로딩 중...</p></div>';
+    }
+    
+    // 결과 보기 버튼 표시
+    if (showResultsBtn) {
+        showResultsBtn.style.display = 'block';
+    }
     
     try {
         // 이미 본 곡들을 제외하고 요청
@@ -171,8 +351,9 @@ async function loadBattle() {
             container.innerHTML = `
                 <div class="pixel-card p-10 text-center">
                     <h3 class="text-xl serif-font mb-2">모든 곡을 다 봤습니다!</h3>
-                    <p class="text-sm opacity-50 mb-4">다시 시작하시겠습니까?</p>
-                    <button class="btn-pixel text-xs tracking-widest" onclick="resetWorldCup()">다시 시작</button>
+                    <p class="text-sm opacity-50 mb-4">투표 결과를 확인하세요.</p>
+                    <button class="btn-pixel text-xs tracking-widest mr-2" onclick="showResults()">결과 보기</button>
+                    <button class="btn-outline text-xs tracking-widest" onclick="resetWorldCup()">다시 시작</button>
                 </div>
             `;
         } else {
@@ -289,12 +470,127 @@ async function selectTrack(trackId) {
     }
 }
 
+async function showResults() {
+    const battleContainer = document.getElementById('battleContainer');
+    const resultsSection = document.getElementById('resultsSection');
+    const rankingsList = document.getElementById('rankingsList');
+    const showResultsBtn = document.getElementById('showResultsBtn');
+    
+    // 배틀 섹션 완전히 숨기기
+    if (battleContainer) {
+        battleContainer.style.display = 'none';
+        battleContainer.classList.add('hidden');
+    }
+    
+    // 결과 보기 버튼 숨기기
+    if (showResultsBtn) {
+        showResultsBtn.style.display = 'none';
+    }
+    
+    // 결과 섹션 표시
+    if (resultsSection) {
+        resultsSection.style.display = 'block';
+        resultsSection.classList.add('active');
+    }
+    
+    if (rankingsList) {
+        rankingsList.innerHTML = '<div class="loading-state"><p class="text-lg opacity-50">결과 로딩 중...</p></div>';
+    }
+    
+    try {
+        const res = await fetch('/api/worldcup/results?limit=50');
+        const data = await res.json();
+        
+        if (data.success && data.rankings && data.rankings.length > 0) {
+            let html = '';
+            data.rankings.forEach((ranking, index) => {
+                const isTop3 = ranking.rank <= 3;
+                const rankClass = ranking.rank === 1 ? 'top-1' : ranking.rank === 2 ? 'top-2' : ranking.rank === 3 ? 'top-3' : '';
+                const coverUrl = ranking.cover_url || '/static/img/default-cover.png';
+                
+                html += `
+                    <div class="pixel-card ranking-item ${isTop3 ? 'top-3' : ''}">
+                        <div class="rank-number ${rankClass}">${ranking.rank}</div>
+                        <div class="ranking-track-info">
+                            <div style="display: flex; gap: 1rem; align-items: center;">
+                                <img src="${coverUrl}" alt="${ranking.title}" class="ranking-cover" onerror="this.src='/static/img/default-cover.png'">
+                                <div>
+                                    <div class="ranking-track-title">${ranking.title || 'Unknown'}</div>
+                                    <div class="ranking-track-artist">${ranking.artist || 'Unknown Artist'}</div>
+                                    <div class="ranking-track-stats">${ranking.duration_str || ''}</div>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="ranking-wins">
+                            ${ranking.wins}
+                            <div class="ranking-wins-label">WINS</div>
+                        </div>
+                    </div>
+                `;
+            });
+            
+            rankingsList.innerHTML = html;
+        } else {
+            rankingsList.innerHTML = `
+                <div class="pixel-card p-10 text-center">
+                    <h3 class="text-xl serif-font mb-2">아직 투표 결과가 없습니다</h3>
+                    <p class="text-sm opacity-50 mb-4">투표를 시작해보세요!</p>
+                    <button class="btn-pixel text-xs tracking-widest" onclick="hideResults()">투표 시작</button>
+                </div>
+            `;
+        }
+    } catch (e) {
+        console.error('결과 로드 실패:', e);
+        rankingsList.innerHTML = '<div class="pixel-card p-10 text-center"><p class="text-red-400">결과를 불러오는데 실패했습니다.</p></div>';
+    }
+}
+
+function hideResults() {
+    const battleContainer = document.getElementById('battleContainer');
+    const resultsSection = document.getElementById('resultsSection');
+    const showResultsBtn = document.getElementById('showResultsBtn');
+    
+    // 결과 섹션 완전히 숨기기
+    if (resultsSection) {
+        resultsSection.style.display = 'none';
+        resultsSection.classList.remove('active');
+    }
+    
+    // 배틀 섹션 표시
+    if (battleContainer) {
+        battleContainer.style.display = 'grid';
+        battleContainer.classList.remove('hidden');
+    }
+    
+    // 결과 보기 버튼 다시 표시
+    if (showResultsBtn) {
+        showResultsBtn.style.display = 'block';
+    }
+    
+    resetWorldCup();
+}
+
 // 페이지 로드 시 첫 배틀 로드
 document.addEventListener('DOMContentLoaded', () => {
+    // 결과 섹션 초기화 - 완전히 숨기기
+    const resultsSection = document.getElementById('resultsSection');
+    if (resultsSection) {
+        resultsSection.style.display = 'none';
+        resultsSection.classList.remove('active');
+    }
+    
+    // 배틀 섹션 표시
+    const battleContainer = document.getElementById('battleContainer');
+    if (battleContainer) {
+        battleContainer.style.display = 'grid';
+        battleContainer.classList.remove('hidden');
+    }
+    
     loadBattle();
 });
 </script>
 {% endblock %}
+
 
 
 

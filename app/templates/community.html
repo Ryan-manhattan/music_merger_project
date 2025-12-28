@@ -91,12 +91,21 @@
         </p>
     </header>
     
+    {% if current_user.is_authenticated %}
     <div class="mb-12">
         <a href="{{ url_for('community_write') }}" class="btn-pixel">
             <span>✏️</span>
             <span>기록하기</span>
         </a>
     </div>
+    {% else %}
+    <div class="mb-12">
+        <a href="{{ url_for('login') }}" class="btn-outline">
+            <span>🔐</span>
+            <span>로그인 후 기록하기</span>
+        </a>
+    </div>
+    {% endif %}
     
     {% if error %}
     <div class="pixel-card mb-8 border-red-900/50 text-red-200">

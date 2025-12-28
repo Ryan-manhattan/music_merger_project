@@ -662,6 +662,13 @@ def index():
         'total_posts': 0,
         'growth': 12.4
     }
+    worldcup_stats = {
+        'total_battles': 0,
+        'total_votes': 0,
+        'recent_battles': 0
+    }
+    total_tracks_count = 0
+    today_visits = 0
     
     # 로그인한 사용자인지 확인
     is_authenticated = current_user.is_authenticated
@@ -712,11 +719,37 @@ def index():
                 # featured_track, daily_curator_track, recent_diary는 모두 None으로 유지
                 # 템플릿에서 "로그인이 필요합니다" 메시지 표시
                 pass
+            
+            # 월드컵 통계 조회 (전체 사용자 누적 - 로그인 여부와 관계없이 조회)
+            try:
+                worldcup_stats = supabase.get_worldcup_stats()
+            except Exception as e:
+                print(f"[ERROR] 월드컵 통계 조회 실패: {e}")
+                worldcup_stats = {'total_battles': 0, 'total_votes': 0, 'recent_battles': 0}
+            
+            # 전체 트랙 수 조회 (모든 사용자)
+            try:
+                all_tracks = supabase.get_tracks(limit=10000, offset=0, user_id=None, playlist_id=None)
+                total_tracks_count = len(all_tracks) if all_tracks else 0
+            except Exception as e:
+                print(f"[ERROR] 전체 트랙 수 조회 실패: {e}")
+                total_tracks_count = 0
+            
+            # 오늘 방문횟수 조회
+            try:
+                today_visits = supabase.get_today_visits()
+            except Exception as e:
+                print(f"[ERROR] 오늘 방문횟수 조회 실패: {e}")
+                today_visits = 0
                 
     except Exception as e:
         print(f"[ERROR] 인덱스 페이지 데이터 로드 실패: {e}")
         import traceback
         traceback.print_exc()
+    
+    # 오늘 날짜 포맷팅
+    from datetime import datetime
+    today_date = datetime.now().strftime('%Y.%m.%d')
     
     return render_template(
         'index.html',
@@ -724,6 +757,10 @@ def index():
         daily_curator_track=daily_curator_track,
         recent_diary=recent_diary,
         activity_stats=activity_stats,
+        worldcup_stats=worldcup_stats,
+        total_tracks_count=total_tracks_count,
+        today_visits=today_visits,
+        today_date=today_date,
         is_authenticated=is_authenticated
     )
 
@@ -859,6 +896,28 @@ def vote_worldcup():
         return jsonify({'success': False, 'error': str(e)}), 500
 
 
+@app.route('/api/worldcup/results', methods=['GET'])
+def get_worldcup_results():
+    """이상형 월드컵 투표 결과 순위 조회"""
+    try:
+        if not supabase_available:
+            return jsonify({"success": False, "error": "Supabase 연결이 불가능합니다."}), 503
+        
+        supabase = SupabaseClient()
+        limit = int(request.args.get('limit', 50))
+        
+        rankings = supabase.get_worldcup_rankings(limit=limit)
+        
+        # duration_str 추가
+        for ranking in rankings:
+            ranking["duration_str"] = _format_duration(ranking.get("duration_seconds", 0))
+        
+        return jsonify({'success': True, 'rankings': rankings}), 200
+    except Exception as e:
+        print(f"[ERROR] 월드컵 결과 조회 실패: {e}")
+        return jsonify({'success': False, 'error': str(e)}), 500
+
+
 @app.route('/diary')
 def diary():
     """일기(기존 커뮤니티) 피드 - 전체 사용자 접근 가능"""
@@ -964,8 +1023,13 @@ def community_post(post_id):
 @app.route('/community/write')
 @app.route('/diary/write')
 def community_write():
-    """글쓰기 페이지"""
+    """글쓰기 페이지 - 로그인 필요"""
     console.log("[Route] /community/write - 글쓰기 페이지 요청")
+    
+    # 로그인 체크
+    if not current_user.is_authenticated:
+        return redirect(url_for('login'))
+    
     return render_template('community_write.html')
 
 
@@ -1504,7 +1568,11 @@ def delete_track_comment_api(comment_id):
 
 @app.route('/api/community/posts', methods=['POST'])
 def create_post():
-    """게시글 생성 API"""
+    """게시글 생성 API - 로그인 필요"""
+    # 로그인 체크
+    if not current_user.is_authenticated:
+        return jsonify({'success': False, 'error': '로그인이 필요합니다.'}), 401
+    
     try:
         data = request.get_json()
         data = data or {}
@@ -1527,13 +1595,11 @@ def create_post():
         if supabase_available:
             supabase = SupabaseClient()
             
-            # 현재 로그인한 사용자 ID 가져오기
-            user_id = None
-            if current_user.is_authenticated:
-                user_id = str(current_user.id)
-                # 로그인한 경우 author를 사용자명으로 설정
-                if author == 'Anonymous' or not author:
-                    author = current_user.username
+            # 로그인한 사용자 ID 가져오기 (로그인 체크를 이미 했으므로 항상 존재)
+            user_id = str(current_user.id)
+            # 로그인한 경우 author를 사용자명으로 설정
+            if author == 'Anonymous' or not author:
+                author = current_user.username
             
             post_id = supabase.create_post(title, content, author, user_id=user_id)
             
