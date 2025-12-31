@@ -13,3 +13,4 @@ SELECT '✅ posts 테이블에 user_id 컬럼 추가 완료!' as message;
 
 
 
+

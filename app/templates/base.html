@@ -86,13 +86,13 @@
         </div>
         
         <nav class="flex-1 p-4 space-y-2 mt-4">
-            <a href="{{ url_for('playlists') }}" class="sidebar-item {% if request.endpoint == 'playlists' or request.endpoint == 'playlist_detail' %}active{% endif %}">
-                <div class="dot"></div>
-                <span>SONG ARCHIVE</span>
-            </a>
             <a href="{{ url_for('diary') }}" class="sidebar-item {% if request.endpoint == 'diary' %}active{% endif %}">
                 <div class="dot"></div>
                 <span>DIARY COMMUNITY</span>
+            </a>
+            <a href="{{ url_for('playlists') }}" class="sidebar-item {% if request.endpoint == 'playlists' or request.endpoint == 'playlist_detail' %}active{% endif %}">
+                <div class="dot"></div>
+                <span>SONG ARCHIVE</span>
             </a>
             <a href="{{ url_for('worldcup') }}" class="sidebar-item {% if request.endpoint == 'worldcup' %}active{% endif %}">
                 <div class="dot"></div>

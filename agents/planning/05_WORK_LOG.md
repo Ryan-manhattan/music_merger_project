@@ -20,4 +20,3 @@
 ### 2025-12-19 (금) 추가(결재 확정)
 - **결정(사장님 결재)**: 지표 범위=내부+YouTube+SoundCloud, stats 초기 키셋=최소
 - **산출물**: `agents/planning/reports/2025-12-19_23-47-33__REPORT.md`, `agents/planning/tickets/T-005__implement_track_stats_collection.md`
-

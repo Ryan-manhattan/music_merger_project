@@ -696,11 +696,13 @@ def index():
                         daily_curator_track["duration_str"] = _format_duration(daily_curator_track.get("duration_seconds"))
                 # 사용자 곡이 없으면 daily_curator_track은 None으로 유지
                 
-                # 최근 다이어리 게시글 1개 (현재 사용자만)
-                user_posts = supabase.get_posts(limit=1, offset=0, user_id=current_user_id)
-                if user_posts:
-                    recent_diary = user_posts[0]
-                # 사용자 게시글이 없으면 recent_diary는 None으로 유지
+                # 다이어리 샘플 게시글 3개 조회 (공개 게시글 - 로그인/미로그인 통일)
+                try:
+                    public_posts = supabase.get_posts(limit=3, offset=0, user_id=None)
+                    recent_diary = public_posts if public_posts else []
+                except Exception as e:
+                    print(f"[ERROR] 공개 다이어리 게시글 조회 실패: {e}")
+                    recent_diary = []
                 
                 # 활동 통계 (현재 사용자)
                 try:
@@ -716,9 +718,14 @@ def index():
                     pass
             else:
                 # 로그인하지 않은 사용자: 곡 정보 표시 안 함
-                # featured_track, daily_curator_track, recent_diary는 모두 None으로 유지
-                # 템플릿에서 "로그인이 필요합니다" 메시지 표시
-                pass
+                # featured_track, daily_curator_track은 None으로 유지
+                # 다이어리 샘플 게시글 3개 조회 (공개 게시글)
+                try:
+                    public_posts = supabase.get_posts(limit=3, offset=0, user_id=None)
+                    recent_diary = public_posts if public_posts else []
+                except Exception as e:
+                    print(f"[ERROR] 공개 다이어리 게시글 조회 실패: {e}")
+                    recent_diary = []
             
             # 월드컵 통계 조회 (전체 사용자 누적 - 로그인 여부와 관계없이 조회)
             try:

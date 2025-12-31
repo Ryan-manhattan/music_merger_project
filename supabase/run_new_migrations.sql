@@ -74,3 +74,4 @@ SELECT '✅ 모든 마이그레이션 완료!' as message;
 
 
 
+

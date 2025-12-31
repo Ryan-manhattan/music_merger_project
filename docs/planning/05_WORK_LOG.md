@@ -13,9 +13,7 @@
 - **진행**: 개발자 에이전트 공유 폴더 `docs/planning/dev/` 생성 및 행동지침 문서화
 - **진행**: 기획↔개발 최신 공유 플로우 문서화(`docs/planning/06_COLLAB_FLOW.md`)
 
----
-
-## (공지) planning 문서 SSOT 변경
+---## (공지) planning 문서 SSOT 변경
 - 이 문서는 `docs/planning/`에 **참고용으로 유지**됩니다(삭제/덮어쓰기 금지 원칙 유지).
 - planning 문서의 **최신(SSOT)** 은 `agents/planning/`에서 관리합니다.
   - 최신 문서: `agents/planning/05_WORK_LOG.md`
